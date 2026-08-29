@@ -8,7 +8,7 @@ Tài liệu này quy định **bộ siêu tham số cố định và bất biế
 
 | Siêu Tham Số (Hyperparameter) | Giá Trị Cố Định | Giải Thích Lý Do / Chuẩn Khoa Học |
 | :--- | :---: | :--- |
-| **Số Epoch (`num_epochs`)** | **`10`** | Đủ dài để hội tụ, kết hợp Early Stopping `patience=3` để dừng đúng lúc tối ưu. |
+| **Số Epoch (`num_epochs`)** | **`5`** | Mức chuẩn tối ưu cho fine-tuning BARTpho trên dữ liệu ít tài nguyên (hội tụ nhanh, chống overfitting). |
 | **Kích thước Batch (`batch_size`)** | **`16`** | Chuẩn hóa cho GPU A100 / RTX 3090/4090, tránh OOM và tối ưu gradient. |
 | **Tốc độ học (`learning_rate`)** | **`2e-5`** | Mức chuẩn tối ưu cho mô hình Pretrained `BARTpho` (tránh phá vỡ trọng số). |
 | **Trọng số suy giảm (`weight_decay`)** | **`0.01`** | Regularization chống Overfitting trên tập ít tài nguyên. |

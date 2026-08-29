@@ -19,7 +19,7 @@ training:
   learning_rate: 2.0e-5
   weight_decay: 0.01
   batch_size: 16
-  num_epochs: 10
+  num_epochs: 5
   fp16: true
   seed: 42
   early_stopping_patience: 3

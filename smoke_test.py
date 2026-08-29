@@ -62,8 +62,8 @@ def run_smoke_test():
         "labels": labels,
         "decoder_attention_mask": tgt_enc["attention_mask"],
         "align_matrix": torch.rand((2, 32, 32), device=device),
-        "teacher_enc_states": torch.randn((2, 32, 768), device=device),
-        "teacher_sent_vec": torch.randn((2, 768), device=device)
+        "teacher_enc_states": torch.randn((2, 32, model.d_model), device=device),
+        "teacher_sent_vec": torch.randn((2, model.d_model), device=device)
     }
 
     # Forward

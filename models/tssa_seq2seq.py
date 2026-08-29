@@ -11,16 +11,19 @@ from .head_router import HeadWiseRouter
 
 class TSSASeq2SeqModel(nn.Module):
     def __init__(self, model_name_or_path: str = "vinai/bartpho-syllable", use_route: bool = True,
-                 d_model: int = 768, n_heads: int = 12, n_decoder_layers: int = 6):
+                 d_model: int = None, n_heads: int = None, n_decoder_layers: int = None):
         super().__init__()
         self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, use_safetensors=True)
         self.use_route = use_route
-        self.d_model = d_model
-        self.n_heads = n_heads
-        self.n_decoder_layers = n_decoder_layers
+        
+        # Dynamically read architectural dimensions from backbone model config
+        cfg = self.model.config
+        self.d_model = d_model or getattr(cfg, "d_model", getattr(cfg, "hidden_size", 1024))
+        self.n_heads = n_heads or getattr(cfg, "decoder_attention_heads", getattr(cfg, "num_attention_heads", 16))
+        self.n_decoder_layers = n_decoder_layers or getattr(cfg, "decoder_layers", getattr(cfg, "num_decoder_layers", 12))
 
         if use_route:
-            self.router = HeadWiseRouter(d_model=d_model, n_heads=n_heads, n_layers=n_decoder_layers)
+            self.router = HeadWiseRouter(d_model=self.d_model, n_heads=self.n_heads, n_layers=self.n_decoder_layers)
         else:
             self.router = None
 

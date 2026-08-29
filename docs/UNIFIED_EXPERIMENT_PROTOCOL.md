@@ -94,5 +94,32 @@ python train.py --lang bahnaric --model_type tssa --num_epochs 10 --batch_size 1
 | `checkpoints/cl_lsa_<lang>` | Bảng 1 - Hàng Contrastive InfoNCE | BLEU / chrF++ / COMET |
 | `checkpoints/tssa_<lang>` | **Bảng 1 - Hàng TSSA (Ours 🏆)** | **BLEU / chrF++ / COMET** |
 | `checkpoints/ablation_*` | Bảng 2 (Ablation Table $2^3$ Factorial) | BLEU / COMET |
-| `evaluate.py --run_causal_pruning` | **Hình 3 (Causal Head-Pruning Line Chart)** | BLEU degradation across K |
-| `evaluate.py --run_robustness` | **Hình 4 (Robustness Radar Chart)** | BLEU under 4 noise types |
+| `eval_checkpoint.py --run_causal_pruning` | **Hình 3 (Causal Head-Pruning Line Chart)** | BLEU degradation across K |
+| `eval_checkpoint.py --run_robustness` | **Hình 4 (Robustness Radar Chart)** | BLEU under 4 noise types |
+
+---
+
+## V. Nhật Ký Kết Quả Thực Nghiệm Thực Tế (Live Experiment Log)
+
+### 1. Tiếng Ê Đê (`rhade` $\rightarrow$ `vi`):
+| Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `bartpho_vanilla` (Mốc cơ sở) | **45.18** | **54.28** | -- | -- | **✅ Đã hoàn tất** |
+| `guided_attn` | -- | -- | -- | -- | Chờ chạy |
+| `joint_align` | -- | -- | -- | -- | Chờ chạy |
+| `awesome_align` | -- | -- | -- | -- | Chờ chạy |
+| `cl_lsa` | -- | -- | -- | -- | Chờ chạy |
+| **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
+
+### 2. Tiếng Ba Na (`bahnaric` $\rightarrow$ `vi`):
+| Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `bartpho_vanilla` | -- | -- | -- | -- | ⏳ Đang chuẩn bị chạy qua đêm |
+| **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
+
+### 3. Tiếng Tày (`tay` $\rightarrow$ `vi`):
+| Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `bartpho_vanilla` | -- | -- | -- | -- | Chờ chạy |
+| **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
+

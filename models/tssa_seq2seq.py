@@ -69,6 +69,44 @@ class TSSASeq2SeqModel(nn.Module):
             "router_gates": self.last_router_gates
         }
 
+    @property
+    def config(self):
+        return self.model.config
+
+    @property
+    def generation_config(self):
+        return self.model.generation_config
+
+    @generation_config.setter
+    def generation_config(self, val):
+        self.model.generation_config = val
+
+    @property
+    def device(self):
+        return self.model.device
+
+    @property
+    def warnings_issued(self):
+        return getattr(self.model, "warnings_issued", {})
+
+    def can_generate(self):
+        return True
+
+    def prepare_inputs_for_generation(self, *args, **kwargs):
+        return self.model.prepare_inputs_for_generation(*args, **kwargs)
+
+    def save_pretrained(self, save_directory, **kwargs):
+        self.model.save_pretrained(save_directory, **kwargs)
+        if self.router is not None:
+            import os
+            torch.save(self.router.state_dict(), os.path.join(save_directory, "router.pt"))
+
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return getattr(self.model, name)
+
     @torch.no_grad()
     def generate(self, *args, **kwargs):
         """Standard Seq2Seq generation pass."""

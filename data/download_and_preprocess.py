@@ -82,7 +82,7 @@ def parse_split_to_df(split_data, src_key, tgt_key):
             rows.append({"src_text": src, "tgt_text": tgt})
     return pd.DataFrame(rows).drop_duplicates()
 
-def process_single_dataset(lang_name: str, config: dict, output_base: str = "data_processed", token: str = None):
+def process_single_dataset(lang_name: str, config: dict, output_base: str = "data_processed"):
     """Downloads and processes a single language dataset."""
     print(f"\n=======================================================")
     print(f"[*] Đang tải và trích xuất: {lang_name} ({config['hf_path']})")
@@ -91,17 +91,7 @@ def process_single_dataset(lang_name: str, config: dict, output_base: str = "dat
     save_dir = os.path.join(output_base, lang_name)
     os.makedirs(save_dir, exist_ok=True)
     
-    # Use token if available or fallback to huggingface-cli login
-    hf_token = token or os.getenv("HF_TOKEN", True)
-    try:
-        ds = load_dataset(config['hf_path'], token=hf_token)
-    except Exception as e:
-        # Fallback for older datasets library syntax
-        try:
-            ds = load_dataset(config['hf_path'], use_auth_token=hf_token)
-        except Exception:
-            raise e
-
+    ds = load_dataset(config['hf_path'])
     splits = list(ds.keys())
     print(f"    -> Splits có sẵn trên HF: {splits}")
     
@@ -133,23 +123,16 @@ def process_single_dataset(lang_name: str, config: dict, output_base: str = "dat
     print(f"    [+] Hoàn tất: train.csv ({len(train_df)} dòng), test.csv ({len(test_df)} dòng)")
     return train_df, test_df
 
-def process_all_datasets(output_base: str = "data_processed", token: str = None):
+def process_all_datasets(output_base: str = "data_processed"):
     """Processes all 3 language datasets."""
     results = {}
     for lang, config in DATASETS_CONFIG.items():
         try:
-            train_df, test_df = process_single_dataset(lang, config, output_base, token=token)
+            train_df, test_df = process_single_dataset(lang, config, output_base)
             results[lang] = {"train_len": len(train_df), "test_len": len(test_df)}
         except Exception as e:
             print(f"[!] Lỗi khi xử lý {lang}: {e}")
     return results
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Download and preprocess datasets for TSSA")
-    parser.add_argument("--hf_token", type=str, default=None, help="Hugging Face Token for gated datasets")
-    parser.add_argument("--output_dir", type=str, default="data_processed", help="Output directory")
-    args = parser.parse_args()
-
-    process_all_datasets(output_base=args.output_dir, token=args.hf_token)
-
+    process_all_datasets()

@@ -13,7 +13,7 @@ class TSSASeq2SeqModel(nn.Module):
     def __init__(self, model_name_or_path: str = "vinai/bartpho-syllable", use_route: bool = True,
                  d_model: int = 768, n_heads: int = 12, n_decoder_layers: int = 6):
         super().__init__()
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, use_safetensors=True)
         self.use_route = use_route
         self.d_model = d_model
         self.n_heads = n_heads

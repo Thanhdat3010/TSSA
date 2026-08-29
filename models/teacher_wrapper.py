@@ -16,7 +16,7 @@ class TeacherWrapper(nn.Module):
         super().__init__()
         self.mode = mode
         self.ema_decay = ema_decay
-        self.teacher = AutoModel.from_pretrained(model_name)
+        self.teacher = AutoModel.from_pretrained(model_name, use_safetensors=True)
         
         if mode == "frozen":
             self.teacher.eval()

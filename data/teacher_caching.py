@@ -13,7 +13,7 @@ class TeacherFeatureCacher:
     def __init__(self, teacher_ckpt: str = "vinai/bartpho-syllable", device: str = "cpu"):
         self.device = device
         self.tokenizer = AutoTokenizer.from_pretrained(teacher_ckpt)
-        self.model = AutoModel.from_pretrained(teacher_ckpt).to(device)
+        self.model = AutoModel.from_pretrained(teacher_ckpt, use_safetensors=True).to(device)
         self.model.eval()
         for param in self.model.parameters():
             param.requires_grad = False

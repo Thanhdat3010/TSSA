@@ -73,8 +73,20 @@ class TranslationEvaluator:
         chrf_res = sacrebleu.corpus_chrf(predictions, ref_lists, word_order=2)
         chrf_score = chrf_res.score
 
-        # 3. METEOR approximation
-        meteor_score = "--"
+        # 3. METEOR calculation
+        meteor_val = "--"
+        try:
+            import nltk
+            try:
+                nltk.data.find('corpora/wordnet')
+            except LookupError:
+                nltk.download('wordnet', quiet=True)
+                nltk.download('omw-1.4', quiet=True)
+            from nltk.translate.meteor_score import meteor_score
+            m_scores = [meteor_score([r.split()], p.split()) for r, p in zip(references, predictions)]
+            meteor_val = round((sum(m_scores) / len(m_scores)) * 100, 2)
+        except Exception as e:
+            pass
 
         # 4. COMET
         comet_score = None
@@ -89,16 +101,9 @@ class TranslationEvaluator:
         results = {
             "sacrebleu": round(bleu_score, 2),
             "chrf++": round(chrf_score, 2),
-            "meteor": meteor_score,
+            "meteor": meteor_val,
             "comet": round(comet_score, 4) if comet_score is not None else "--"
         }
-
-        # Save predictions to CSV if path given
-        if output_save_path:
-            os.makedirs(os.path.dirname(output_save_path), exist_ok=True)
-            df_out = pd.DataFrame({"source": sources, "reference": references, "prediction": predictions})
-            df_out.to_csv(output_save_path, index=False, encoding="utf-8")
-            print(f"[+] Đã lưu bản dịch kiểm thử vào: {output_save_path}")
 
         print(f"\n================ KẾT QUẢ ĐÁNH GIÁ ================")
         print(f"  BLEU   : {results['sacrebleu']}")

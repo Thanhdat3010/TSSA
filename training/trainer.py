@@ -22,7 +22,7 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
         self.baseline_loss_fn = baseline_loss_fn
         self.baseline_weight = baseline_weight
 
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
         """
         Overrides Hugging Face compute_loss to inject TSSA / baseline alignment losses.
         """
@@ -36,7 +36,7 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
             output_attentions=True
         )
 
-        loss_mt = outputs.loss if isinstance(outputs, dict) and "loss" in outputs else outputs["loss"]
+        loss_mt = outputs["loss"] if isinstance(outputs, dict) else outputs.loss
         total_loss = loss_mt
 
         # 2. Compute TSSA Loss if active

@@ -144,7 +144,25 @@ def main():
         report_to="tensorboard"
     )
 
-    # 7. Khởi tạo Trainer
+    # 7. Định nghĩa hàm tính SacreBLEU cho validation
+    import numpy as np
+    import evaluate as hf_evaluate
+    sacrebleu_metric = hf_evaluate.load("sacrebleu")
+
+    def compute_metrics(eval_preds):
+        preds, labels = eval_preds
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
+        labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
+        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
+        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
+        decoded_preds = [p.strip() for p in decoded_preds]
+        decoded_labels = [[l.strip()] for l in decoded_labels]
+        res = sacrebleu_metric.compute(predictions=decoded_preds, references=decoded_labels)
+        return {"sacrebleu": res["score"]}
+
+    # 8. Khởi tạo Trainer
     trainer = TSSASeq2SeqTrainer(
         model=model,
         args=training_args,
@@ -155,10 +173,11 @@ def main():
         loss_scheduler=loss_scheduler,
         model_type=args.model_type,
         baseline_loss_fn=baseline_loss_fn,
+        compute_metrics=compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
     )
 
-    # 8. Bắt đầu Huấn Luyện
+    # 9. Bắt đầu Huấn Luyện
     print("\n🚀 Bắt đầu quá trình huấn luyện ...")
     trainer.train()
 

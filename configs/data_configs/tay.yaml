@@ -1,0 +1,8 @@
+# Tay Configuration
+lang: "tay"
+hf_path: "HeyDunaX/tay-vietnamese-nmt"
+src_key: "tay"
+tgt_key: ["viet", "vietnamese", "vi"]
+train_split: "train"
+test_split: "val"
+data_dir: "data_processed/tay"

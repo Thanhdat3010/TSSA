@@ -1,0 +1,8 @@
+# Rhade (Ê Đê) Configuration
+lang: "rhade"
+hf_path: "NIRVLab/rhade-vietnamese-mt"
+src_key: ["ede", "cdc"]
+tgt_key: "vi"
+train_split: "train"
+test_split: "test"
+data_dir: "data_processed/rhade"

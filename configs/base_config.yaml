@@ -1,0 +1,36 @@
+# Base Configuration for TSSA Framework
+model:
+  student_ckpt: "vinai/bartpho-syllable"
+  teacher_ckpt: "vinai/bartpho-syllable"
+  teacher_mode: "frozen"        # "frozen", "trainable", "ema"
+  use_struct: true
+  use_prime: true
+  use_route: true
+  d_model: 768
+  n_heads: 12
+  n_decoder_layers: 6
+
+data:
+  max_source_length: 256
+  max_target_length: 256
+  data_dir: "data_processed"
+
+training:
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  batch_size: 16
+  num_epochs: 10
+  fp16: true
+  seed: 42
+  early_stopping_patience: 3
+  save_total_limit: 3
+  metric_for_best_model: "sacrebleu"
+
+loss:
+  lambda_struct: 0.5
+  lambda_prime: 0.2
+  lambda_route: 0.1
+  scheduler:
+    warmup_ratio: 0.1
+    rampup_ratio: 0.3
+    routing_ratio: 0.5

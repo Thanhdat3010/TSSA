@@ -1,0 +1,8 @@
+# Bahnaric Configuration
+lang: "bahnaric"
+hf_path: "FiveC/bahnaric_vietnamese"
+src_key: "bahnaric"
+tgt_key: "vietnamese"
+train_split: "train"
+test_split: "test"
+data_dir: "data_processed/bahnaric"

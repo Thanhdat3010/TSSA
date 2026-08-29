@@ -77,3 +77,30 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
                 total_loss = total_loss + self.baseline_weight * loss_align
 
         return (total_loss, outputs) if return_outputs else total_loss
+
+    def _save(self, output_dir: str, state_dict=None):
+        """
+        Safely saves checkpoint by delegating to PreTrainedModel.save_pretrained,
+        avoiding shared/tied embedding errors with safetensors.
+        """
+        import os
+        os.makedirs(output_dir, exist_ok=True)
+        
+        target_model = self.model
+        if hasattr(target_model, "module"):
+            target_model = target_model.module
+
+        if hasattr(target_model, "save_pretrained"):
+            target_model.save_pretrained(output_dir)
+        elif hasattr(target_model, "model") and hasattr(target_model.model, "save_pretrained"):
+            target_model.model.save_pretrained(output_dir)
+        else:
+            torch.save(target_model.state_dict(), os.path.join(output_dir, "pytorch_model.bin"))
+
+        if self.tokenizer is not None:
+            self.tokenizer.save_pretrained(output_dir)
+
+    def save_model(self, output_dir: str = None, _internal_call: bool = False):
+        if output_dir is None:
+            output_dir = self.args.output_dir
+        self._save(output_dir)

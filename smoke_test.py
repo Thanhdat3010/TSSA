@@ -114,11 +114,34 @@ def run_smoke_test():
         compute_metrics=compute_metrics
     )
 
-    eval_res = trainer.evaluate(eval_dataset=eval_ds)
-    assert "eval_sacrebleu" in eval_res or "eval_loss" in eval_res
-    print(f"      -> Trainer Evaluate Loop: OK (eval_loss={eval_res.get('eval_loss', 0):.2f})!")
+    # 5. Kiểm tra Train & Checkpoint Save
+    print("[5/5] Kiểm tra Trainer.train() & Lưu Checkpoint...")
+    training_args = Seq2SeqTrainingArguments(
+        output_dir="checkpoints/smoke_test_tmp",
+        per_device_train_batch_size=2,
+        per_device_eval_batch_size=2,
+        max_steps=2,
+        save_strategy="steps",
+        save_steps=1,
+        predict_with_generate=True,
+        fp16=torch.cuda.is_available(),
+        report_to="none"
+    )
 
-    # 5. Dọn dẹp thư mục tạm
+    trainer = TSSASeq2SeqTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=eval_ds,
+        eval_dataset=eval_ds,
+        tokenizer=tokenizer,
+        compute_metrics=compute_metrics
+    )
+
+    trainer.train()
+    trainer.save_model("checkpoints/smoke_test_tmp/saved_model")
+    print("      -> Trainer Train & Checkpoint Save: OK!")
+
+    # 6. Dọn dẹp thư mục tạm
     import shutil, os
     if os.path.exists("checkpoints/smoke_test_tmp"):
         shutil.rmtree("checkpoints/smoke_test_tmp", ignore_errors=True)

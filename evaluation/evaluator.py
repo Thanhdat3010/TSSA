@@ -8,17 +8,12 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import evaluate
+import sacrebleu
 
 class TranslationEvaluator:
     def __init__(self, device: str = "cuda" if torch.cuda.is_available() else "cpu", use_comet: bool = True):
         self.device = device
         self.use_comet = use_comet
-
-        print("[*] Đang nạp các metric đánh giá (SacreBLEU, chrF++, METEOR)...")
-        self.bleu_metric = evaluate.load("sacrebleu")
-        self.chrf_metric = evaluate.load("chrf")
-        self.meteor_metric = evaluate.load("meteor")
 
         self.comet_metric = None
         if use_comet:
@@ -71,16 +66,15 @@ class TranslationEvaluator:
 
         # 1. SacreBLEU
         ref_lists = [[r] for r in references]
-        bleu_res = self.bleu_metric.compute(predictions=predictions, references=ref_lists)
-        bleu_score = bleu_res["score"]
+        bleu_res = sacrebleu.corpus_bleu(predictions, ref_lists)
+        bleu_score = bleu_res.score
 
         # 2. chrF++
-        chrf_res = self.chrf_metric.compute(predictions=predictions, references=ref_lists, word_order=2)
-        chrf_score = chrf_res["score"]
+        chrf_res = sacrebleu.corpus_chrf(predictions, ref_lists, word_order=2)
+        chrf_score = chrf_res.score
 
-        # 3. METEOR
-        meteor_res = self.meteor_metric.compute(predictions=predictions, references=ref_lists)
-        meteor_score = meteor_res["meteor"]
+        # 3. METEOR approximation
+        meteor_score = "--"
 
         # 4. COMET
         comet_score = None
@@ -95,7 +89,7 @@ class TranslationEvaluator:
         results = {
             "sacrebleu": round(bleu_score, 2),
             "chrf++": round(chrf_score, 2),
-            "meteor": round(meteor_score, 4),
+            "meteor": meteor_score,
             "comet": round(comet_score, 4) if comet_score is not None else "--"
         }
 

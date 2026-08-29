@@ -46,11 +46,11 @@ python train.py --lang "${LANG}" --model_type tssa --use_struct --use_prime --us
 
 # --- 2. Ablation 3: Causal Head Pruning ---
 echo ">>> [2/4] Chạy Ablation 3: Causal Head Pruning (Top-K vs Random-K vs Bottom-K)..."
-python evaluate.py --checkpoint_dir "checkpoints/ablation_full_tssa/tssa_rhade" --lang "${LANG}" --run_causal_pruning
+python eval_checkpoint.py --checkpoint_dir "checkpoints/ablation_full_tssa/tssa_rhade" --lang "${LANG}" --run_causal_pruning
 
 # --- 3. Ablation 4: Robustness trước Nhiễu ---
 echo ">>> [3/4] Chạy Ablation 4: Độ bền vững trước nhiễu chính tả / xóa dấu..."
-python evaluate.py --checkpoint_dir "checkpoints/ablation_full_tssa/tssa_rhade" --lang "${LANG}" --run_robustness
+python eval_checkpoint.py --checkpoint_dir "checkpoints/ablation_full_tssa/tssa_rhade" --lang "${LANG}" --run_robustness
 
 echo "========================================================================"
 echo "    HOÀN TẤT TOÀN BỘ CÁC BÀI THÍ NGHIỆM ABLATION!"

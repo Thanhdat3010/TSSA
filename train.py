@@ -146,8 +146,7 @@ def main():
 
     # 7. Định nghĩa hàm tính SacreBLEU cho validation
     import numpy as np
-    import evaluate as hf_evaluate
-    sacrebleu_metric = hf_evaluate.load("sacrebleu")
+    import sacrebleu
 
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
@@ -159,8 +158,8 @@ def main():
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
         decoded_preds = [p.strip() for p in decoded_preds]
         decoded_labels = [[l.strip()] for l in decoded_labels]
-        res = sacrebleu_metric.compute(predictions=decoded_preds, references=decoded_labels)
-        return {"sacrebleu": res["score"]}
+        bleu_res = sacrebleu.corpus_bleu(decoded_preds, decoded_labels)
+        return {"sacrebleu": round(bleu_res.score, 2)}
 
     # 8. Khởi tạo Trainer
     trainer = TSSASeq2SeqTrainer(

@@ -104,7 +104,7 @@ python train.py --lang bahnaric --model_type tssa --num_epochs 10 --batch_size 1
 ### 1. Tiếng Ê Đê (`rhade` $\rightarrow$ `vi`):
 | Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | **45.18** | **54.28** | -- | -- | **✅ Đã hoàn tất** |
+| `bartpho_vanilla` (Mốc cơ sở) | **45.18** | **54.28** | **33.91** | **0.6556** | **✅ Đã hoàn tất** |
 | `guided_attn` | -- | -- | -- | -- | Chờ chạy |
 | `joint_align` | -- | -- | -- | -- | Chờ chạy |
 | `awesome_align` | -- | -- | -- | -- | Chờ chạy |

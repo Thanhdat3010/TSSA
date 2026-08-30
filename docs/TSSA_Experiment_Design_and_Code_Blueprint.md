@@ -87,7 +87,7 @@ Toàn bộ các ô kết quả dưới đây để trống (`--`) sẵn sàng đ
 #### 1. Bảng Kết Quả: Tiếng Ê Đê $\rightarrow$ Tiếng Việt (`NIRVLab/rhade-vietnamese-mt` - 15.1K)
 | Model / System | Loại Phương Pháp | Link Tham Khảo | BLEU $\uparrow$ | chrF++ $\uparrow$ | COMET $\uparrow$ |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **45.18** | **54.28** | -- |
+| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **45.18** | **54.28** | **0.6556** |
 | `BARTBahnar` | DAE Pretraining | [NAACL 2025](https://arxiv.org) | -- | -- | -- |
 | `BARTpho` + Guided Attention | Attention Alignment | [Chen et al. (ACL)](https://github.com/OpenNMT/OpenNMT-py) | -- | -- | -- |
 | `BARTpho` + Joint-Align | Attention Alignment | [Garg et al. (EMNLP)](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- | -- | -- |

@@ -64,6 +64,12 @@ class TranslationEvaluator:
             if "src_texts" in batch:
                 sources.extend([str(s).strip() for s in batch["src_texts"]])
 
+        return self.compute_scores_from_texts(sources, references, predictions, output_save_path=output_save_path)
+
+    def compute_scores_from_texts(self, sources: list, references: list, predictions: list, output_save_path: str = None) -> dict:
+        """
+        Computes SacreBLEU, chrF++, METEOR, and COMET from text lists.
+        """
         # 1. SacreBLEU
         ref_lists = [[r] for r in references]
         bleu_res = sacrebleu.corpus_bleu(predictions, ref_lists)
@@ -93,7 +99,7 @@ class TranslationEvaluator:
         if self.comet_metric is not None and len(sources) == len(predictions):
             try:
                 comet_data = [{"src": s, "mt": p, "ref": r} for s, p, r in zip(sources, predictions, references)]
-                comet_output = self.comet_metric.predict(comet_data, batch_size=32, gpus=1 if self.device.startswith("cuda") else 0)
+                comet_output = self.comet_metric.predict(comet_data, batch_size=32, gpus=1 if str(self.device).startswith("cuda") else 0)
                 comet_score = comet_output.system_score
             except Exception as e:
                 print(f"[!] Lỗi khi tính COMET: {e}")
@@ -111,5 +117,16 @@ class TranslationEvaluator:
         print(f"  METEOR : {results['meteor']}")
         print(f"  COMET  : {results['comet']}")
         print(f"==================================================")
+
+        # Lưu bản dịch ra file csv để kiểm tra định tính
+        if output_save_path is not None:
+            os.makedirs(os.path.dirname(output_save_path), exist_ok=True)
+            df_out = pd.DataFrame({
+                "source": sources if len(sources) == len(predictions) else [""] * len(predictions),
+                "reference": references,
+                "prediction": predictions
+            })
+            df_out.to_csv(output_save_path, index=False, encoding="utf-8")
+            print(f"[+] Đã lưu bản dịch kiểm thử vào: {output_save_path}")
 
         return results

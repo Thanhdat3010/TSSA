@@ -114,7 +114,7 @@ python train.py --lang bahnaric --model_type tssa --num_epochs 10 --batch_size 1
 ### 2. Tiếng Ba Na (`bahnaric` $\rightarrow$ `vi`):
 | Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` | -- | -- | -- | -- | ⏳ Đang chuẩn bị chạy qua đêm |
+| `bartpho_vanilla` (Mốc cơ sở) | **14.45** | **25.02** | **18.15** | -- | **✅ Đã hoàn tất** |
 | **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
 
 ### 3. Tiếng Tày (`tay` $\rightarrow$ `vi`):

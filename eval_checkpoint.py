@@ -20,7 +20,8 @@ from evaluation.robustness_noise import RobustnessEvaluator
 
 def parse_args():
     parser = argparse.ArgumentParser(description="TSSA Comprehensive Evaluation Suite")
-    parser.add_argument("--checkpoint_dir", type=str, required=True, help="Đường dẫn thư mục checkpoint mô hình")
+    parser.add_argument("--checkpoint_dir", type=str, default=None, help="Đường dẫn thư mục checkpoint mô hình")
+    parser.add_argument("--predictions_csv", type=str, default=None, help="Đường dẫn file test_predictions.csv để tính điểm siêu tốc")
     parser.add_argument("--lang", type=str, default="bahnaric", choices=["rhade", "tay", "bahnaric"])
     parser.add_argument("--data_dir", type=str, default="data_processed")
     parser.add_argument("--max_target_length", type=int, default=256)
@@ -36,6 +37,27 @@ def parse_args():
 def main():
     args = parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    
+    evaluator = TranslationEvaluator(device=device, use_comet=True)
+
+    # Nếu có sẵn file predictions.csv, chấm điểm ngay lập tức trong 5 giây!
+    if args.predictions_csv and os.path.exists(args.predictions_csv):
+        print("=" * 60)
+        print(f"[*] Đang nạp kết quả dịch có sẵn từ: {args.predictions_csv}")
+        print("=" * 60)
+        df = pd.read_csv(args.predictions_csv)
+        results = evaluator.compute_scores_from_texts(
+            sources=df["source"].astype(str).tolist(),
+            references=df["reference"].astype(str).tolist(),
+            predictions=df["prediction"].astype(str).tolist()
+        )
+        print(f"\n[+] Kết quả chấm điểm: {results}")
+        return
+
+    if args.checkpoint_dir is None:
+        print("[!] Lỗi: Bạn cần cung cấp --checkpoint_dir hoặc --predictions_csv")
+        return
+
     print("=" * 60)
     print(f"[*] Bắt đầu đánh giá mô hình: {args.checkpoint_dir} trên {args.lang}")
     print("=" * 60)
@@ -50,8 +72,6 @@ def main():
     from torch.utils.data import DataLoader
     from data.dataloader import tssa_collate_fn
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=tssa_collate_fn)
-
-    evaluator = TranslationEvaluator(device=device, use_comet=True)
 
     # 3. Main Benchmark Eval
     print("\n--- 1. Đánh Giá Điểm Chuẩn (Main Benchmark) ---")

@@ -110,7 +110,7 @@ Toàn bộ các ô kết quả dưới đây để trống (`--`) sẵn sàng đ
 #### 3. Bảng Kết Quả: Tiếng Ba Na $\rightarrow$ Tiếng Việt (`FiveC/bahnaric_vietnamese` - 51.9K)
 | Model / System | Loại Phương Pháp | Link Tham Khảo | BLEU $\uparrow$ | chrF++ $\uparrow$ | COMET $\uparrow$ |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | -- | -- | -- |
+| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **14.45** | **25.02** | -- |
 | `BARTBahnar` | DAE Pretraining | [NAACL 2025](https://arxiv.org) | -- | -- | -- |
 | `BARTpho` + Guided Attention | Attention Alignment | [Chen et al. (ACL)](https://github.com/OpenNMT/OpenNMT-py) | -- | -- | -- |
 | `BARTpho` + Joint-Align | Attention Alignment | [Garg et al. (EMNLP)](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- | -- | -- |

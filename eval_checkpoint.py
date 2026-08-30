@@ -38,14 +38,24 @@ def main():
     args = parse_args()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     
+    # 1. Tìm đường dẫn file predictions nếu có
+    pred_path = args.predictions_csv
+    if pred_path is not None:
+        if os.path.isdir(pred_path):
+            pred_path = os.path.join(pred_path, "test_predictions.csv")
+    elif args.checkpoint_dir is not None:
+        cand = os.path.join(args.checkpoint_dir, "test_predictions.csv")
+        if os.path.exists(cand):
+            pred_path = cand
+
     evaluator = TranslationEvaluator(device=device, use_comet=True)
 
-    # Nếu có sẵn file predictions.csv, chấm điểm ngay lập tức trong 5 giây!
-    if args.predictions_csv and os.path.exists(args.predictions_csv):
+    # 2. Nếu tìm thấy file predictions, chấm điểm siêu tốc trong vài giây
+    if pred_path and os.path.exists(pred_path):
         print("=" * 60)
-        print(f"[*] Đang nạp kết quả dịch có sẵn từ: {args.predictions_csv}")
+        print(f"[*] Đang nạp kết quả dịch từ: {pred_path}")
         print("=" * 60)
-        df = pd.read_csv(args.predictions_csv)
+        df = pd.read_csv(pred_path)
         results = evaluator.compute_scores_from_texts(
             sources=df["source"].astype(str).tolist(),
             references=df["reference"].astype(str).tolist(),
@@ -53,6 +63,10 @@ def main():
         )
         print(f"\n[+] Kết quả chấm điểm: {results}")
         return
+    elif pred_path and not os.path.exists(pred_path):
+        print(f"[!] Không tìm thấy file dự đoán: {pred_path}")
+        if args.checkpoint_dir is None:
+            return
 
     if args.checkpoint_dir is None:
         print("[!] Lỗi: Bạn cần cung cấp --checkpoint_dir hoặc --predictions_csv")

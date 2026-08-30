@@ -139,7 +139,7 @@ def main():
         load_best_model_at_end=True,
         metric_for_best_model="sacrebleu",
         greater_is_better=True,
-        save_total_limit=2,
+        save_total_limit=1,
         fp16=args.fp16 and torch.cuda.is_available(),
         report_to="tensorboard"
     )
@@ -178,8 +178,8 @@ def main():
     print("\n🚀 Bắt đầu quá trình huấn luyện ...")
     trainer.train()
 
-    # 10. Lưu mô hình tốt nhất vào thư mục chính và dọn dẹp các checkpoint tạm thời (chứa optimizer.pt ~3.2GB)
-    print(f"[*] Đang lưu mô hình tối ưu vào: {save_dir}")
+    # 10. Lưu mô hình tốt nhất và dọn dẹp checkpoint trung gian để tiết kiệm 90% dung lượng
+    print("\n[*] Đang lưu mô hình tốt nhất (Best Model) và Tokenizer...")
     trainer.save_model(save_dir)
     tokenizer.save_pretrained(save_dir)
 
@@ -187,8 +187,11 @@ def main():
     for item in os.listdir(save_dir):
         item_path = os.path.join(save_dir, item)
         if os.path.isdir(item_path) and item.startswith("checkpoint-"):
-            shutil.rmtree(item_path, ignore_errors=True)
-            print(f"[+] Đã dọn dẹp checkpoint phụ: {item}")
+            try:
+                shutil.rmtree(item_path)
+            except Exception:
+                pass
+    print(f"[+] Đã tối ưu hóa dung lượng lưu trữ cho {save_dir} (chỉ giữ lại Best Model ~1.6GB)")
 
     # 11. Đánh giá cuối cùng trên Test set
     print("\n📊 Đang tiến hành đánh giá toàn diện trên tập Test ...")

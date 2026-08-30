@@ -120,6 +120,6 @@ python train.py --lang bahnaric --model_type tssa --num_epochs 10 --batch_size 1
 ### 3. Tiếng Tày (`tay` $\rightarrow$ `vi`):
 | Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` | -- | -- | -- | -- | Chờ chạy |
+| `bartpho_vanilla` (Mốc cơ sở) | **24.67** | **35.74** | **25.68** | **0.6530** | **✅ Đã hoàn tất** |
 | **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
 

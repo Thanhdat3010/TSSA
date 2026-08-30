@@ -99,7 +99,7 @@ Toàn bộ các ô kết quả dưới đây để trống (`--`) sẵn sàng đ
 #### 2. Bảng Kết Quả: Tiếng Tày $\rightarrow$ Tiếng Việt (`HeyDunaX/tay-vietnamese-nmt` - 20.6K)
 | Model / System | Loại Phương Pháp | Link Tham Khảo | BLEU $\uparrow$ | chrF++ $\uparrow$ | COMET $\uparrow$ |
 | :--- | :--- | :---: | :---: | :---: | :---: |
-| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | -- | -- | -- |
+| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **24.67** | **35.74** | **0.6530** |
 | `BARTpho` + Guided Attention | Attention Alignment | [Chen et al. (ACL)](https://github.com/OpenNMT/OpenNMT-py) | -- | -- | -- |
 | `BARTpho` + Joint-Align | Attention Alignment | [Garg et al. (EMNLP)](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- | -- | -- |
 | `BARTpho` + AWESOME Loss | Embedding Alignment | [Dou et al. (EACL)](https://github.com/neulab/awesome-align) | -- | -- | -- |

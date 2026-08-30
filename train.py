@@ -158,7 +158,7 @@ def main():
         decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
         decoded_preds = [p.strip() for p in decoded_preds]
         decoded_labels = [[l.strip()] for l in decoded_labels]
-        bleu_res = sacrebleu.corpus_bleu(decoded_preds, decoded_labels)
+        bleu_res = sacrebleu.corpus_bleu(decoded_preds, decoded_labels, smooth_method="exp")
         return {"sacrebleu": round(bleu_res.score, 2)}
 
     # 8. Khởi tạo Trainer

@@ -7,8 +7,8 @@ Implements a 3-phase progressive loss schedule:
 """
 
 class TSSALossScheduler:
-    def __init__(self, total_steps: int, max_l1: float = 0.5, max_l2: float = 0.2, max_l3: float = 0.1,
-                 warmup_ratio: float = 0.1, rampup_ratio: float = 0.3, routing_ratio: float = 0.5):
+    def __init__(self, total_steps: int, max_l1: float = 0.05, max_l2: float = 0.05, max_l3: float = 0.10,
+                 warmup_ratio: float = 0.20, rampup_ratio: float = 0.30, routing_ratio: float = 0.50):
         self.total_steps = max(1, total_steps)
         self.max_l1 = max_l1
         self.max_l2 = max_l2

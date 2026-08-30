@@ -74,9 +74,9 @@ def run_smoke_test():
     assert outputs["router_gates"] is not None, "Router gates không được kích hoạt!"
     print("      -> Online Frozen Teacher & On-the-fly Alignment: OK (0.001s)!")
 
-    # Test TSSA 3 Losses Synergy with Phase 3 weights (l1=0.5, l2=0.2, l3=0.1)
+    # Test TSSA 3 Losses Synergy with Phase 3 weights (l1=0.05, l2=0.05, l3=0.10)
     tssa_crit = TSSAUnifiedCriterion(use_struct=True, use_prime=True, use_route=True).to(device)
-    tssa_res = tssa_crit(outputs["loss"], outputs, raw_batch, lambdas=(0.5, 0.2, 0.1))
+    tssa_res = tssa_crit(outputs["loss"], outputs, raw_batch, lambdas=(0.05, 0.05, 0.10))
     
     loss_val = tssa_res["loss"].item()
     assert not torch.isnan(tssa_res["loss"]), "TSSA Loss bị NaN!"

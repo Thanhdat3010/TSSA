@@ -75,10 +75,10 @@ class TSSASeq2SeqModel(nn.Module):
                 mask_exp = tgt_mask.unsqueeze(-1).float()
                 teacher_sent_vec = (teacher_enc_states * mask_exp).sum(dim=1) / mask_exp.sum(dim=1).clamp(min=1.0) # [B, D]
 
-                # Instant subword semantic alignment posterior matrix
+                # Instant subword semantic alignment posterior matrix (smoothed with tau=0.5)
                 src_norm = F.normalize(outputs.encoder_last_hidden_state.detach(), p=2, dim=-1)
                 tgt_norm = F.normalize(teacher_enc_states, p=2, dim=-1)
-                sim = torch.bmm(src_norm, tgt_norm.transpose(1, 2)) / 0.1 # [B, S, T]
+                sim = torch.bmm(src_norm, tgt_norm.transpose(1, 2)) / 0.5 # [B, S, T]
                 align_matrix = F.softmax(sim, dim=-1).detach()
 
         # If Router is active, compute router gate activations on decoder states

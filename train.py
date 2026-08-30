@@ -1,28 +1,29 @@
 """
-Main Unified Training Script for TSSA & Competitor Baselines
+Main Unified Training Script for TSSA & All 8 Competitor Alignment Baselines
 Supports:
 - Proposed TSSA (Full & Ablations)
-- Baselines: bartpho_vanilla, guided_attn, joint_align, awesome_align, cl_lsa
+- Baselines: bartpho_vanilla, align_to_distill, structural_supervision, shift_aet,
+             cross_init, awesome_align, dm_bli, cl_lsa, dpo_align
 """
 
 import os
 import argparse
 import torch
+import shutil
+import numpy as np
+import sacrebleu
 from transformers import AutoTokenizer, Seq2SeqTrainingArguments, EarlyStoppingCallback
 
 from data.dataloader import get_dataloaders
 from models.tssa_seq2seq import TSSASeq2SeqModel
 from losses.unified_criterion import TSSAUnifiedCriterion
-from losses.baselines.guided_attention_loss import GuidedAttentionLoss
-from losses.baselines.joint_align_loss import JointAlignLoss
-from losses.baselines.awesome_align_loss import AwesomeAlignLoss
-from losses.baselines.cl_lsa_loss import CrossLingualInfoNCELoss
+from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
 from training.trainer import TSSASeq2SeqTrainer
 from evaluation.evaluator import TranslationEvaluator
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="TSSA & Baselines Unified Training Suite")
+    parser = argparse.ArgumentParser(description="TSSA & All 8 Baselines Unified Training Suite")
 
     # 1. Dữ liệu & Ngôn ngữ
     parser.add_argument("--lang", type=str, default="bahnaric", choices=["rhade", "tay", "bahnaric"],
@@ -31,10 +32,15 @@ def parse_args():
     parser.add_argument("--max_source_length", type=int, default=256, help="Độ dài tối đa câu nguồn")
     parser.add_argument("--max_target_length", type=int, default=256, help="Độ dài tối đa câu đích")
 
-    # 2. Backbone Mô hình
+    # 2. Backbone Mô hình & Phương pháp
     parser.add_argument("--model_ckpt", type=str, default="vinai/bartpho-syllable", help="Pretrained Backbone checkpoint")
     parser.add_argument("--model_type", type=str, default="tssa",
-                        choices=["tssa", "bartpho_vanilla", "joint_align", "guided_attn", "awesome_align", "cl_lsa"],
+                        choices=[
+                            "tssa", "bartpho_vanilla",
+                            "align_to_distill", "structural_supervision", "shift_aet",
+                            "cross_init", "awesome_align", "dm_bli",
+                            "cl_lsa", "dpo_align"
+                        ],
                         help="Loại phương pháp cần chạy")
 
     # 3. Cấu hình TSSA Loss & Ablation
@@ -62,10 +68,10 @@ def parse_args():
 
 def main():
     args = parse_args()
-    print("=" * 60)
+    print("=" * 65)
     print(f"[*] Bắt đầu quy trình huấn luyện: Model={args.model_type}, Lang={args.lang}")
     print(f"[*] Max Source Len={args.max_source_length}, Max Target Len={args.max_target_length}")
-    print("=" * 60)
+    print("=" * 65)
 
     # 1. Chuẩn bị đường dẫn dữ liệu
     lang_data_dir = os.path.join(args.data_dir, args.lang)
@@ -95,7 +101,7 @@ def main():
 
     # 5. Khởi tạo Hàm Loss
     criterion = None
-    baseline_loss_fn = None
+    baseline_loss_factory = None
     total_steps = len(train_loader) * args.num_epochs
     loss_scheduler = None
 
@@ -111,14 +117,24 @@ def main():
             max_l2=args.lambda_prime,
             max_l3=args.lambda_route
         )
-    elif args.model_type == "guided_attn":
-        baseline_loss_fn = GuidedAttentionLoss().to(device)
-    elif args.model_type == "joint_align":
-        baseline_loss_fn = JointAlignLoss().to(device)
-    elif args.model_type == "awesome_align":
-        baseline_loss_fn = AwesomeAlignLoss().to(device)
-    elif args.model_type == "cl_lsa":
-        baseline_loss_fn = CrossLingualInfoNCELoss().to(device)
+    elif args.model_type != "bartpho_vanilla":
+        config = {
+            "hidden_dim": 768,
+            "embed_dim": 768,
+            "subspace_dim": 64,
+            "temperature": 0.1,
+            "alpha": 0.5,
+            "beta": 1.0,
+            "decay": 0.9,
+            "lambda_struct": 0.3,
+            "lambda_orth": 0.01,
+            "lambda_co": 1.0,
+            "mu": 0.5
+        }
+        baseline_loss_factory = UnifiedAlignmentLossFactory(
+            method_name=args.model_type,
+            config=config
+        ).to(device)
 
     # 6. Thiết lập Training Arguments
     exp_name = f"{args.model_type}_{args.lang}"
@@ -145,9 +161,6 @@ def main():
     )
 
     # 7. Định nghĩa hàm tính SacreBLEU cho validation
-    import numpy as np
-    import sacrebleu
-
     def compute_metrics(eval_preds):
         preds, labels = eval_preds
         if isinstance(preds, tuple):
@@ -169,7 +182,7 @@ def main():
         criterion=criterion,
         loss_scheduler=loss_scheduler,
         model_type=args.model_type,
-        baseline_loss_fn=baseline_loss_fn,
+        baseline_loss_factory=baseline_loss_factory,
         compute_metrics=compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
     )
@@ -183,7 +196,6 @@ def main():
     trainer.save_model(save_dir)
     tokenizer.save_pretrained(save_dir)
 
-    import shutil
     for item in os.listdir(save_dir):
         item_path = os.path.join(save_dir, item)
         if os.path.isdir(item_path) and item.startswith("checkpoint-"):

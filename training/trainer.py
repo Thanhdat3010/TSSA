@@ -2,29 +2,29 @@
 TSSA Custom Seq2Seq Trainer
 Subclasses Hugging Face Seq2SeqTrainer to seamlessly integrate:
 - Multi-objective TSSA losses (L_struct, L_prime, L_route)
-- Baseline alignment losses (Guided Attention, Joint-Align, AWESOME-loss, CL-LSA)
+- Unified Baseline Alignment Loss Factory (A2D, Structural Supervision, Shift-AET, CrossInit, AWESOME-align, DM-BLI, CL-LSA, DPO Alignment)
 - Dynamic loss scheduling
 - Fast evaluation with SacreBLEU, chrF++, METEOR, and COMET.
 """
 
+import os
 import torch
 import numpy as np
 from transformers import Seq2SeqTrainer
-import evaluate
+from losses.baselines.factory import UnifiedAlignmentLossFactory
 
 class TSSASeq2SeqTrainer(Seq2SeqTrainer):
     def __init__(self, *args, criterion=None, loss_scheduler=None, model_type="tssa",
-                 baseline_loss_fn=None, baseline_weight=0.5, **kwargs):
+                 baseline_loss_factory=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.criterion = criterion
         self.loss_scheduler = loss_scheduler
-        self.model_type = model_type
-        self.baseline_loss_fn = baseline_loss_fn
-        self.baseline_weight = baseline_weight
+        self.model_type = model_type.lower().strip()
+        self.baseline_loss_factory = baseline_loss_factory
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
         """
-        Overrides Hugging Face compute_loss to inject TSSA / baseline alignment losses.
+        Overrides Hugging Face compute_loss to inject TSSA / unified baseline alignment losses.
         """
         # 1. Forward pass
         outputs = model(
@@ -46,35 +46,15 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
             crit_res = self.criterion(loss_mt, outputs, inputs, lambdas=lambdas)
             total_loss = crit_res["loss"]
 
-        # 3. Compute Baseline losses if configured
-        elif self.baseline_loss_fn is not None:
-            if self.model_type == "guided_attn" and "align_matrix" in inputs:
-                # Guided Attention on Cross-Attentions
-                loss_align = self.baseline_loss_fn(outputs.get("cross_attentions"), inputs["align_matrix"])
-                total_loss = total_loss + self.baseline_weight * loss_align
-
-            elif self.model_type == "joint_align" and "align_matrix" in inputs:
-                # Joint Align on Decoder & Encoder Top Hidden States
-                dec_states = outputs["decoder_hidden_states"][-1]
-                enc_states = outputs["encoder_last_hidden_state"]
-                loss_align = self.baseline_loss_fn(dec_states, enc_states, inputs["align_matrix"])
-                total_loss = total_loss + self.baseline_weight * loss_align
-
-            elif self.model_type == "awesome_align" and "align_matrix" in inputs and "teacher_enc_states" in inputs:
-                # AWESOME Symmetric Embedding Align
-                enc_states = outputs["encoder_last_hidden_state"]
-                tgt_states = inputs["teacher_enc_states"]
-                loss_align = self.baseline_loss_fn(enc_states, tgt_states, inputs["align_matrix"])
-                total_loss = total_loss + self.baseline_weight * loss_align
-
-            elif self.model_type == "cl_lsa" and "teacher_sent_vec" in inputs:
-                # Cross-Lingual Sentence InfoNCE
-                enc_states = outputs["encoder_last_hidden_state"]
-                mask = inputs["attention_mask"].unsqueeze(-1)
-                src_sent = (enc_states * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
-                tgt_sent = inputs["teacher_sent_vec"]
-                loss_align = self.baseline_loss_fn(src_sent, tgt_sent)
-                total_loss = total_loss + self.baseline_weight * loss_align
+        # 3. Compute Unified Baseline Alignment losses if configured
+        elif self.baseline_loss_factory is not None:
+            res = self.baseline_loss_factory(
+                loss_mt=loss_mt,
+                model_outputs=outputs,
+                batch=inputs,
+                global_step=self.state.global_step
+            )
+            total_loss = res["loss_total"]
 
         return (total_loss, outputs) if return_outputs else total_loss
 
@@ -83,7 +63,6 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
         Safely saves checkpoint by delegating to PreTrainedModel.save_pretrained,
         avoiding shared/tied embedding errors with safetensors.
         """
-        import os
         os.makedirs(output_dir, exist_ok=True)
         
         target_model = self.model
@@ -99,8 +78,3 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
 
         if self.tokenizer is not None:
             self.tokenizer.save_pretrained(output_dir)
-
-    def save_model(self, output_dir: str = None, _internal_call: bool = False):
-        if output_dir is None:
-            output_dir = self.args.output_dir
-        self._save(output_dir)

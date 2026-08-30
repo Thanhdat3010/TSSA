@@ -178,7 +178,19 @@ def main():
     print("\n🚀 Bắt đầu quá trình huấn luyện ...")
     trainer.train()
 
-    # 9. Đánh giá cuối cùng trên Test set
+    # 10. Lưu mô hình tốt nhất vào thư mục chính và dọn dẹp các checkpoint tạm thời (chứa optimizer.pt ~3.2GB)
+    print(f"[*] Đang lưu mô hình tối ưu vào: {save_dir}")
+    trainer.save_model(save_dir)
+    tokenizer.save_pretrained(save_dir)
+
+    import shutil
+    for item in os.listdir(save_dir):
+        item_path = os.path.join(save_dir, item)
+        if os.path.isdir(item_path) and item.startswith("checkpoint-"):
+            shutil.rmtree(item_path, ignore_errors=True)
+            print(f"[+] Đã dọn dẹp checkpoint phụ: {item}")
+
+    # 11. Đánh giá cuối cùng trên Test set
     print("\n📊 Đang tiến hành đánh giá toàn diện trên tập Test ...")
     evaluator = TranslationEvaluator(device=device, use_comet=True)
     results = evaluator.evaluate_model(

@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# SCRIPT CHẠY HUẤN LUYỆN TSSA TỰ ĐỘNG CHO CẢ 3 NGÔN NGỮ QUA ĐÊM
+# SCRIPT CHẠY HUẤN LUYỆN TSSA TỰ ĐỘNG CHO CẢ 3 NGÔN NGỮ QUA ĐÊM (PHIÊN BẢN MỚI)
 # ==============================================================================
 # Trình tự thực thi:
-# 1. Tiếng Ê Đê (rhade) -> Tự động lưu Best Model & dọn dẹp checkpoint
-# 2. Tiếng Ba Na (bahnaric) -> Tự động lưu Best Model & dọn dẹp checkpoint
-# 3. Tiếng Tày (tay) -> Tự động lưu Best Model & dọn dẹp checkpoint
+# 1. Tự động dọn dẹp các checkpoint TSSA cũ
+# 2. Tiếng Ê Đê (rhade) -> Tự động lưu Best Model & Đánh giá
+# 3. Tiếng Ba Na (bahnaric) -> Tự động lưu Best Model & Đánh giá
+# 4. Tiếng Tày (tay) -> Tự động lưu Best Model & Đánh giá
 # ==============================================================================
 
 set -e
 
 echo "========================================================================"
-echo "    🚀 BẮT ĐẦU CHẠY HUẤN LUYỆN TSSA CHO CẢ 3 NGÔN NGỮ (5 EPOCHS)"
+echo "    🚀 BẮT ĐẦU CHẠY HUẤN LUYỆN TSSA MỚI CHO CẢ 3 NGÔN NGỮ (5 EPOCHS)"
 echo "========================================================================"
+
+echo "[*] Đang dọn dẹp các checkpoint TSSA cũ..."
+rm -rf checkpoints/tssa_rhade checkpoints/tssa_bahnaric checkpoints/tssa_tay
 
 echo ""
 echo ">>> [1/3] ĐANG CHẠY TSSA TRÊN TIẾNG Ê ĐÊ (rhade) ..."
@@ -31,5 +35,5 @@ echo ">>> [3/3] HOÀN TẤT TIẾNG TÀY!"
 
 echo ""
 echo "========================================================================"
-echo "    🏆 CHÚC MỪNG! ĐÃ HOÀN TẤT TOÀN BỘ 3 NGÔN NGỮ VỚI PHƯƠNG PHÁP TSSA!"
+echo "    🏆 CHÚC MỪNG! ĐÃ HOÀN TẤT TOÀN BỘ 3 NGÔN NGỮ VỚI PHƯƠNG PHÁP TSSA MỚI!"
 echo "========================================================================"

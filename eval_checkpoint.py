@@ -76,18 +76,31 @@ def main():
     print(f"[*] Bắt đầu đánh giá mô hình: {args.checkpoint_dir} trên {args.lang}")
     print("=" * 60)
 
-    # 1. Nạp Tokenizer và Model
-    tokenizer = AutoTokenizer.from_pretrained(args.checkpoint_dir)
-    model = TSSASeq2SeqModel(model_name_or_path=args.checkpoint_dir).to(device)
+    # 1. Tìm đường dẫn checkpoint chính xác
+    ckpt_path = args.checkpoint_dir
+    if not os.path.exists(os.path.join(ckpt_path, "config.json")) and os.path.exists(ckpt_path):
+        subfolders = [os.path.join(ckpt_path, d) for d in os.listdir(ckpt_path) if d.startswith("checkpoint-") and os.path.isdir(os.path.join(ckpt_path, d))]
+        if len(subfolders) > 0:
+            subfolders.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+            ckpt_path = subfolders[0]
+            print(f"[*] Đã tự động chọn checkpoint tốt nhất: {ckpt_path}")
 
-    # 2. Chuẩn bị DataLoader Test
+    # 2. Nạp Tokenizer và Model
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(ckpt_path)
+    except Exception:
+        tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-syllable")
+        
+    model = TSSASeq2SeqModel(model_name_or_path=ckpt_path).to(device)
+
+    # 3. Chuẩn bị DataLoader Test
     test_csv = os.path.join(args.data_dir, args.lang, "test.csv")
     test_dataset = TSSADataset(test_csv, tokenizer, max_tgt_len=args.max_target_length)
     from torch.utils.data import DataLoader
     from data.dataloader import tssa_collate_fn
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=tssa_collate_fn)
 
-    # 3. Main Benchmark Eval
+    # 4. Main Benchmark Eval
     print("\n--- 1. Đánh Giá Điểm Chuẩn (Main Benchmark) ---")
     base_results = evaluator.evaluate_model(
         model, tokenizer, test_loader,

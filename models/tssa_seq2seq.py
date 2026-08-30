@@ -2,7 +2,7 @@
 TSSA Seq2Seq Model Architecture
 Integrates Pretrained BARTpho Seq2Seq backbone with Head-Wise Router
 and Online Frozen Teacher Semantic Anchoring.
-Fully delegates all generation, encoder/decoder, and config methods to the inner backbone.
+Fully delegates all generation, encoder/decoder, and HF Trainer serialization methods.
 """
 
 import torch
@@ -12,6 +12,11 @@ from transformers import AutoModelForSeq2SeqLM
 from .head_router import HeadWiseRouter
 
 class TSSASeq2SeqModel(nn.Module):
+    # Hugging Face Trainer serialization attributes
+    _keys_to_ignore_on_save = None
+    _keys_to_ignore_on_load_missing = None
+    _keys_to_ignore_on_load_unexpected = None
+
     def __init__(self, model_name_or_path: str = "vinai/bartpho-syllable", use_route: bool = True,
                  d_model: int = None, n_heads: int = None, n_decoder_layers: int = None):
         super().__init__()
@@ -155,6 +160,6 @@ class TSSASeq2SeqModel(nn.Module):
         try:
             return super().__getattr__(name)
         except AttributeError:
-            if "model" in self.__dict__:
+            if hasattr(self, "model") and hasattr(self.model, name):
                 return getattr(self.model, name)
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")

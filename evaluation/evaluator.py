@@ -70,13 +70,12 @@ class TranslationEvaluator:
         """
         Computes SacreBLEU, chrF++, METEOR, and COMET from text lists.
         """
-        # 1. SacreBLEU (với Exponential smoothing chuẩn để xử lý cả câu ngắn và câu dài)
-        ref_lists = [[r] for r in references]
-        bleu_res = sacrebleu.corpus_bleu(predictions, ref_lists, smooth_method="exp")
+        # 1. SacreBLEU (Chuẩn định dạng: [references] là danh sách các luồng tham chiếu)
+        bleu_res = sacrebleu.corpus_bleu(predictions, [references], smooth_method="exp")
         bleu_score = bleu_res.score
 
         # 2. chrF++
-        chrf_res = sacrebleu.corpus_chrf(predictions, ref_lists, word_order=2)
+        chrf_res = sacrebleu.corpus_chrf(predictions, [references], word_order=2)
         chrf_score = chrf_res.score
 
         # 3. METEOR calculation

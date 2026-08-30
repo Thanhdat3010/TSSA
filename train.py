@@ -154,10 +154,8 @@ def main():
             preds = preds[0]
         preds = np.where(preds != -100, preds, tokenizer.pad_token_id)
         labels = np.where(labels != -100, labels, tokenizer.pad_token_id)
-        decoded_preds = tokenizer.batch_decode(preds, skip_special_tokens=True)
-        decoded_labels = tokenizer.batch_decode(labels, skip_special_tokens=True)
-        decoded_preds = [p.strip() for p in decoded_preds]
-        decoded_labels = [[l.strip()] for l in decoded_labels]
+        decoded_preds = [p.strip() for p in tokenizer.batch_decode(preds, skip_special_tokens=True)]
+        decoded_labels = [[l.strip() for l in tokenizer.batch_decode(labels, skip_special_tokens=True)]]
         bleu_res = sacrebleu.corpus_bleu(decoded_preds, decoded_labels, smooth_method="exp")
         return {"sacrebleu": round(bleu_res.score, 2)}
 

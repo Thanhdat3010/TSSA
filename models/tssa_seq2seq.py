@@ -2,6 +2,7 @@
 TSSA Seq2Seq Model Architecture
 Integrates Pretrained BARTpho Seq2Seq backbone with Head-Wise Router
 and Online Frozen Teacher Semantic Anchoring.
+Fully delegates all generation, encoder/decoder, and config methods to the inner backbone.
 """
 
 import torch
@@ -104,6 +105,22 @@ class TSSASeq2SeqModel(nn.Module):
             "align_matrix": align_matrix
         }
 
+    def generate(self, *args, **kwargs):
+        """Delegates sequence generation directly to the inner Seq2Seq model."""
+        return self.model.generate(*args, **kwargs)
+
+    def get_encoder(self):
+        return self.model.get_encoder()
+
+    def get_decoder(self):
+        return self.model.get_decoder()
+
+    def resize_token_embeddings(self, *args, **kwargs):
+        return self.model.resize_token_embeddings(*args, **kwargs)
+
+    def save_pretrained(self, save_directory, **kwargs):
+        return self.model.save_pretrained(save_directory, **kwargs)
+
     @property
     def config(self):
         return self.model.config
@@ -121,6 +138,10 @@ class TSSASeq2SeqModel(nn.Module):
         return self.model.device
 
     @property
+    def main_input_name(self):
+        return getattr(self.model, "main_input_name", "input_ids")
+
+    @property
     def warnings_issued(self):
         return getattr(self.model, "warnings_issued", {})
 
@@ -129,3 +150,11 @@ class TSSASeq2SeqModel(nn.Module):
 
     def prepare_inputs_for_generation(self, *args, **kwargs):
         return self.model.prepare_inputs_for_generation(*args, **kwargs)
+
+    def __getattr__(self, name: str):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            if "model" in self.__dict__:
+                return getattr(self.model, name)
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")

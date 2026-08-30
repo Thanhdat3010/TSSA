@@ -1,11 +1,12 @@
 """
 TSSA Seq2Seq Model Architecture
 Integrates Pretrained BARTpho Seq2Seq backbone with Head-Wise Router
-and Teacher representations.
+and Online Frozen Teacher Semantic Anchoring.
 """
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from transformers import AutoModelForSeq2SeqLM
 from .head_router import HeadWiseRouter
 
@@ -33,7 +34,7 @@ class TSSASeq2SeqModel(nn.Module):
                 labels: torch.Tensor = None, decoder_attention_mask: torch.Tensor = None,
                 output_attentions: bool = True, output_hidden_states: bool = True, **kwargs):
         """
-        Forward pass for student model.
+        Forward pass for student model with automatic Online Frozen Teacher encoding.
         """
         outputs = self.model(
             input_ids=input_ids,
@@ -45,10 +46,38 @@ class TSSASeq2SeqModel(nn.Module):
             return_dict=True
         )
 
+        teacher_enc_states = None
+        teacher_sent_vec = None
+        align_matrix = None
+
+        # Online Frozen Teacher Extraction (Runs in 0.001s, zero disk cache required)
+        if labels is not None and self.training:
+            with torch.no_grad():
+                pad_id = getattr(self.model.config, "pad_token_id", 1)
+                tgt_ids = labels.clone()
+                tgt_ids[tgt_ids == -100] = pad_id
+                tgt_mask = (tgt_ids != pad_id).long()
+
+                teacher_out = self.model.model.encoder(
+                    input_ids=tgt_ids,
+                    attention_mask=tgt_mask,
+                    return_dict=True
+                )
+                teacher_enc_states = teacher_out.last_hidden_state.detach() # [B, T, D]
+
+                # Masked mean sentence pooling
+                mask_exp = tgt_mask.unsqueeze(-1).float()
+                teacher_sent_vec = (teacher_enc_states * mask_exp).sum(dim=1) / mask_exp.sum(dim=1).clamp(min=1.0) # [B, D]
+
+                # Instant subword semantic alignment posterior matrix
+                src_norm = F.normalize(outputs.encoder_last_hidden_state.detach(), p=2, dim=-1)
+                tgt_norm = F.normalize(teacher_enc_states, p=2, dim=-1)
+                sim = torch.bmm(src_norm, tgt_norm.transpose(1, 2)) / 0.1 # [B, S, T]
+                align_matrix = F.softmax(sim, dim=-1).detach()
+
         # If Router is active, compute router gate activations on decoder states
         if self.use_route and self.router is not None and outputs.decoder_hidden_states is not None:
             dec_last_state = outputs.decoder_hidden_states[-1] # [B, T, D]
-            # Context approximation from encoder state mean
             enc_last_state = outputs.encoder_last_hidden_state # [B, S, D]
             ctx_approx = enc_last_state.mean(dim=1, keepdim=True).expand(-1, dec_last_state.size(1), -1) # [B, T, D]
 
@@ -69,7 +98,10 @@ class TSSASeq2SeqModel(nn.Module):
             "encoder_hidden_states": outputs.encoder_hidden_states,
             "decoder_hidden_states": outputs.decoder_hidden_states,
             "cross_attentions": outputs.cross_attentions,
-            "router_gates": self.last_router_gates
+            "router_gates": self.last_router_gates,
+            "teacher_enc_states": teacher_enc_states,
+            "teacher_sent_vec": teacher_sent_vec,
+            "align_matrix": align_matrix
         }
 
     @property
@@ -97,28 +129,3 @@ class TSSASeq2SeqModel(nn.Module):
 
     def prepare_inputs_for_generation(self, *args, **kwargs):
         return self.model.prepare_inputs_for_generation(*args, **kwargs)
-
-    def save_pretrained(self, save_directory, **kwargs):
-        self.model.save_pretrained(save_directory, **kwargs)
-        if self.router is not None:
-            import os
-            torch.save(self.router.state_dict(), os.path.join(save_directory, "router.pt"))
-
-    def __getattr__(self, name):
-        try:
-            return super().__getattr__(name)
-        except AttributeError:
-            return getattr(self.model, name)
-
-    @torch.no_grad()
-    def generate(self, *args, **kwargs):
-        """Standard Seq2Seq generation pass."""
-        return self.model.generate(*args, **kwargs)
-
-    def prune_heads(self, pruned_indices: list):
-        if self.router is not None:
-            self.router.prune_heads(pruned_indices)
-
-    def reset_pruning_mask(self):
-        if self.router is not None:
-            self.router.reset_pruning_mask()

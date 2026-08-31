@@ -50,7 +50,6 @@ class AlignToDistillLoss(nn.Module):
                 s_attn = torch.clamp(student_attns[l], min=1e-8)
                 t_attn = torch.clamp(teacher_attns[l], min=1e-8)
                 
-                # Match head and sequence dimensions if differing
                 H_min = min(s_attn.size(1), t_attn.size(1))
                 T_min = min(s_attn.size(2), t_attn.size(2))
                 S_min = min(s_attn.size(3), t_attn.size(3))
@@ -58,7 +57,6 @@ class AlignToDistillLoss(nn.Module):
                 s_cut = s_attn[:, :H_min, :T_min, :S_min]
                 t_cut = t_attn[:, :H_min, :T_min, :S_min]
                 
-                # Normalize distributions over source tokens
                 s_prob = s_cut / s_cut.sum(dim=-1, keepdim=True).clamp(min=1e-8)
                 t_prob = t_cut / t_cut.sum(dim=-1, keepdim=True).clamp(min=1e-8)
                 

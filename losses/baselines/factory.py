@@ -16,14 +16,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Any
 
-from .a2d_loss import AlignToDistillLoss
-from .structural_supervision_loss import StructuralSupervisionLoss
-from .shift_aet_loss import ShiftAETLoss
-from .cross_init_loss import CrossInitLoss
-from .awesome_align_loss import AwesomeAlignLoss
-from .dm_bli_loss import DMBLISubspaceLoss
-from .cl_lsa_loss import CrossLingualInfoNCELoss
-from .dpo_align_loss import AlignmentDPOLoss
+from .align_to_distill import AlignToDistillLoss
+from .structural_supervision import StructuralSupervisionLoss
+from .shift_aet import ShiftAETLoss
+from .cross_init import CrossInitLoss
+from .awesome_align import AwesomeAlignLoss
+from .dm_bli import DMBLISubspaceLoss
+from .cl_lsa import CrossLingualInfoNCELoss
+from .dpo_align import AlignmentDPOLoss
 
 class UnifiedAlignmentLossFactory(nn.Module):
     """
@@ -49,7 +49,7 @@ class UnifiedAlignmentLossFactory(nn.Module):
         elif self.method_name == "shift_aet":
             self.loss_fn = ShiftAETLoss(
                 hidden_dim=self.config.get("hidden_dim", 1024),
-                alignment_dim=self.config.get("align_dim", 128)
+                n_heads=self.config.get("n_heads", 16)
             )
         elif self.method_name == "cross_init":
             self.loss_fn = CrossInitLoss(
@@ -135,7 +135,7 @@ class UnifiedAlignmentLossFactory(nn.Module):
 
         elif self.method_name == "dpo_align":
             if src_h is not None and tgt_h is not None:
-                align_loss = F.mse_loss(src_h.mean(dim=1), tgt_h.mean(dim=1)) * self.config.get("beta", 0.1)
+                align_loss = self.loss_fn(src_h, tgt_h)
 
         total_loss = loss_mt + align_loss
         return {"loss_total": total_loss, "loss_mt": loss_mt.item(), "loss_align": align_loss.item()}

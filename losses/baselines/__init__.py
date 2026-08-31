@@ -1,15 +1,24 @@
 """
-Unified Baseline Alignment Loss Functions (ACL/EMNLP/LREC/EACL Standards)
+Baseline Alignment Losses Module
+Exports all 8 modular alignment baselines organized into dedicated folders:
+1. align_to_distill
+2. structural_supervision
+3. shift_aet
+4. cross_init
+5. awesome_align
+6. dm_bli
+7. cl_lsa
+8. dpo_align
 """
 
-from .a2d_loss import AlignToDistillLoss
-from .structural_supervision_loss import StructuralSupervisionLoss
-from .shift_aet_loss import ShiftAETLoss
-from .cross_init_loss import CrossInitLoss
-from .awesome_align_loss import AwesomeAlignLoss
-from .dm_bli_loss import DMBLISubspaceLoss
-from .cl_lsa_loss import CrossLingualInfoNCELoss
-from .dpo_align_loss import AlignmentDPOLoss
+from .align_to_distill import AlignToDistillLoss
+from .structural_supervision import StructuralSupervisionLoss
+from .shift_aet import ShiftAETLoss
+from .cross_init import CrossInitLoss
+from .awesome_align import AwesomeAlignLoss
+from .dm_bli import DMBLISubspaceLoss
+from .cl_lsa import CrossLingualInfoNCELoss
+from .dpo_align import AlignmentDPOLoss
 from .factory import UnifiedAlignmentLossFactory
 
 __all__ = [
@@ -21,5 +30,5 @@ __all__ = [
     "DMBLISubspaceLoss",
     "CrossLingualInfoNCELoss",
     "AlignmentDPOLoss",
-    "UnifiedAlignmentLossFactory",
+    "UnifiedAlignmentLossFactory"
 ]

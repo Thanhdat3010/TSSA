@@ -34,8 +34,6 @@ class ShiftAETLoss(nn.Module):
         Returns:
             Scalar alignment loss L_a (Eq. 6)
         """
-        # 1. Shift step: Take decoder states from step 1 onward (z_1, z_2, ..., z_T)
-        # Corresponding to input target tokens y_0, y_1, ..., y_{T-2}
         if decoder_hidden_states.size(1) > 1:
             shifted_dec_states = decoder_hidden_states[:, 1:, :] # [B, T-1, D]
         else:
@@ -46,8 +44,7 @@ class ShiftAETLoss(nn.Module):
         H = self.n_heads
         d_k = self.head_dim
 
-        # 2. Multi-Head Projections (Eq. 5)
-        # q: [B, H, T_shift, d_k], k: [B, H, S, d_k]
+        # Multi-Head Projections (Eq. 5)
         q = self.q_proj(shifted_dec_states).view(B, T_shift, H, d_k).transpose(1, 2)
         k = self.k_proj(encoder_hidden_states).view(B, S, H, d_k).transpose(1, 2)
 
@@ -58,7 +55,6 @@ class ShiftAETLoss(nn.Module):
         # Average across all N heads -> S_{i-1} [B, T_shift, S] (Eq. 5)
         S_matrix = attn_heads.mean(dim=1)
 
-        # 3. Format Reference Alignment Matrix A_hat^P [B, T_shift, S]
         if target_align_matrix.size(1) == S and target_align_matrix.size(2) != S:
             align_ref = target_align_matrix.transpose(1, 2) # [B, S, T] -> [B, T, S]
         else:
@@ -71,17 +67,15 @@ class ShiftAETLoss(nn.Module):
         A_cut = align_ref[:, :T_curr, :S_curr].float().detach()
 
         # Row-normalize A_hat^P for target tokens aligned to at least one source token (Footnote 2)
-        row_sum = A_cut.sum(dim=-1, keepdim=True) # [B, T_curr, 1]
+        row_sum = A_cut.sum(dim=-1, keepdim=True)
         has_align = (row_sum > 0).float()
         A_norm = (A_cut / row_sum.clamp(min=1.0)) * has_align
 
-        # 4. Supervised Cross-Entropy Alignment Loss L_a (Eq. 6)
-        # L_a = - (1/|y|) sum (A_hat^P * log S)
+        # Supervised Cross-Entropy Alignment Loss L_a (Eq. 6)
         log_S = torch.log(S_cut + self.eps)
-        loss_per_sent = - (A_norm * log_S).sum(dim=-1) # sum over source tokens: [B, T_curr]
+        loss_per_sent = - (A_norm * log_S).sum(dim=-1)
         
-        # Average over active target sequence length |y|
-        valid_targets = has_align.sum(dim=1).clamp(min=1.0) # [B, 1]
+        valid_targets = has_align.sum(dim=1).clamp(min=1.0)
         loss_a = (loss_per_sent.sum(dim=1, keepdim=True) / valid_targets).mean()
 
         return loss_a

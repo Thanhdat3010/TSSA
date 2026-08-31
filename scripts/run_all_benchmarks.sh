@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# UNIFIED MAIN BENCHMARK RUNNER SCRIPT (TSSA & BASELINES)
+# UNIFIED MAIN BENCHMARK RUNNER SCRIPT (TSSA 2.0 & ALL 8 ALIGNMENT BASELINES)
 # ==============================================================================
-# Tất cả các thí nghiệm đều chạy theo đúng chuẩn siêu tham số đồng nhất:
-# - NUM_EPOCHS = 10 (Early stopping patience = 3)
+# Unified training configuration across all methods & languages:
+# - NUM_EPOCHS = 5
 # - BATCH_SIZE = 16
 # - LEARNING_RATE = 2e-5
 # - WEIGHT_DECAY = 0.01
@@ -21,10 +21,19 @@ MAX_LEN=256
 SEED=42
 
 LANGUAGES=("rhade" "tay" "bahnaric")
-MODELS=("bartpho_vanilla" "guided_attn" "joint_align" "awesome_align" "cl_lsa" "tssa")
+MODELS=(
+    "align_to_distill"
+    "structural_supervision"
+    "shift_aet"
+    "cross_init"
+    "awesome_align"
+    "dm_bli"
+    "cl_lsa"
+    "dpo_align"
+)
 
 echo "========================================================================"
-echo "    BẮT ĐẦU CHẠY TOÀN BỘ BENCHMARK CHÍNH (3 NGÔN NGỮ x 6 MÔ HÌNH)"
+echo "    BẮT ĐẦU CHẠY TOÀN BỘ 8 BASELINE BENCHMARK TRÊN 3 NGÔN NGỮ"
 echo "========================================================================"
 
 for LANG in "${LANGUAGES[@]}"; do
@@ -35,7 +44,7 @@ for LANG in "${LANGUAGES[@]}"; do
     
     for MODEL in "${MODELS[@]}"; do
         echo ""
-        echo ">>> [${LANG^^}] Đang chạy mô hình: ${MODEL} ..."
+        echo ">>> [${LANG^^}] Đang huấn luyện phương pháp: ${MODEL} ..."
         python train.py \
             --lang "${LANG}" \
             --model_type "${MODEL}" \
@@ -53,5 +62,5 @@ done
 
 echo ""
 echo "========================================================================"
-echo "    CHÚC MỪNG! TOÀN BỘ THÍ NGHIỆM MAIN BENCHMARK ĐÃ HOÀN TẤT!"
+echo "    CHÚC MỪNG! TOÀN BỘ 8 BASELINE BENCHMARK ĐÃ HOÀN TẤT THÀNH CÔNG!"
 echo "========================================================================"

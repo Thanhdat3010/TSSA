@@ -23,7 +23,11 @@ class TSSASeq2SeqModel(nn.Module):
     def __init__(self, model_name_or_path: str = "vinai/bartpho-syllable", use_route: bool = True,
                  d_model: int = None, n_heads: int = None, n_decoder_layers: int = None):
         super().__init__()
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, use_safetensors=True)
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name_or_path,
+            use_safetensors=True,
+            attn_implementation="eager"
+        )
         self.use_route = use_route
         
         # Dynamically read architectural dimensions from backbone model config

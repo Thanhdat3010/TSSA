@@ -62,6 +62,8 @@ class CrossAttentionAnchorLoss(nn.Module):
         layer_losses = []
         for l_idx in selected_layers:
             attn_layer = cross_attentions[l_idx] # [B, H, T_attn, S_attn]
+            if attn_layer is None:
+                continue
             
             # Slice to match dimensions if needed
             T_curr = min(attn_layer.size(2), T)

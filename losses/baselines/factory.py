@@ -37,6 +37,7 @@ class UnifiedAlignmentLossFactory(nn.Module):
 
         if self.method_name == "align_to_distill":
             self.loss_fn = AlignToDistillLoss(
+                num_heads=self.config.get("n_heads", 16),
                 alpha=self.config.get("alpha", 0.5),
                 beta=self.config.get("beta", 1.0),
                 decay=self.config.get("decay", 0.9),
@@ -54,7 +55,7 @@ class UnifiedAlignmentLossFactory(nn.Module):
         elif self.method_name == "cross_init":
             self.loss_fn = CrossInitLoss(
                 embed_dim=self.config.get("embed_dim", 1024),
-                lambda_orth=self.config.get("lambda_orth", 0.01)
+                temperature=self.config.get("temperature", 0.1)
             )
         elif self.method_name == "awesome_align":
             self.loss_fn = AwesomeAlignLoss(
@@ -65,6 +66,7 @@ class UnifiedAlignmentLossFactory(nn.Module):
             self.loss_fn = DMBLISubspaceLoss(
                 hidden_dim=self.config.get("hidden_dim", 1024),
                 subspace_dim=self.config.get("subspace_dim", 64),
+                temperature=self.config.get("temperature", 0.1),
                 mu=self.config.get("mu", 0.5)
             )
         elif self.method_name == "cl_lsa":
@@ -90,15 +92,24 @@ class UnifiedAlignmentLossFactory(nn.Module):
 
         align_loss = torch.tensor(0.0, device=loss_mt.device)
 
-        # Robust extraction from model_outputs or batch
+        # Safe tensor extraction avoiding bool(Tensor) evaluations
         src_h = model_outputs.get("encoder_last_hidden_state")
-        tgt_h = model_outputs.get("teacher_enc_states") or batch.get("teacher_enc_states")
-        align_matrix = model_outputs.get("align_matrix_ts") or batch.get("align_matrix")
+        
+        tgt_h = model_outputs.get("teacher_enc_states")
+        if tgt_h is None:
+            tgt_h = batch.get("teacher_enc_states")
+
+        align_matrix = model_outputs.get("align_matrix_ts")
+        if align_matrix is None:
+            align_matrix = batch.get("align_matrix")
+
         cross_attns = model_outputs.get("cross_attentions")
 
         if self.method_name == "align_to_distill":
             student_logits = model_outputs.get("logits")
-            teacher_logits = model_outputs.get("teacher_logits") or batch.get("teacher_logits")
+            teacher_logits = model_outputs.get("teacher_logits")
+            if teacher_logits is None:
+                teacher_logits = batch.get("teacher_logits")
             student_attns = cross_attns
             teacher_attns = batch.get("teacher_cross_attentions")
             targets = batch.get("labels")

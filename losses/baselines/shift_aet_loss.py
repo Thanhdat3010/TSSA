@@ -1,11 +1,11 @@
 """
 Shift-AET: Accurate Word Alignment Induced from Transformers (Chen et al., EMNLP 2020)
-Aligns source tokens with shifted decoder states s_{t+1} (after target word y_t has entered the decoder).
+Word alignment induction method using an Alignment-Enhanced Transformer (AET).
 
-Formulation from Section 3 of Chen et al. (EMNLP 2020):
-- Shift step: Decoder state s_{t+1} at step t+1 captures target word y_t context
-- Alignment score: alpha_{ts} = Sigmoid( (W_d s_{t+1})^T (W_e h_s^E) / sqrt(d_a) )
-- Supervised Loss: Binary Cross-Entropy against alignment prior matrix A
+Exact formulation from Section 3.2, Eq. (5) & Eq. (6) and Figure 2:
+- Inputs: Decoder state z_i^{l_b} at step i (corresponding to target token y_{i-1}) and Encoder outputs h
+- Eq. (5): S_{i-1} = (1/N) * sum_{n=1}^N Softmax( (z_i G_n^Q) (h G_n^K)^T / sqrt(d_k) )
+- Eq. (6): L_a = - (1/|y|) * sum_{i=1}^{|y|} sum_{j=1}^{|x|} (A_hat_{i,j}^P * log S_{i,j})
 """
 
 import torch
@@ -13,57 +13,75 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ShiftAETLoss(nn.Module):
-    def __init__(self, hidden_dim: int = 1024, alignment_dim: int = 128):
+    def __init__(self, hidden_dim: int = 1024, n_heads: int = 16, eps: float = 1e-8):
         super().__init__()
-        self.q_proj = nn.Linear(hidden_dim, alignment_dim)
-        self.k_proj = nn.Linear(hidden_dim, alignment_dim)
-        self.bce_loss = nn.BCELoss(reduction='none')
+        self.hidden_dim = hidden_dim
+        self.n_heads = n_heads
+        self.head_dim = hidden_dim // n_heads # d_k = 64
+        self.eps = eps
+
+        # Multi-Head Key and Query Projections (G_n^Q, G_n^K)
+        self.q_proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
+        self.k_proj = nn.Linear(hidden_dim, hidden_dim, bias=False)
 
     def forward(self, decoder_hidden_states: torch.Tensor, encoder_hidden_states: torch.Tensor,
                 target_align_matrix: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
         Args:
-            decoder_hidden_states: [B, T, D] Student decoder states
-            encoder_hidden_states: [B, S, D] Student encoder states
-            target_align_matrix: [B, T, S] or [B, S, T] Target-Source alignment matrix
-            mask: Optional [B, T-1, S] sequence mask
+            decoder_hidden_states: [B, T, D] Decoder hidden states z_i
+            encoder_hidden_states: [B, S, D] Encoder hidden states h
+            target_align_matrix: [B, T, S] or [B, S, T] Reference alignment matrix A
         Returns:
-            Scalar Shift-AET alignment loss
+            Scalar alignment loss L_a (Eq. 6)
         """
-        # 1. Shift step: take decoder states s_{t+1} (step 1 onward) [B, T-1, D]
+        # 1. Shift step: Take decoder states from step 1 onward (z_1, z_2, ..., z_T)
+        # Corresponding to input target tokens y_0, y_1, ..., y_{T-2}
         if decoder_hidden_states.size(1) > 1:
-            shifted_dec_states = decoder_hidden_states[:, 1:, :] # s_{1}, s_{2}, ..., s_{T-1}
+            shifted_dec_states = decoder_hidden_states[:, 1:, :] # [B, T-1, D]
         else:
             shifted_dec_states = decoder_hidden_states
 
-        # 2. Linear alignment projections into d_a = 128
-        queries = self.q_proj(shifted_dec_states) # [B, T-1, d_a]
-        keys = self.k_proj(encoder_hidden_states)  # [B, S, d_a]
+        B, T_shift, D = shifted_dec_states.shape
+        S = encoder_hidden_states.size(1)
+        H = self.n_heads
+        d_k = self.head_dim
 
-        # 3. Scaled dot-product alignment probabilities alpha_{ts}
-        scores = torch.bmm(queries, keys.transpose(1, 2)) / (queries.size(-1) ** 0.5) # [B, T-1, S]
-        align_probs = torch.sigmoid(scores) # [B, T-1, S]
+        # 2. Multi-Head Projections (Eq. 5)
+        # q: [B, H, T_shift, d_k], k: [B, H, S, d_k]
+        q = self.q_proj(shifted_dec_states).view(B, T_shift, H, d_k).transpose(1, 2)
+        k = self.k_proj(encoder_hidden_states).view(B, S, H, d_k).transpose(1, 2)
 
-        # 4. Dimension alignment for target matrix [B, T, S]
-        if target_align_matrix.size(1) == align_probs.size(2) and target_align_matrix.size(2) != align_probs.size(2):
-            align_target = target_align_matrix.transpose(1, 2) # [B, S, T] -> [B, T, S]
+        # Scaled dot product across source tokens [B, H, T_shift, S]
+        scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+        attn_heads = F.softmax(scores, dim=-1) # Softmax along source dimension
+
+        # Average across all N heads -> S_{i-1} [B, T_shift, S] (Eq. 5)
+        S_matrix = attn_heads.mean(dim=1)
+
+        # 3. Format Reference Alignment Matrix A_hat^P [B, T_shift, S]
+        if target_align_matrix.size(1) == S and target_align_matrix.size(2) != S:
+            align_ref = target_align_matrix.transpose(1, 2) # [B, S, T] -> [B, T, S]
         else:
-            align_target = target_align_matrix # [B, T, S]
+            align_ref = target_align_matrix
 
-        # Slicing to match [B, T-1, S]
-        T_curr = min(align_probs.size(1), align_target.size(1))
-        S_curr = min(align_probs.size(2), align_target.size(2))
+        T_curr = min(T_shift, align_ref.size(1))
+        S_curr = min(S, align_ref.size(2))
 
-        probs_cut = align_probs[:, :T_curr, :S_curr]
-        target_cut = align_target[:, :T_curr, :S_curr].float().detach()
+        S_cut = S_matrix[:, :T_curr, :S_curr] # [B, T_curr, S_curr]
+        A_cut = align_ref[:, :T_curr, :S_curr].float().detach()
 
-        # 5. Supervised BCE Alignment Loss
-        loss = self.bce_loss(probs_cut, target_cut)
+        # Row-normalize A_hat^P for target tokens aligned to at least one source token (Footnote 2)
+        row_sum = A_cut.sum(dim=-1, keepdim=True) # [B, T_curr, 1]
+        has_align = (row_sum > 0).float()
+        A_norm = (A_cut / row_sum.clamp(min=1.0)) * has_align
 
-        if mask is not None:
-            mask_cut = mask[:, :T_curr, :S_curr].float()
-            loss = (loss * mask_cut).sum() / (mask_cut.sum() + 1e-8)
-        else:
-            loss = loss.mean()
+        # 4. Supervised Cross-Entropy Alignment Loss L_a (Eq. 6)
+        # L_a = - (1/|y|) sum (A_hat^P * log S)
+        log_S = torch.log(S_cut + self.eps)
+        loss_per_sent = - (A_norm * log_S).sum(dim=-1) # sum over source tokens: [B, T_curr]
+        
+        # Average over active target sequence length |y|
+        valid_targets = has_align.sum(dim=1).clamp(min=1.0) # [B, 1]
+        loss_a = (loss_per_sent.sum(dim=1, keepdim=True) / valid_targets).mean()
 
-        return loss
+        return loss_a

@@ -1,9 +1,9 @@
 """
 TSSA 2.0 Seq2Seq Model Architecture
 Integrates Pretrained BARTpho Seq2Seq backbone with:
-1. Target-Guided Cross-Attention Anchoring
+1. Target-Guided Cross-Attention Anchoring (direct exact projection)
 2. Residual Cross-Lingual Semantic Projector
-3. Dynamic Head-Wise Router
+3. Dynamic Head-Wise Attention Router
 4. Online Frozen Teacher Semantic Anchoring
 """
 
@@ -23,11 +23,8 @@ class TSSASeq2SeqModel(nn.Module):
     def __init__(self, model_name_or_path: str = "vinai/bartpho-syllable", use_route: bool = True,
                  d_model: int = None, n_heads: int = None, n_decoder_layers: int = None):
         super().__init__()
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(
-            model_name_or_path,
-            use_safetensors=True,
-            attn_implementation="eager"
-        )
+        # Standard fast & robust backbone loading
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, use_safetensors=True)
         self.use_route = use_route
         
         # Dynamically read architectural dimensions from backbone model config
@@ -53,13 +50,11 @@ class TSSASeq2SeqModel(nn.Module):
         """
         Forward pass for student model with TSSA 2.0 Cross-Attention & Projector components.
         """
-        # Always output cross attentions during training for TSSA 2.0
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             labels=labels,
             decoder_attention_mask=decoder_attention_mask,
-            output_attentions=True,
             output_hidden_states=True,
             return_dict=True
         )
@@ -68,6 +63,7 @@ class TSSASeq2SeqModel(nn.Module):
         teacher_sent_vec = None
         align_matrix_ts = None
         student_projected_sent = None
+        cross_attentions_tuple = None
 
         # 1. Source Sentence Pooling & Residual Projection
         if outputs.encoder_last_hidden_state is not None:
@@ -100,7 +96,29 @@ class TSSASeq2SeqModel(nn.Module):
                 sim_ts = torch.bmm(tgt_norm, src_norm.transpose(1, 2)) / 0.5 # [B, T, S]
                 align_matrix_ts = F.softmax(sim_ts, dim=-1).detach() # [B, T, S]
 
-        # 3. Dynamic Head-Wise Router Gate Activations
+        # 3. Direct Exact Cross-Attention Computation for Top Decoder Layers
+        if self.training and outputs.decoder_hidden_states is not None and outputs.encoder_last_hidden_state is not None:
+            B, T, D = outputs.decoder_hidden_states[-1].shape
+            S = outputs.encoder_last_hidden_state.size(1)
+            H = self.n_heads
+            d_k = D // H
+            enc_state = outputs.encoder_last_hidden_state # [B, S, D]
+
+            num_layers = min(self.n_decoder_layers, len(outputs.decoder_hidden_states) - 1)
+            top_3_start = max(0, num_layers - 3)
+            cross_attn_list = []
+            for l in range(top_3_start, num_layers):
+                dec_state = outputs.decoder_hidden_states[l] # [B, T, D]
+                dec_layer = self.model.model.decoder.layers[l]
+
+                q = dec_layer.encoder_attn.q_proj(dec_state).view(B, T, H, d_k).transpose(1, 2) # [B, H, T, d_k]
+                k = dec_layer.encoder_attn.k_proj(enc_state).view(B, S, H, d_k).transpose(1, 2) # [B, H, S, d_k]
+                scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5) # [B, H, T, S]
+                attn_map = F.softmax(scores, dim=-1) # [B, H, T, S]
+                cross_attn_list.append(attn_map)
+            cross_attentions_tuple = tuple(cross_attn_list)
+
+        # 4. Dynamic Head-Wise Router Gate Activations
         if self.use_route and self.router is not None and outputs.decoder_hidden_states is not None:
             dec_last_state = outputs.decoder_hidden_states[-1] # [B, T, D]
             enc_last_state = outputs.encoder_last_hidden_state # [B, S, D]
@@ -122,7 +140,7 @@ class TSSASeq2SeqModel(nn.Module):
             "encoder_last_hidden_state": outputs.encoder_last_hidden_state,
             "encoder_hidden_states": outputs.encoder_hidden_states,
             "decoder_hidden_states": outputs.decoder_hidden_states,
-            "cross_attentions": outputs.cross_attentions,
+            "cross_attentions": cross_attentions_tuple,
             "router_gates": self.last_router_gates,
             "student_projected_sent": student_projected_sent,
             "teacher_enc_states": teacher_enc_states,

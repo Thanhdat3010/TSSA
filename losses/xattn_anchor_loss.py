@@ -70,9 +70,9 @@ class CrossAttentionAnchorLoss(nn.Module):
             S_curr = min(attn_layer.size(3), S)
 
             attn_cut = attn_layer[:, :, :T_curr, :S_curr]
-            target_cut = align_target[:, :, :T_curr, :S_curr]
-            mask_cut = mask_expanded[:, :, :T_curr, :S_curr]
-            conf_cut = conf_weights[:, :, :T_curr, :]
+            target_cut = align_target[:, :, :T_curr, :S_curr].expand_as(attn_cut)
+            mask_cut = mask_expanded[:, :, :T_curr, :S_curr].expand_as(attn_cut)
+            conf_cut = conf_weights[:, :, :T_curr, :].expand_as(attn_cut)
 
             # SmoothL1 distance between Cross-Attention and Alignment Prior
             diff = F.smooth_l1_loss(attn_cut, target_cut, reduction="none") # [B, H, T, S]

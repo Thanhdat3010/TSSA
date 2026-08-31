@@ -104,22 +104,25 @@ python train.py --lang bahnaric --model_type tssa --num_epochs 10 --batch_size 1
 ### 1. Tiếng Ê Đê (`rhade` $\rightarrow$ `vi`):
 | Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | **23.41** | **39.33** | **33.91** | **0.6556** | **✅ Đã hoàn tất** |
-| `guided_attn` | -- | -- | -- | -- | Chờ chạy |
-| `joint_align` | -- | -- | -- | -- | Chờ chạy |
+| `bartpho_vanilla` (Mốc cơ sở) | 23.41 | 39.33 | 33.91 | 0.6556 | ✅ Đã hoàn tất |
+| `align_to_distill` | -- | -- | -- | -- | Chờ chạy |
+| `shift_aet` | -- | -- | -- | -- | Chờ chạy |
+| `cross_init` | -- | -- | -- | -- | Chờ chạy |
 | `awesome_align` | -- | -- | -- | -- | Chờ chạy |
+| `dm_bli` | -- | -- | -- | -- | Chờ chạy |
 | `cl_lsa` | -- | -- | -- | -- | Chờ chạy |
-| **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
+| `dpo_align` | -- | -- | -- | -- | Chờ chạy |
+| **`tssa` (TSSA 2.0 - Ours 🏆)** | **24.11** | **40.43** | **34.81** | **0.6634** | **🏆 Vượt đỉnh (+0.70 BLEU, +1.10 chrF++)** |
 
 ### 2. Tiếng Ba Na (`bahnaric` $\rightarrow$ `vi`):
 | Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | **9.63** | **23.47** | **18.15** | **0.5462** | **✅ Đã hoàn tất** |
-| **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
+| `bartpho_vanilla` (Mốc cơ sở) | 9.63 | 23.47 | 18.15 | 0.5462 | ✅ Đã hoàn tất |
+| **`tssa` (TSSA 2.0 - Ours 🏆)** | **9.66** | **23.89** | **18.46** | **0.5506** | **🏆 Tăng toàn diện 4/4 chỉ số** |
 
 ### 3. Tiếng Tày (`tay` $\rightarrow$ `vi`):
 | Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | **24.67** | **35.74** | **25.68** | **0.6530** | **✅ Đã hoàn tất** |
-| **`tssa` (Đề xuất của bạn)** | -- | -- | -- | -- | Chờ chạy |
+| `bartpho_vanilla` (Mốc cơ sở) | 24.67 | 35.74 | 25.68 | 0.6530 | ✅ Đã hoàn tất |
+| **`tssa` (TSSA 2.0 - Ours 🏆)** | **25.46** | **36.31** | **26.29** | **0.6552** | **🏆 Vượt đỉnh (+0.79 BLEU, +0.57 chrF++)** |
 

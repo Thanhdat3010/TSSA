@@ -64,60 +64,33 @@ Bảng so sánh chính được định dạng theo chuẩn bảng Markdown hi�
 | Nhóm Phương Pháp | Phương Pháp / Hệ Thống | Bài Báo Gốc | Kho Mã Nguồn (GitHub) | Ê Đê (15.1K)<br/>COMET / BLEU | Tày (20.6K)<br/>COMET / BLEU | Ba Na (51.9K)<br/>COMET / BLEU |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **1. Standard Baselines** | • Transformer Scratch | [Vaswani et al.](https://arxiv.org/abs/1706.03762) | [`fairseq`](https://github.com/facebookresearch/fairseq) | -- / -- | -- / -- | -- / -- |
-| | • `BARTpho` Fine-tuning | [Tran et al. (2021)](https://arxiv.org/abs/2109.09701) | [`VinAI/BARTpho`](https://github.com/VinAIResearch/BARTpho) | -- / -- | -- / -- | -- / -- |
+| | • `BARTpho` Fine-tuning | [Tran et al. (2021)](https://arxiv.org/abs/2109.09701) | [`VinAI/BARTpho`](https://github.com/VinAIResearch/BARTpho) | 0.6556 / 23.41 | 0.6530 / 24.67 | 0.5462 / 9.63 |
 | | • `BARTBahnar` *(Lab của bạn)* | [NAACL 2025](https://arxiv.org) | *Mã nguồn nội bộ* | -- / -- | -- / -- | -- / -- |
 | | • Forward Self-Training | [He et al. (EMNLP'20)](https://aclanthology.org/2020.emnlp-main.744/) | [`fairseq/self_train`](https://github.com/facebookresearch/fairseq) | -- / -- | -- / -- | -- / -- |
-| **2. Attention Alignment**<br>*(Ép trực tiếp Attention)* | • Guided Cross-Attention | [Chen et al. (ACL'16)](https://aclanthology.org/P16-1180/) | [`OpenNMT-py`](https://github.com/OpenNMT/OpenNMT-py) | -- / -- | -- / -- | -- / -- |
-| | • Joint-Align Transformer | [Garg et al. (EMNLP'19)](https://aclanthology.org/D19-1211/) | [`fairseq/joint_align`](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- / -- | -- / -- | -- / -- |
-| | • Shift-AET Align-NMT | [Zenkel et al. (ACL'20)](https://aclanthology.org/2020.acl-main.484/) | [`cuni/shift-aet`](https://github.com/tzenkel) | -- / -- | -- / -- | -- / -- |
-| **3. Embedding Alignment**<br>*(Nắn vector từ)* | • Linear Procrustes Mapping | [Conneau et al.](https://arxiv.org/abs/1710.04087) | [`facebook/MUSE`](https://github.com/facebookresearch/MUSE) | -- / -- | -- / -- | -- / -- |
-| | • AWESOME-align Loss | [Dou et al. (EACL'21)](https://aclanthology.org/2021.eacl-main.59/) | [`neulab/awesome-align`](https://github.com/neulab/awesome-align) | -- / -- | -- / -- | -- / -- |
-| | • DM-BLI Subspace Align | [ACL 2024](https://aclanthology.org) | [`DM-BLI`](https://github.com) | -- / -- | -- / -- | -- / -- |
-| **4. Contrastive Alignment**<br>*(Học tương phản)* | • Cross-Lingual InfoNCE (CL-LSA)| [ACL 2024](https://aclanthology.org) | [`CL-LSA`](https://github.com) | -- / -- | -- / -- | -- / -- |
+| **2. Attention Alignment**<br>*(Ép trực tiếp Attention)* | • Align-to-Distill| [Jin et al., 2024](https://aclanthology.org/2024.lrec-main.64/) | [`Align-to-Distill`](https://github.com/ncsoft/Align-to-Distill) | -- / -- | -- / -- | -- / -- |
+| | • Structural Supervision for Word Alignment and Machine Translation | [Li et al.](https://aclanthology.org/2022.findings-acl.322/) | | -- / -- | -- / -- | -- / -- |
+| | • Shift-AET Align-NMT | [Yun Chen et al.](https://aclanthology.org/2020.emnlp-main.42.pdf) | [`cuni/shift-aet`](https://github.com/sufe-nlp/transformer-alignment) | -- / -- | -- / -- | -- / -- |
+| **3. Embedding Alignment**<br>*(Nắn vector từ)* | • CrossInit | [Ai & Huang](https://aclanthology.org/2024.findings-acl.358/) | [`CrossInit`](https://github.com/baridxiai/crossInit_tria) | -- / -- | -- / -- | -- / -- |
+| | • AWESOME-align Loss | [Dou et al. (EACL'21)](https://aclanthology.org/2021.eacl-main.181.pdf) | [`neulab/awesome-align`](https://github.com/neulab/awesome-align) | -- / -- | -- / -- | -- / -- |
+| | • DM-BLI Subspace Align | [ACL 2024](https://aclanthology.org/2024.acl-long.112.pdf) | [`DM-BLI`](https://github.com/huling-2/DM-BLI/tree/master) | -- / -- | -- / -- | -- / -- |
+| **4. Contrastive Alignment**<br>*(Học tương phản)* | • Cross-Lingual InfoNCE (CL-LSA)| [ArXiv](https://arxiv.org/abs/1807.03748) | [`CL-LSA`](https://github.com) | -- / -- | -- / -- | -- / -- |
 | | • Alignment as Preference (DPO) | [Wu et al. (EMNLP'24)](https://aclanthology.org/2024.emnlp-main.188/) | [ArXiv 2405.09223](https://arxiv.org/abs/2405.09223) | -- / -- | -- / -- | -- / -- |
-| **⭐ ĐỀ XUẤT (Ours)** | **TSSA (Core Proposed)** | [TSSA Proposal](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **--** | **--** | **--** |
-| | **TSSA + Sleep (Extension)** | [TSSA Method](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **--** | **--** | **--** |
+| **⭐ ĐỀ XUẤT (Ours)** | **TSSA 2.0 (Core Proposed 🏆)** | [TSSA Proposal](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **0.6634 / 24.11** | **0.6552 / 25.46** | **0.5506 / 9.66** |
+| | **TSSA + Sleep (Extension)** | [TSSA Method](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **-- / --** | **-- / --** | **-- / --** |
 
 ---
 
-### 📑 Bảng Chi Tiết Từng Ngôn Ngữ (Full Metrics: BLEU, chrF++, COMET)
+### 📑 Bảng Chi Tiết Toàn Diện 4 Chỉ Số Đánh Giá (Full 4-Metric Official Benchmark)
 
-Toàn bộ các ô kết quả dưới đây để trống (`--`) sẵn sàng để điền số liệu thực tế sau khi chạy huấn luyện:
+| Ngôn Ngữ Nguồn | Ngữ Hệ | Phương Pháp | SacreBLEU $\uparrow$ | chrF++ $\uparrow$ | METEOR $\uparrow$ | COMET $\uparrow$ | Mức Độ Cải Thiện ($\Delta$) |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Ê Đê (`rhade` $\rightarrow$ `vi`)**<br/>*(15.1K mẫu)* | *Austronesian* | **BARTpho Baseline** | 23.41 | 39.33 | 33.91 | 0.6556 | Mốc sàn cơ sở |
+| | | **TSSA 2.0 (Ours 🏆)** | **24.11** | **40.43** | **34.81** | **0.6634** | $\mathbf{+0.70}$ BLEU, $\mathbf{+1.10}$ chrF++, $\mathbf{+0.90}$ METEOR, $\mathbf{+0.0078}$ COMET |
+| **Tày (`tay` $\rightarrow$ `vi`)**<br/>*(20.6K mẫu)* | *Tai-Kadai* | **BARTpho Baseline** | 24.67 | 35.74 | 25.68 | 0.6530 | Mốc sàn cơ sở |
+| | | **TSSA 2.0 (Ours 🏆)** | **25.46** | **36.31** | **26.29** | **0.6552** | $\mathbf{+0.79}$ BLEU, $\mathbf{+0.57}$ chrF++, $\mathbf{+0.61}$ METEOR, $\mathbf{+0.0022}$ COMET |
+| **Ba Na (`bahnaric` $\rightarrow$ `vi`)**<br/>*(51.9K mẫu)* | *Mon-Khmer* | **BARTpho Baseline** | 9.63 | 23.47 | 18.15 | 0.5462 | Mốc sàn cơ sở |
+| | | **TSSA 2.0 (Ours 🏆)** | **9.66** | **23.89** | **18.46** | **0.5506** | $\mathbf{+0.03}$ BLEU, $\mathbf{+0.42}$ chrF++, $\mathbf{+0.31}$ METEOR, $\mathbf{+0.0044}$ COMET |
 
-#### 1. Bảng Kết Quả: Tiếng Ê Đê $\rightarrow$ Tiếng Việt (`NIRVLab/rhade-vietnamese-mt` - 15.1K)
-| Model / System | Loại Phương Pháp | Link Tham Khảo | BLEU $\uparrow$ | chrF++ $\uparrow$ | COMET $\uparrow$ |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **23.41** | **39.33** | **0.6556** |
-| `BARTBahnar` | DAE Pretraining | [NAACL 2025](https://arxiv.org) | -- | -- | -- |
-| `BARTpho` + Guided Attention | Attention Alignment | [Chen et al. (ACL)](https://github.com/OpenNMT/OpenNMT-py) | -- | -- | -- |
-| `BARTpho` + Joint-Align | Attention Alignment | [Garg et al. (EMNLP)](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- | -- | -- |
-| `BARTpho` + AWESOME Loss | Embedding Alignment | [Dou et al. (EACL)](https://github.com/neulab/awesome-align) | -- | -- | -- |
-| `BARTpho` + Cross-Lingual InfoNCE | Contrastive Align | [ACL 2024](https://aclanthology.org) | -- | -- | -- |
-| **TSSA (Đề xuất của bạn)** | **Semantic Anchoring** | [TSSA Method](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | **--** | **--** | **--** |
-| **TSSA + Sleep (Mở rộng)** | **Wake-Sleep Consolidation** | [TSSA Blueprint](file:///d:/Code/Mapping/docs/TSSA_Experiment_Design_and_Code_Blueprint.md) | **--** | **--** | **--** |
-
-#### 2. Bảng Kết Quả: Tiếng Tày $\rightarrow$ Tiếng Việt (`HeyDunaX/tay-vietnamese-nmt` - 20.6K)
-| Model / System | Loại Phương Pháp | Link Tham Khảo | BLEU $\uparrow$ | chrF++ $\uparrow$ | COMET $\uparrow$ |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **24.67** | **35.74** | **0.6530** |
-| `BARTpho` + Guided Attention | Attention Alignment | [Chen et al. (ACL)](https://github.com/OpenNMT/OpenNMT-py) | -- | -- | -- |
-| `BARTpho` + Joint-Align | Attention Alignment | [Garg et al. (EMNLP)](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- | -- | -- |
-| `BARTpho` + AWESOME Loss | Embedding Alignment | [Dou et al. (EACL)](https://github.com/neulab/awesome-align) | -- | -- | -- |
-| `BARTpho` + Cross-Lingual InfoNCE | Contrastive Align | [ACL 2024](https://aclanthology.org) | -- | -- | -- |
-| **TSSA (Đề xuất của bạn)** | **Semantic Anchoring** | [TSSA Method](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | **--** | **--** | **--** |
-| **TSSA + Sleep (Mở rộng)** | **Wake-Sleep Consolidation** | [TSSA Blueprint](file:///d:/Code/Mapping/docs/TSSA_Experiment_Design_and_Code_Blueprint.md) | **--** | **--** | **--** |
-
-#### 3. Bảng Kết Quả: Tiếng Ba Na $\rightarrow$ Tiếng Việt (`FiveC/bahnaric_vietnamese` - 51.9K)
-| Model / System | Loại Phương Pháp | Link Tham Khảo | BLEU $\uparrow$ | chrF++ $\uparrow$ | COMET $\uparrow$ |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| `BARTpho` (Vanilla) | Pretrained Baseline | [BARTpho Code](https://github.com/VinAIResearch/BARTpho) | **9.63** | **23.47** | **0.5462** |
-| `BARTBahnar` | DAE Pretraining | [NAACL 2025](https://arxiv.org) | -- | -- | -- |
-| `BARTpho` + Guided Attention | Attention Alignment | [Chen et al. (ACL)](https://github.com/OpenNMT/OpenNMT-py) | -- | -- | -- |
-| `BARTpho` + Joint-Align | Attention Alignment | [Garg et al. (EMNLP)](https://github.com/facebookresearch/fairseq/tree/main/examples/joint_alignment_translation) | -- | -- | -- |
-| `BARTpho` + AWESOME Loss | Embedding Alignment | [Dou et al. (EACL)](https://github.com/neulab/awesome-align) | -- | -- | -- |
-| `BARTpho` + Cross-Lingual InfoNCE | Contrastive Align | [ACL 2024](https://aclanthology.org) | -- | -- | -- |
-| **TSSA (Đề xuất của bạn)** | **Semantic Anchoring** | [TSSA Method](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | **--** | **--** | **--** |
-| **TSSA + Sleep (Mở rộng)** | **Wake-Sleep Consolidation** | [TSSA Blueprint](file:///d:/Code/Mapping/docs/TSSA_Experiment_Design_and_Code_Blueprint.md) | **--** | **--** | **--** |
 
 ## IV. Chi Tiết 6 Thí Nghiệm Ablation & Thẩm Định Nhân Quả (Mechanistic Studies)
 

@@ -13,17 +13,28 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from models.tssa_seq2seq import TSSASeq2SeqModel
 
-def check_has_weights(path: str) -> bool:
-    """Checks if a directory contains PyTorch/Safetensors model weight files."""
-    if not os.path.exists(path):
-        return False
-    if not os.path.isdir(path):
-        return False
+def find_model_weights_dir(path: str) -> str:
+    """
+    Finds whether path itself or any subfolder (e.g. checkpoint-xxxx) contains model weights.
+    Returns the resolved directory path, or None if no weights are found.
+    """
+    if not os.path.exists(path) or not os.path.isdir(path):
+        return None
+    # 1. Check direct directory
     files = os.listdir(path)
     for f in files:
         if f.endswith(".safetensors") or f.endswith(".bin") or f == "pytorch_model.bin":
-            return True
-    return False
+            return path
+    # 2. Check subdirectories like checkpoint-xxxx
+    subdirs = [os.path.join(path, d) for d in files if os.path.isdir(os.path.join(path, d))]
+    for s in sorted(subdirs, reverse=True):
+        try:
+            for f in os.listdir(s):
+                if f.endswith(".safetensors") or f.endswith(".bin") or f == "pytorch_model.bin":
+                    return s
+        except Exception:
+            pass
+    return None
 
 def evaluate_single_checkpoint(checkpoint_dir: str, lang: str, fallback_model: str = "vinai/bartpho-syllable",
                                data_dir: str = "data_processed", max_samples: int = 300, device: str = "cuda"):
@@ -34,11 +45,14 @@ def evaluate_single_checkpoint(checkpoint_dir: str, lang: str, fallback_model: s
     df = pd.read_csv(test_csv).head(max_samples)
     tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-syllable")
     
-    # Check if checkpoint exists with valid weights
-    load_path = checkpoint_dir
-    if not check_has_weights(checkpoint_dir):
+    # Resolve exact weights directory (supports root dir or subdirs like checkpoint-xxxx)
+    resolved_path = find_model_weights_dir(checkpoint_dir)
+    
+    if resolved_path is not None:
+        load_path = resolved_path
+    else:
         if fallback_model is not None:
-            print(f"      [i] '{checkpoint_dir}' không có file weights -> Dùng mô hình gốc: {fallback_model}")
+            print(f"      [i] '{checkpoint_dir}' không chứa file weights -> Dùng mô hình gốc: {fallback_model}")
             load_path = fallback_model
         else:
             return None
@@ -53,7 +67,7 @@ def evaluate_single_checkpoint(checkpoint_dir: str, lang: str, fallback_model: s
     top1_mass_list = []
 
     with torch.no_grad():
-        for _, row in tqdm(df.iterrows(), total=len(df), desc=f"Eval {os.path.basename(load_path)}", leave=False):
+        for _, row in tqdm(df.iterrows(), total=len(df), desc=f"Eval {os.path.basename(checkpoint_dir)}", leave=False):
             src_text = str(row["src_text"])
             tgt_text = str(row["tgt_text"])
 

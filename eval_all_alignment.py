@@ -13,26 +13,47 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from models.tssa_seq2seq import TSSASeq2SeqModel
 
-def evaluate_single_checkpoint(checkpoint_dir: str, lang: str, data_dir: str = "data_processed",
-                               max_samples: int = 300, device: str = "cuda"):
+def check_has_weights(path: str) -> bool:
+    """Checks if a directory contains PyTorch/Safetensors model weight files."""
+    if not os.path.exists(path):
+        return False
+    if not os.path.isdir(path):
+        return False
+    files = os.listdir(path)
+    for f in files:
+        if f.endswith(".safetensors") or f.endswith(".bin") or f == "pytorch_model.bin":
+            return True
+    return False
+
+def evaluate_single_checkpoint(checkpoint_dir: str, lang: str, fallback_model: str = "vinai/bartpho-syllable",
+                               data_dir: str = "data_processed", max_samples: int = 300, device: str = "cuda"):
     test_csv = os.path.join(data_dir, lang, "test.csv")
-    if not os.path.exists(test_csv) or not os.path.exists(checkpoint_dir):
+    if not os.path.exists(test_csv):
         return None
 
     df = pd.read_csv(test_csv).head(max_samples)
     tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-syllable")
     
+    # Check if checkpoint exists with valid weights
+    load_path = checkpoint_dir
+    if not check_has_weights(checkpoint_dir):
+        if fallback_model is not None:
+            print(f"      [i] '{checkpoint_dir}' không có file weights -> Dùng mô hình gốc: {fallback_model}")
+            load_path = fallback_model
+        else:
+            return None
+
     try:
-        model = TSSASeq2SeqModel(model_name_or_path=checkpoint_dir).to(device)
+        model = TSSASeq2SeqModel(model_name_or_path=load_path).to(device)
     except Exception:
-        model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint_dir).to(device)
+        model = AutoModelForSeq2SeqLM.from_pretrained(load_path).to(device)
 
     model.eval()
     entropy_list = []
     top1_mass_list = []
 
     with torch.no_grad():
-        for _, row in tqdm(df.iterrows(), total=len(df), desc=f"Eval {os.path.basename(checkpoint_dir)}", leave=False):
+        for _, row in tqdm(df.iterrows(), total=len(df), desc=f"Eval {os.path.basename(load_path)}", leave=False):
             src_text = str(row["src_text"])
             tgt_text = str(row["tgt_text"])
 
@@ -92,9 +113,9 @@ def evaluate_single_checkpoint(checkpoint_dir: str, lang: str, data_dir: str = "
 
 def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print("=" * 70)
+    print("=" * 75)
     print("  🚀 ĐANG ĐÁNH GIÁ CHỈ SỐ CĂN CHỈNH VÀ ATTENTION ENTROPY CHO CẢ 3 NGÔN NGỮ")
-    print("=" * 70)
+    print("=" * 75)
 
     configs = [
         ("Ê Đê (rhade)", "rhade", "checkpoints/bartpho_vanilla_rhade", "checkpoints/tssa_rhade"),
@@ -105,8 +126,8 @@ def main():
     results = []
     for lang_name, lang_code, base_dir, tssa_dir in configs:
         print(f"\n[*] Đang đánh giá cặp: {lang_name} ...")
-        base_res = evaluate_single_checkpoint(base_dir, lang_code, device=device)
-        tssa_res = evaluate_single_checkpoint(tssa_dir, lang_code, device=device)
+        base_res = evaluate_single_checkpoint(base_dir, lang_code, fallback_model="vinai/bartpho-syllable", device=device)
+        tssa_res = evaluate_single_checkpoint(tssa_dir, lang_code, fallback_model=None, device=device)
 
         results.append({
             "lang": lang_name,
@@ -116,14 +137,14 @@ def main():
             "tssa_top1": f"{tssa_res['top1_concentration']}%" if tssa_res else "--"
         })
 
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 85)
     print("📊 BẢNG 3: SO SÁNH ĐỘ TẬP TRUNG CHÚ Ý (ATTENTION SHARPNESS & CONCENTRATION)")
-    print("=" * 80)
+    print("=" * 85)
     print(f"| {'Ngôn Ngữ':<18} | {'Baseline Entropy H(α) ↓':<24} | {'TSSA 2.0 Entropy H(α) ↓':<24} | {'Baseline Top-1 Mass ↑':<22} | {'TSSA 2.0 Top-1 Mass ↑':<22} |")
     print(f"|{'-'*20}|{'-'*26}|{'-'*26}|{'-'*24}|{'-'*24}|")
     for r in results:
         print(f"| {r['lang']:<18} | {str(r['base_ent']):<24} | {str(r['tssa_ent']):<24} | {str(r['base_top1']):<22} | {str(r['tssa_top1']):<22} |")
-    print("=" * 80)
+    print("=" * 85)
 
 if __name__ == "__main__":
     main()

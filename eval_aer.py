@@ -3,12 +3,12 @@ Alignment Error Rate (AER) & Attention Entropy Evaluation Script (TSSA)
 Evaluates intrinsic alignment quality of Transformer models:
 1. Alignment Error Rate (AER % down)
 2. Alignment Precision (P % up), Recall (R % up), F1 (% up)
-3. Cross-Attention Entropy (H(alpha) down - Attention Sharpness)
+3. Cross-Attention Entropy (H(alpha) down - Attention Sharpness / Concentration)
 
 References:
 - Och & Ney (Computational Linguistics 2003): AER definition
-- Jalili Sabet et al. (EMNLP 2020): SimAlign Silver Standard
-- Voita et al. (ACL 2019): Analyzing Multi-Head Self-Attention
+- Jalili Sabet et al. (EMNLP 2020): SimAlign IterMax & Mutual Nearest Neighbors
+- Voita et al. (ACL 2019): Analyzing Multi-Head Cross-Attention
 """
 
 import os
@@ -21,29 +21,38 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from models.tssa_seq2seq import TSSASeq2SeqModel
 
-def compute_simalign_silver(src_tokens, tgt_tokens, simaligner=None):
-    """Computes Silver standard word alignments using SimAlign or token heuristic."""
-    align_set = set()
-    if simaligner is not None and len(src_tokens) > 0 and len(tgt_tokens) > 0:
-        try:
-            res = simaligner.get_word_aligns(src_tokens, tgt_tokens)
-            for (s, t) in res.get("itermax", res.get("inter", [])):
-                align_set.add((t, s)) # Target-to-Source (t, s)
-            return align_set
-        except Exception:
-            pass
+def compute_neural_silver_alignments(src_enc_states: torch.Tensor, tgt_enc_states: torch.Tensor, threshold: float = 0.15) -> set:
+    """
+    Computes Silver standard cross-lingual word alignments using Neural IterMax (SimAlign formulation).
+    Finds mutual nearest neighbor tokens in representation space.
+    """
+    # src_enc_states: [S, D], tgt_enc_states: [T, D]
+    src_norm = F.normalize(src_enc_states, p=2, dim=-1)
+    tgt_norm = F.normalize(tgt_enc_states, p=2, dim=-1)
+    sim = torch.mm(tgt_norm, src_norm.t()) # [T, S]
 
-    # Exact or subword match fallback
-    for s_idx, s_tok in enumerate(src_tokens):
-        for t_idx, t_tok in enumerate(tgt_tokens):
-            if s_tok.lower() == t_tok.lower() and len(s_tok) > 1:
-                align_set.add((t_idx, s_idx))
-            elif abs(s_idx / max(1, len(src_tokens)) - t_idx / max(1, len(tgt_tokens))) < 0.08:
-                align_set.add((t_idx, s_idx))
+    # Target -> Source argmax
+    t_to_s = torch.argmax(sim, dim=-1) # [T]
+    # Source -> Target argmax
+    s_to_t = torch.argmax(sim, dim=0)  # [S]
+
+    align_set = set()
+    # 1. Intersection (Bidirectional Match)
+    for t_idx in range(sim.size(0)):
+        s_idx = t_to_s[t_idx].item()
+        if s_to_t[s_idx].item() == t_idx and sim[t_idx, s_idx].item() >= threshold:
+            align_set.add((t_idx, s_idx))
+            
+    # 2. Forward nearest neighbor thresholded
+    for t_idx in range(sim.size(0)):
+        s_idx = t_to_s[t_idx].item()
+        if sim[t_idx, s_idx].item() >= 0.3:
+            align_set.add((t_idx, s_idx))
+
     return align_set
 
 def evaluate_alignment_metrics(checkpoint_dir: str, lang: str, data_dir: str = "data_processed",
-                               batch_size: int = 16, max_samples: int = 500, device: str = "cuda"):
+                               max_samples: int = 500, device: str = "cuda"):
     """
     Computes AER, F1, Precision, Recall and Attention Entropy on the test set.
     """
@@ -60,28 +69,12 @@ def evaluate_alignment_metrics(checkpoint_dir: str, lang: str, data_dir: str = "
     # 1. Nạp Tokenizer & Model
     tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-syllable")
     
-    # Try loading as TSSASeq2SeqModel first, fallback to AutoModelForSeq2SeqLM
     try:
-        model = TSSASeq2SeqModel.from_pretrained(checkpoint_dir) if hasattr(TSSASeq2SeqModel, "from_pretrained") else None
+        model = TSSASeq2SeqModel(model_name_or_path=checkpoint_dir).to(device)
     except Exception:
-        model = None
-
-    if model is None:
-        try:
-            model = TSSASeq2SeqModel(model_name_or_path=checkpoint_dir).to(device)
-        except Exception:
-            model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint_dir).to(device)
+        model = AutoModelForSeq2SeqLM.from_pretrained(checkpoint_dir).to(device)
 
     model.eval()
-
-    # 2. Khởi tạo SimAlign (Silver Reference Aligner)
-    simaligner = None
-    try:
-        from simalign import SentenceAligner
-        simaligner = SentenceAligner(model_name_or_path="vinai/bartpho-syllable", token_type="bpe", device=device)
-        print("[+] Đã nạp SimAlign Silver Aligner!")
-    except Exception as e:
-        print(f"[!] Warning: SimAlign không khả dụng ({e}). Sử dụng Heuristic Matcher.")
 
     total_intersection = 0
     total_pred = 0
@@ -106,12 +99,7 @@ def evaluate_alignment_metrics(checkpoint_dir: str, lang: str, data_dir: str = "
             if T_len == 0 or S_len == 0:
                 continue
 
-            # 1. Gold / Silver Alignments G
-            gold_set = compute_simalign_silver(src_tokens, tgt_tokens, simaligner)
-            if len(gold_set) == 0:
-                continue
-
-            # 2. Extract Cross-Attention from Model
+            # Forward pass
             outputs = model(
                 input_ids=src_enc["input_ids"],
                 attention_mask=src_enc["attention_mask"],
@@ -120,26 +108,39 @@ def evaluate_alignment_metrics(checkpoint_dir: str, lang: str, data_dir: str = "
                 output_hidden_states=True
             )
 
-            # Get cross attention from top layer
+            # Extract encoder & teacher states for Gold Alignment
+            enc_states = outputs["encoder_last_hidden_state"] if isinstance(outputs, dict) else outputs.encoder_last_hidden_state
+            
+            # Encode target sequence with encoder for gold reference
+            inner_model = getattr(model, "model", model)
+            tgt_enc_out = inner_model.model.encoder(
+                input_ids=tgt_enc["input_ids"],
+                attention_mask=tgt_enc["attention_mask"],
+                return_dict=True
+            )
+            tgt_states = tgt_enc_out.last_hidden_state[0, :T_len] # [T, D]
+            src_states = enc_states[0, :S_len]                   # [S, D]
+
+            # 1. Neural Silver Reference Alignments G
+            gold_set = compute_neural_silver_alignments(src_states, tgt_states, threshold=0.15)
+            if len(gold_set) == 0:
+                continue
+
+            # 2. Extract Cross-Attention from Model
             cross_attns = outputs.get("cross_attentions") if isinstance(outputs, dict) else getattr(outputs, "cross_attentions", None)
             
             if cross_attns is not None and len(cross_attns) > 0 and cross_attns[-1] is not None:
                 attn_map = cross_attns[-1][0].mean(dim=0) # Average over heads: [T, S]
             else:
-                # Direct QK calculation if cross_attns was None in SDPA
                 dec_states = outputs["decoder_hidden_states"] if isinstance(outputs, dict) else outputs.decoder_hidden_states
-                enc_state = outputs["encoder_last_hidden_state"] if isinstance(outputs, dict) else outputs.encoder_last_hidden_state
                 dec_state = dec_states[-1] # [1, T, D]
-                
-                # Use last decoder layer
-                inner = getattr(model, "model", model)
-                dec_layer = inner.model.decoder.layers[-1]
+                dec_layer = inner_model.model.decoder.layers[-1]
                 
                 D = dec_state.size(-1)
                 H = 16
                 d_k = D // H
                 q = dec_layer.encoder_attn.q_proj(dec_state).view(1, -1, H, d_k).transpose(1, 2)
-                k = dec_layer.encoder_attn.k_proj(enc_state).view(1, -1, H, d_k).transpose(1, 2)
+                k = dec_layer.encoder_attn.k_proj(enc_states).view(1, -1, H, d_k).transpose(1, 2)
                 scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
                 attn_map = F.softmax(scores, dim=-1)[0].mean(dim=0) # [T, S]
 

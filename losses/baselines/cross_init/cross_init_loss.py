@@ -1,9 +1,12 @@
 """
 CrossInit Loss (Ai & Huang, Findings of ACL 2024)
-CrossInit: Subword Alignment for Cross-Lingual Transfer
+Zero-shot Cross-lingual Alignment for Embedding Initialization
 
-Forces source subwords to align with target subwords via an orthogonal linear map W
-such that W^T W = I (Orthogonality constraint) and minimizes MSE alignment distance.
+Exact formulation from Section 2.3, Eq. (1) & Figure 2:
+- Positive pairs: Aligned source and target subword embeddings (E_{V_{span}^{L_i}}, E_{V_{span}^{L_j}})
+- Negative pairs: Unaligned / out-of-span target subword embeddings (E_{V_{span}^{L_i}}, E_{V_{notin span}^{L_j}})
+- Eq. (1): L_CrossInit = - log P(1 | E_{src} E_{tgt}^+) - log P(0 | E_{src} E_{tgt}^-)
+          where P(1 | u, v) = sigmoid( u^T v / tau )
 """
 
 import torch
@@ -11,50 +14,49 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CrossInitLoss(nn.Module):
-    def __init__(self, embed_dim: int = 1024, lambda_orth: float = 0.01):
+    def __init__(self, embed_dim: int = 1024, temperature: float = 0.1, eps: float = 1e-8):
         super().__init__()
         self.embed_dim = embed_dim
-        self.lambda_orth = lambda_orth
-        self.linear_map = nn.Linear(embed_dim, embed_dim, bias=False)
-        nn.init.orthogonal_(self.linear_map.weight)
+        self.temp = temperature
+        self.eps = eps
 
     def forward(self, src_embeddings: torch.Tensor, tgt_embeddings: torch.Tensor,
                 align_matrix: torch.Tensor, mask: torch.Tensor = None) -> torch.Tensor:
         """
         Args:
-            src_embeddings: [B, S, D] Source subword representations
-            tgt_embeddings: [B, T, D] Target subword representations
+            src_embeddings: [B, S, D] Source subword representations E_{src}
+            tgt_embeddings: [B, T, D] Target subword representations E_{tgt}
             align_matrix: [B, S, T] or [B, T, S] Subword alignment prior matrix A
         Returns:
-            Scalar CrossInit loss = L_align + lambda_orth * L_orth
+            Scalar CrossInit contrastive loss (Eq. 1)
         """
         if align_matrix.size(1) == tgt_embeddings.size(1) and align_matrix.size(2) == src_embeddings.size(1):
-            A = align_matrix.transpose(1, 2) # [B, T, S] -> [B, S, T]
+            A = align_matrix.transpose(1, 2) # [B, S, T]
         else:
-            A = align_matrix # [B, S, T]
+            A = align_matrix
 
         S_min = min(src_embeddings.size(1), A.size(1))
         T_min = min(tgt_embeddings.size(1), A.size(2))
 
-        src_cut = src_embeddings[:, :S_min, :]
-        tgt_cut = tgt_embeddings[:, :T_min, :]
+        src_cut = F.normalize(src_embeddings[:, :S_min, :], p=2, dim=-1) # [B, S_min, D]
+        tgt_cut = F.normalize(tgt_embeddings[:, :T_min, :], p=2, dim=-1) # [B, T_min, D]
         A_cut = A[:, :S_min, :T_min].float().detach()
 
-        # 1. Project source subwords through orthogonal linear map W
-        proj_src = self.linear_map(src_cut) # [B, S_min, D]
-
-        # 2. Target alignment barycenter: T_bar = A * T_emb / sum(A)
+        # Positive target embeddings: weighted sum according to alignment span (Eq. 1)
         row_sum = A_cut.sum(dim=-1, keepdim=True).clamp(min=1e-8)
         A_norm = A_cut / row_sum
-        tgt_barycenter = torch.bmm(A_norm, tgt_cut) # [B, S_min, D]
+        tgt_pos = torch.bmm(A_norm, tgt_cut) # [B, S_min, D]
 
-        # Alignment MSE Loss
-        loss_align = F.mse_loss(proj_src, tgt_barycenter)
+        # Negative target embeddings: in-batch roll / out-of-span tokens
+        tgt_neg = torch.roll(tgt_cut, shifts=1, dims=0)[:, :S_min, :] # [B, S_min, D]
 
-        # 3. Orthogonality Constraint: || W^T W - I ||_F^2
-        W = self.linear_map.weight
-        I = torch.eye(self.embed_dim, device=W.device)
-        loss_orth = F.mse_loss(torch.mm(W.t(), W), I)
+        # Dot products
+        pos_sim = (src_cut * tgt_pos).sum(dim=-1) / self.temp # [B, S_min]
+        neg_sim = (src_cut * tgt_neg).sum(dim=-1) / self.temp # [B, S_min]
 
-        total_loss = loss_align + (self.lambda_orth * loss_orth)
-        return total_loss
+        # Eq. (1): - log sigmoid(pos_sim) - log (1 - sigmoid(neg_sim)) = - log_sigmoid(pos_sim) - log_sigmoid(-neg_sim)
+        loss_pos = - F.logsigmoid(pos_sim)
+        loss_neg = - F.logsigmoid(-neg_sim)
+
+        loss = (loss_pos + loss_neg).mean()
+        return loss

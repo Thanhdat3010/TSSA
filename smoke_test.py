@@ -1,9 +1,9 @@
 """
-Lightning Smoke Test Script for TSSA Framework & Baselines
+Lightning Smoke Test Script for TSSA 2.0 Framework & Baselines
 Runs a complete 5-second end-to-end sanity check:
-1. Model loading, attribute delegation & _keys_to_ignore check
-2. Automatic Online Frozen Teacher extraction on raw inputs
-3. TSSA Loss with full 3-loss synergy (L_struct + L_prime + normalized L_route)
+1. Model loading, ResidualSemanticProjector, attribute delegation & _keys_to_ignore check
+2. Automatic Online Frozen Teacher extraction & Target-to-Source Alignment
+3. TSSA 2.0 Loss with 3-loss synergy (L_xattn + L_prime_projected + normalized L_route)
 4. All 8 baseline alignment losses via Unified Factory
 5. Hugging Face Seq2SeqTrainer evaluation loop & SacreBLEU computation
 """
@@ -23,7 +23,7 @@ import sacrebleu
 
 def run_smoke_test():
     print("=" * 65)
-    print("      🚀 ĐANG CHẠY SMOKE TEST TOÀN DIỆN CHO TSSA & BASELINES")
+    print("      🚀 ĐANG CHẠY SMOKE TEST TOÀN DIỆN CHO TSSA 2.0 & BASELINES")
     print("=" * 65)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -34,18 +34,19 @@ def run_smoke_test():
     print("[1/5] Nạp Tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
 
-    # 2. Nạp Model & Kiểm tra delegation
-    print("[2/5] Nạp Model & Kiểm tra thuộc tính HF Trainer...")
+    # 2. Nạp Model & Kiểm tra thuộc tính HF Trainer
+    print("[2/5] Nạp Model & Kiểm tra thuộc tính HF Trainer + Semantic Projector...")
     model = TSSASeq2SeqModel(model_name_or_path=model_ckpt, use_route=True).to(device)
     
     assert hasattr(model, "generation_config"), "Model thiếu generation_config!"
     assert hasattr(model, "config"), "Model thiếu config!"
+    assert hasattr(model, "projector"), "Model thiếu ResidualSemanticProjector!"
     assert hasattr(model, "_keys_to_ignore_on_save"), "Model thiếu _keys_to_ignore_on_save!"
     assert model.can_generate(), "Model phải hỗ trợ can_generate()!"
-    print("      -> Delegation thuộc tính Trainer & Model: OK!")
+    print("      -> Delegation thuộc tính Trainer & Semantic Projector: OK!")
 
-    # 3. Tạo Raw Batch (Không cần cache offline) & Kiểm tra Online Frozen Teacher
-    print("[3/5] Kiểm tra Online Frozen Teacher & TSSA 3 Losses...")
+    # 3. Tạo Raw Batch & Kiểm tra Online Frozen Teacher + TSSA 2.0 Losses
+    print("[3/5] Kiểm tra Online Frozen Teacher & TSSA 2.0 (L_xattn + L_prime + L_route)...")
     src_texts = ["Hnam kơ dră kơ kơl", "Ơi ya gơñ kơ ai"]
     tgt_texts = ["Nhà của tôi ở đây", "Bà ơi cháu đi học"]
 
@@ -70,18 +71,20 @@ def run_smoke_test():
     assert "loss" in outputs and not torch.isnan(outputs["loss"]), "Loss Seq2Seq bị lỗi!"
     assert outputs["teacher_enc_states"] is not None, "Online Teacher không trích xuất được token states!"
     assert outputs["teacher_sent_vec"] is not None, "Online Teacher không trích xuất được sent vector!"
-    assert outputs["align_matrix"] is not None, "On-the-fly Alignment matrix không được sinh!"
+    assert outputs["student_projected_sent"] is not None, "Residual Projector không xuất được projected vector!"
+    assert outputs["align_matrix_ts"] is not None, "Target-to-Source Alignment matrix không được sinh!"
+    assert outputs["cross_attentions"] is not None, "Cross-attentions không được trích xuất từ decoder!"
     assert outputs["router_gates"] is not None, "Router gates không được kích hoạt!"
-    print("      -> Online Frozen Teacher & On-the-fly Alignment: OK (0.001s)!")
+    print("      -> Online Frozen Teacher & Target-to-Source Cross Alignment: OK (0.001s)!")
 
-    # Test TSSA 3 Losses Synergy with Phase 3 weights (l1=0.05, l2=0.05, l3=0.10)
+    # Test TSSA 2.0 3 Losses Synergy with Phase 3 weights (l1=0.10, l2=0.05, l3=0.10)
     tssa_crit = TSSAUnifiedCriterion(use_struct=True, use_prime=True, use_route=True).to(device)
-    tssa_res = tssa_crit(outputs["loss"], outputs, raw_batch, lambdas=(0.05, 0.05, 0.10))
+    tssa_res = tssa_crit(outputs["loss"], outputs, raw_batch, lambdas=(0.10, 0.05, 0.10))
     
     loss_val = tssa_res["loss"].item()
-    assert not torch.isnan(tssa_res["loss"]), "TSSA Loss bị NaN!"
-    assert loss_val < 10.0, f"TSSA Loss bị nổ giá trị ({loss_val})!"
-    print(f"      -> [1/9] TSSA Core Loss (L_struct={tssa_res['log_dict']['loss_struct']:.4f}, L_prime={tssa_res['log_dict']['loss_prime']:.4f}, L_route={tssa_res['log_dict']['loss_route']:.4f}, Total={loss_val:.4f}): OK & Chuẩn hóa hoàn hảo!")
+    assert not torch.isnan(tssa_res["loss"]), "TSSA 2.0 Loss bị NaN!"
+    assert loss_val < 10.0, f"TSSA 2.0 Loss bị nổ giá trị ({loss_val})!"
+    print(f"      -> [1/9] TSSA 2.0 Loss (L_xattn={tssa_res['log_dict']['loss_struct']:.4f}, L_prime={tssa_res['log_dict']['loss_prime']:.4f}, L_route={tssa_res['log_dict']['loss_route']:.4f}, Total={loss_val:.4f}): OK & Chuẩn hóa hoàn hảo!")
 
     # Test All 8 Baselines via Factory
     baselines = [
@@ -149,7 +152,7 @@ def run_smoke_test():
         shutil.rmtree("checkpoints/smoke_test_tmp")
 
     print("\n" + "=" * 65)
-    print("  🎉 CHÚC MỪNG: TSSA VÀ TOÀN BỘ CÁC HÀM LOSS ĐÃ PASS 100%!")
+    print("  🎉 CHÚC MỪNG: TSSA 2.0 VÀ TOÀN BỘ CÁC HÀM LOSS ĐÃ PASS 100%!")
     print("=" * 65)
 
 if __name__ == "__main__":

@@ -1,8 +1,10 @@
 """
-TSSA Seq2Seq Model Architecture
-Integrates Pretrained BARTpho Seq2Seq backbone with Head-Wise Router
-and Online Frozen Teacher Semantic Anchoring.
-Fully delegates all generation, encoder/decoder, and HF Trainer serialization methods.
+TSSA 2.0 Seq2Seq Model Architecture
+Integrates Pretrained BARTpho Seq2Seq backbone with:
+1. Target-Guided Cross-Attention Anchoring
+2. Residual Cross-Lingual Semantic Projector
+3. Dynamic Head-Wise Router
+4. Online Frozen Teacher Semantic Anchoring
 """
 
 import torch
@@ -10,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModelForSeq2SeqLM
 from .head_router import HeadWiseRouter
+from .semantic_projector import ResidualSemanticProjector
 
 class TSSASeq2SeqModel(nn.Module):
     # Hugging Face Trainer serialization attributes
@@ -29,6 +32,10 @@ class TSSASeq2SeqModel(nn.Module):
         self.n_heads = n_heads or getattr(cfg, "decoder_attention_heads", getattr(cfg, "num_attention_heads", 16))
         self.n_decoder_layers = n_decoder_layers or getattr(cfg, "decoder_layers", getattr(cfg, "num_decoder_layers", 12))
 
+        # 1. Residual Cross-Lingual Semantic Projector (TSSA 2.0)
+        self.projector = ResidualSemanticProjector(d_model=self.d_model, hidden_dim=self.d_model * 2)
+
+        # 2. Dynamic Head-Wise Attention Router
         if use_route:
             self.router = HeadWiseRouter(d_model=self.d_model, n_heads=self.n_heads, n_layers=self.n_decoder_layers)
         else:
@@ -40,23 +47,31 @@ class TSSASeq2SeqModel(nn.Module):
                 labels: torch.Tensor = None, decoder_attention_mask: torch.Tensor = None,
                 output_attentions: bool = True, output_hidden_states: bool = True, **kwargs):
         """
-        Forward pass for student model with automatic Online Frozen Teacher encoding.
+        Forward pass for student model with TSSA 2.0 Cross-Attention & Projector components.
         """
+        # Always output cross attentions during training for TSSA 2.0
         outputs = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             labels=labels,
             decoder_attention_mask=decoder_attention_mask,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
+            output_attentions=True,
+            output_hidden_states=True,
             return_dict=True
         )
 
         teacher_enc_states = None
         teacher_sent_vec = None
-        align_matrix = None
+        align_matrix_ts = None
+        student_projected_sent = None
 
-        # Online Frozen Teacher Extraction (Runs in 0.001s, zero disk cache required)
+        # 1. Source Sentence Pooling & Residual Projection
+        if outputs.encoder_last_hidden_state is not None:
+            mask_src = attention_mask.unsqueeze(-1).float()
+            student_sent_raw = (outputs.encoder_last_hidden_state * mask_src).sum(dim=1) / mask_src.sum(dim=1).clamp(min=1.0)
+            student_projected_sent = self.projector(student_sent_raw) # [B, D]
+
+        # 2. Online Frozen Teacher Extraction & Target-to-Source Semantic Alignment Matrix
         if labels is not None and self.training:
             with torch.no_grad():
                 pad_id = getattr(self.model.config, "pad_token_id", 1)
@@ -71,17 +86,17 @@ class TSSASeq2SeqModel(nn.Module):
                 )
                 teacher_enc_states = teacher_out.last_hidden_state.detach() # [B, T, D]
 
-                # Masked mean sentence pooling
-                mask_exp = tgt_mask.unsqueeze(-1).float()
-                teacher_sent_vec = (teacher_enc_states * mask_exp).sum(dim=1) / mask_exp.sum(dim=1).clamp(min=1.0) # [B, D]
+                # Masked mean sentence pooling for Teacher
+                mask_tgt = tgt_mask.unsqueeze(-1).float()
+                teacher_sent_vec = (teacher_enc_states * mask_tgt).sum(dim=1) / mask_tgt.sum(dim=1).clamp(min=1.0) # [B, D]
 
-                # Instant subword semantic alignment posterior matrix (smoothed with tau=0.5)
-                src_norm = F.normalize(outputs.encoder_last_hidden_state.detach(), p=2, dim=-1)
-                tgt_norm = F.normalize(teacher_enc_states, p=2, dim=-1)
-                sim = torch.bmm(src_norm, tgt_norm.transpose(1, 2)) / 0.5 # [B, S, T]
-                align_matrix = F.softmax(sim, dim=-1).detach()
+                # Target-to-Source Subword Semantic Alignment Posterior Matrix A [B, T, S]
+                tgt_norm = F.normalize(teacher_enc_states, p=2, dim=-1) # [B, T, D]
+                src_norm = F.normalize(outputs.encoder_last_hidden_state.detach(), p=2, dim=-1) # [B, S, D]
+                sim_ts = torch.bmm(tgt_norm, src_norm.transpose(1, 2)) / 0.5 # [B, T, S]
+                align_matrix_ts = F.softmax(sim_ts, dim=-1).detach() # [B, T, S]
 
-        # If Router is active, compute router gate activations on decoder states
+        # 3. Dynamic Head-Wise Router Gate Activations
         if self.use_route and self.router is not None and outputs.decoder_hidden_states is not None:
             dec_last_state = outputs.decoder_hidden_states[-1] # [B, T, D]
             enc_last_state = outputs.encoder_last_hidden_state # [B, S, D]
@@ -105,9 +120,10 @@ class TSSASeq2SeqModel(nn.Module):
             "decoder_hidden_states": outputs.decoder_hidden_states,
             "cross_attentions": outputs.cross_attentions,
             "router_gates": self.last_router_gates,
+            "student_projected_sent": student_projected_sent,
             "teacher_enc_states": teacher_enc_states,
             "teacher_sent_vec": teacher_sent_vec,
-            "align_matrix": align_matrix
+            "align_matrix_ts": align_matrix_ts
         }
 
     def generate(self, *args, **kwargs):

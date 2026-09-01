@@ -118,9 +118,12 @@ def main():
             max_l3=args.lambda_route
         )
     elif args.model_type != "bartpho_vanilla":
+        d_model = getattr(model, "d_model", 1024)
+        n_heads = getattr(model.config, "decoder_attention_heads", 16)
         config = {
-            "hidden_dim": 768,
-            "embed_dim": 768,
+            "hidden_dim": d_model,
+            "embed_dim": d_model,
+            "n_heads": n_heads,
             "subspace_dim": 64,
             "temperature": 0.1,
             "alpha": 0.5,

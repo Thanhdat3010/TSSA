@@ -81,7 +81,16 @@ def run_smoke_test():
     tssa_res = tssa_crit(outputs["loss"], outputs, raw_batch, lambdas=(0.10, 0.05, 0.10))
     loss_val = tssa_res["loss"].item()
     assert not torch.isnan(tssa_res["loss"]), "TSSA 2.0 Loss bị NaN!"
-    print(f"      -> [1/9] TSSA 2.0 Loss (Total={loss_val:.4f}): OK!")
+    print(f"      -> [1/9] TSSA 2.0 Full Loss (Total={loss_val:.4f}): OK!")
+
+    # Test 3 Ablation Configurations
+    c_no_route = TSSAUnifiedCriterion(use_struct=True, use_prime=True, use_route=False).to(device)
+    assert not torch.isnan(c_no_route(outputs["loss"], outputs, raw_batch, lambdas=(0.10, 0.05, 0.0))["loss"])
+    c_no_struct = TSSAUnifiedCriterion(use_struct=False, use_prime=True, use_route=True).to(device)
+    assert not torch.isnan(c_no_struct(outputs["loss"], outputs, raw_batch, lambdas=(0.0, 0.05, 0.10))["loss"])
+    c_no_prime = TSSAUnifiedCriterion(use_struct=True, use_prime=False, use_route=True).to(device)
+    assert not torch.isnan(c_no_prime(outputs["loss"], outputs, raw_batch, lambdas=(0.10, 0.0, 0.10))["loss"])
+    print("      -> [Ablation Modes] no_route, no_struct, no_prime: OK!")
 
     # Test All 8 Baselines via Factory AND Trainer compute_loss simulation
     d_model = getattr(model, "d_model", 1024)

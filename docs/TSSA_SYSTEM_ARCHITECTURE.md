@@ -58,20 +58,32 @@ $$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{MT}} + \lambda_1(t) \mathcal{L
 
 ---
 
-## III. Hướng Dẫn Dữ Liệu & Quy Trình Tiền Xử Lý Chuẩn (Data Guide)
+## III. Hướng Dẫn Dữ Liệu & Quy Trình Tiền Xử Lý Chi Tiết (Comprehensive Data Guide)
 
-Hệ thống hỗ trợ 3 ngữ hệ thiểu số chính thức:
+Hệ thống hỗ trợ 3 ngữ hệ dân tộc thiểu số với nguồn Hugging Face và các khóa trích xuất (extraction keys) chuẩn:
 
-| Ngôn Ngữ | Ngữ Hệ | Nguồn Dữ Liệu Gốc | Kích Thước Tập Train | Kích Thước Tập Test |
-| :--- | :--- | :--- | :---: | :---: |
-| **Ê Đê (`rhade`)** | Nam Đảo (*Austronesian*) | `NIRVLab/rhade-vietnamese-mt` | 14,969 câu | 1,000 câu |
-| **Tày (`tay`)** | Thái-Ka Đai (*Tai-Kadai*) | `HeyDunaX/tay-vietnamese-nmt` | 20,600 câu | 2,295 câu |
-| **Ba Na (`bahnaric`)** | Môn-Khmer (*Mon-Khmer*) | `FiveC/bahnaric_vietnamese` | 51,900 câu | 2,001 câu |
+| Ngôn Ngữ | Ngữ Hệ (*Family*) | Nguồn Hugging Face (*HF Path*) | Khóa Nguồn (*src_key*) | Khóa Đích (*tgt_key*) | Train Mẫu | Test Mẫu |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
+| **Ê Đê (`rhade`)** | Nam Đảo (*Austronesian*) | `NIRVLab/rhade-vietnamese-mt` | `ede` / `cdc` | `vi` | 14,969 | 1,000 |
+| **Tày (`tay`)** | Thái-Ka Đai (*Tai-Kadai*) | `HeyDunaX/tay-vietnamese-nmt` | `tay` | `viet` / `vietnamese` | 20,600 | 2,295 |
+| **Ba Na (`bahnaric`)** | Môn-Khmer (*Mon-Khmer*) | `FiveC/bahnaric_vietnamese` | `bahnaric` | `vietnamese` | 51,900 | 2,001 |
 
-### Quy trình làm sạch dữ liệu tự động (`data/download_and_preprocess.py`):
-1. **Chuẩn hóa Unicode NFC:** Đảm bảo toàn bộ ký tự có dấu thanh tiếng Việt và chữ cái ngữ tộc thiểu số đồng nhất bảng mã Unicode dựng sẵn.
-2. **Loại bỏ rò rỉ tập kiểm thử (Leak-Free Filtering):** Kiểm tra trùng lặp (Overlapping / Duplicates) giữa tập `train.csv` và `test.csv` để đảm bảo điểm kiểm thử khách quan $100\%$.
-3. **Cắt độ dài tối đa (Truncation):** Giới hạn `max_source_length = 256` và `max_target_length = 256`.
+---
+
+### 🛠️ Chi Tiết 4 Bước Tiền Xử Lý Tự Động (`data/download_and_preprocess.py`):
+
+1. **Chuẩn Hóa Unicode Dựng Sẵn (Unicode NFC):**
+   * Sử dụng `unicodedata.normalize('NFC', text)` cho toàn bộ câu tiếng nguồn và tiếng đích để đồng nhất các ký tự có dấu thanh, phụ tố và nguyên âm biến âm của chữ Ê Đê, Tày, Ba Na.
+2. **Làm Sạch Ký Tự Rác & Khoảng Trắng Thừa (Regex Cleaning):**
+   * Xóa ký tự xuống dòng rác: `re.sub(r'\\n|\|\\|[\n\r\t]', ' ', text)`.
+   * Chuẩn hóa khoảng trắng kép: `re.sub(r'\s+', ' ', text).strip()`.
+   * Lọc bỏ hoàn toàn các cặp câu rỗng hoặc bị gán nhãn `None`.
+3. **Bảo Vệ Tính Toàn Vẹn & Khử Rò Rỉ Tuyệt Đối (Strict Leak-Free Deduplication):**
+   * Loại bỏ trùng lặp nội bộ trong từng tập: `df.drop_duplicates()`.
+   * Khử rò rỉ tập kiểm thử: `train_df = train_df[~train_df["src_text"].isin(test_df["src_text"])]`. Đảm bảo không có bất kỳ câu nào trong tập kiểm thử xuất hiện trong tập huấn luyện.
+4. **Định Dạng Lưu Trữ Chuẩn & Cắt Độ Dài (Truncation):**
+   * Dữ liệu xuất ra file `train.csv` và `test.csv` gồm 2 cột chuẩn: `src_text` và `tgt_text` (mã hóa `utf-8`).
+   * Khi đưa vào DataLoader, áp dụng cắt độ dài chuẩn `max_source_length = 256` và `max_target_length = 256` bằng tokenizer `vinai/bartpho-syllable`.
 
 ---
 

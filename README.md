@@ -1,130 +1,88 @@
-# TSSA: Target-Side Semantic Anchoring for Low-Resource Machine Translation
+# 🚀 TSSA: Target-Side Semantic Anchoring for Low-Resource Neural Machine Translation
 
 [![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-orange.svg)](https://pytorch.org/)
-[![HuggingFace](https://img.shields.io/badge/HuggingFace-Transformers-yellow.svg)](https://huggingface.co/)
+[![PyTorch 2.1+](https://img.shields.io/badge/PyTorch-2.1%2B-orange.svg)](https://pytorch.org/)
+[![HuggingFace Transformers](https://img.shields.io/badge/HuggingFace-Transformers-yellow.svg)](https://huggingface.co/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-Official PyTorch implementation for the paper: **"TSSA: Target-Side Semantic Anchoring with Gated Multi-Head Cross-Attention for Extremely Low-Resource Ethnic Minority Machine Translation"**.
+Official PyTorch implementation of **Target-Side Semantic Anchoring (TSSA)**: A self-contained, end-to-end framework for low-resource Neural Machine Translation (NMT) across non-isomorphic ethnic minority language families.
 
 ---
 
-## 📖 Overview
+## 📑 Danh Mục Tài Liệu Chính Thức (Official Documentation Hub)
 
-Low-resource Machine Translation (NMT) for ethnic minority languages (Bahnar, Rhade/Ê Đê, Tay) into high-resource languages (Vietnamese) often suffers from representation degradation and cross-lingual semantic misalignment. 
+Tất cả tài liệu của dự án đã được tinh gọn và chuẩn hóa thành các tài liệu duy nhất sau:
 
-**TSSA** introduces an asymmetric semantic anchoring framework:
-1. **Confidence-Weighted Barycenter Anchoring ($\mathcal{L}_{\text{struct}}$):** Projects minority source subword tokens into the target semantic space using Stop-Gradient $\text{sg}(\cdot)$ frozen teacher representations.
-2. **In-Batch Sentence InfoNCE Priming ($\mathcal{L}_{\text{prime}}$):** Enforces global semantic coherence between source and target sentence embeddings.
-3. **Decoder Head-Wise Router ($\mathcal{L}_{\text{route}}$):** Dynamically gates cross-attention heads using an MLP to route information specifically through reliable semantic anchor heads.
-
----
-
-## 🗂️ Supported Datasets
-
-| Language Pair | Source Language | Target Language | Official Splits | Source Repo |
-| :--- | :--- | :--- | :---: | :--- |
-| **Bahnaric – Vietnamese** | Ba Na (`bahnaric`) | Tiếng Việt (`vietnamese`) | 51.9k train / test | `FiveC/bahnaric_vietnamese` |
-| **Rhade – Vietnamese** | Ê Đê (`ede` / `cdc`) | Tiếng Việt (`vi`) | 15.1k train / test | `NIRVLab/rhade-vietnamese-mt` |
-| **Tay – Vietnamese** | Tày (`tay`) | Tiếng Việt (`viet`) | 20.6k train / val $\rightarrow$ test | `HeyDunaX/tay-vietnamese-nmt` |
+1. **📊 Kết Quả Thực Nghiệm Toàn Diện (Single Source of Truth):**
+   * 👉 [`docs/OFFICIAL_EXPERIMENT_RESULTS.md`](docs/OFFICIAL_EXPERIMENT_RESULTS.md) — Bảng so sánh 4 chỉ số (SacreBLEU, chrF++, METEOR, COMET) trên cả 3 ngôn ngữ, phân loại 8 đối thủ baselines (paper links & code), và phân tích Attention Entropy.
+2. **🏗️ Kiến Trúc Hệ Thống, Công Thức Toán & Dữ Liệu:**
+   * 👉 [`docs/TSSA_SYSTEM_ARCHITECTURE.md`](docs/TSSA_SYSTEM_ARCHITECTURE.md) — Toàn bộ công thức toán học (Online Teacher, Projector, 3 hàm Loss), cơ chế Scheduler và quy trình tiền xử lý 3 bộ dữ liệu chuẩn.
+3. **📄 Bản Thảo Báo Cáo Kỹ Thuật (LaTeX Dossier):**
+   * 👉 [`docs/tssa_full_paper_dossier.tex`](docs/tssa_full_paper_dossier.tex) — File LaTeX chuẩn quốc tế sẵn sàng biên dịch trên Overleaf.
+4. **🌐 Bảng Báo Cáo Trực Quan (Interactive HTML Report):**
+   * 👉 [`docs/benchmark_table_report.html`](docs/benchmark_table_report.html) — Giao diện web trực quan để chụp ảnh bảng kết quả.
 
 ---
 
-## 🛠️ Installation & Environment Setup
+## 🏆 Tóm Tắt Kết Quả Đối Chuẩn (Benchmark Summary - 5 Epochs)
 
-### 1. Conda Environment Setup:
+| Ngôn Ngữ Nguồn | Ngữ Hệ | Mô Hình / Phương Pháp | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
+| **Ê Đê (`rhade` → `vi`)**<br>*(14,969 train / 1,000 test)* | *Austronesian*<br>*(Nam Đảo)* | Vanilla BARTpho Baseline<br>**TSSA (Ours 🏆)** | 23.41<br>**24.11** *(+0.70)* | 39.33<br>**40.43** *(+1.10)* | 33.91<br>**34.81** *(+0.90)* | -0.3678<br>**-0.3264** *(+0.0414)* |
+| **Tày (`tay` → `vi`)**<br>*(20,600 train / 2,295 test)* | *Tai-Kadai*<br>*(Thái-Ka Đai)* | Vanilla BARTpho Baseline<br>**TSSA (Ours 🏆)** | 24.67<br>**25.46** *(+0.79)* | 35.74<br>**36.31** *(+0.57)* | 25.68<br>**26.29** *(+0.61)* | -0.5291<br>**-0.5086** *(+0.0205)* |
+| **Ba Na (`bahnaric` → `vi`)**<br>*(51,900 train / 2,001 test)* | *Mon-Khmer*<br>*(Môn-Khơ Me)* | Vanilla BARTpho Baseline<br>**TSSA (Ours 🏆)** | 9.63<br>**9.66** *(+0.03)* | 23.47<br>**23.89** *(+0.42)* | 18.15<br>**18.46** *(+0.31)* | -0.8507<br>**-0.8376** *(+0.0131)* |
+
+---
+
+## 🛠️ Cài Đặt Môi Trường (Installation)
+
 ```bash
+# 1. Tạo môi trường conda
 conda create -n TSSA python=3.10 -y
 conda activate TSSA
-```
 
-### 2. Install Dependencies:
-```bash
+# 2. Cài đặt PyTorch và các thư viện cần thiết
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 pip install -r requirements.txt
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Hướng Dẫn Sử Dụng Nhanh (Quick Start)
 
-### 1. Download and Preprocess Datasets
-Downloads official splits from Hugging Face, unzips translation dicts, normalizes Unicode NFC, and generates leak-free `train.csv` and `test.csv`:
+### 1. Tải và Tiền Xử Lý Dữ Liệu Chuẩn:
 ```bash
 python data/download_and_preprocess.py
 ```
 
-### 2. Train TSSA Model (Proposed)
+### 2. Huấn Luyện Mô Hình TSSA (Đề Xuất):
 ```bash
-# Train on Rhade (Ê Đê)
-python train.py --lang rhade --model_type tssa --max_source_length 256 --max_target_length 256
+# Huấn luyện trên tiếng Ê Đê (Rhade)
+python train.py --lang rhade --model_type tssa --num_train_epochs 5
 
-# Train on Tay (Tày)
-python train.py --lang tay --model_type tssa --max_source_length 256 --max_target_length 256
+# Huấn luyện trên tiếng Tày (Tay)
+python train.py --lang tay --model_type tssa --num_train_epochs 5
 
-# Train on Bahnaric (Ba Na)
-python train.py --lang bahnaric --model_type tssa --max_source_length 256 --max_target_length 256
+# Huấn luyện trên tiếng Ba Na (Bahnaric)
+python train.py --lang bahnaric --model_type tssa --num_train_epochs 5
 ```
 
-### 3. Train Competitor Baselines
-All competitor methods run on the **identical `BARTpho` backbone** for fair comparison:
+### 3. Xuất Báo Cáo Kết Quả Toàn Diện (Full 4 Metrics):
 ```bash
-# Guided Cross-Attention (Chen et al., ACL 2016)
-python train.py --lang rhade --model_type guided_attn
-
-# Joint-Align (Garg et al., EMNLP 2019)
-python train.py --lang rhade --model_type joint_align
-
-# AWESOME-align Loss (Dou & Neubig, EACL 2021)
-python train.py --lang rhade --model_type awesome_align
-
-# Cross-Lingual InfoNCE (ACL 2024)
-python train.py --lang rhade --model_type cl_lsa
-
-# Vanilla BARTpho Fine-tuning
-python train.py --lang rhade --model_type bartpho_vanilla
-```
-
-### 4. Evaluate & Run Mechanistic Ablations
-```bash
-# Standard Benchmark Evaluation (BLEU, chrF++, METEOR, COMET)
-python evaluate.py --checkpoint_dir checkpoints/tssa_rhade --lang rhade
-
-# Ablation 3: Causal Head-Pruning (Top-K vs Random-K vs Bottom-K)
-python evaluate.py --checkpoint_dir checkpoints/tssa_rhade --lang rhade --run_causal_pruning
-
-# Ablation 4: Robustness against 4 types of Noise
-python evaluate.py --checkpoint_dir checkpoints/tssa_rhade --lang rhade --run_robustness
+python summary_results.py --comet
 ```
 
 ---
 
-## 📁 Repository Structure
+## 📜 Trích Dẫn (Citation)
 
-```text
-├── configs/                     # YAML configuration files for experiments and ablations
-├── data/                        # Dataset downloading, preprocessing, SimAlign and DataLoaders
-├── models/                      # PyTorch models (TSSASeq2Seq, HeadWiseRouter, TeacherWrapper)
-├── losses/                      # Mathematical Loss functions (StructLoss, PrimeLoss, RouteLoss, Baselines)
-├── training/                    # 3-Phase LossScheduler, TSSASeq2SeqTrainer, Optimizer
-├── evaluation/                  # Multi-metric evaluator, Causal Head Pruning, Robustness noise
-├── docs/                        # Complete scientific specifications and experiment blueprints
-├── requirements.txt             # Python dependencies
-├── test_suite.py                # Unit & integration test suite
-├── train.py                     # Unified training entrypoint
-└── evaluate.py                  # Standalone evaluation entrypoint
-```
+Nếu bạn sử dụng mã nguồn hoặc kết quả của nghiên cứu này, vui lòng trích dẫn:
 
----
-
-## 📜 Citation
-
-If you use this codebase or method in your research, please cite:
 ```bibtex
-@inproceedings{tssa2026,
-  title={TSSA: Target-Side Semantic Anchoring with Gated Multi-Head Cross-Attention for Extremely Low-Resource Ethnic Minority Machine Translation},
-  author={Anonymous Authors},
-  booktitle={ACL / EMNLP},
+@article{tssa2026,
+  title={Target-Side Semantic Anchoring and Dynamic Cross-Attention Routing for Low-Resource Neural Machine Translation},
+  author={Nguyen, Thanh Dat and Research Team},
+  journal={arXiv preprint},
   year={2026}
 }
 ```

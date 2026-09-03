@@ -70,6 +70,45 @@ Hệ thống hỗ trợ 3 ngữ hệ dân tộc thiểu số với nguồn Huggi
 
 ---
 
+### 📦 Chi Tiết Cấu Trúc Cột & JSON Lồng Nhau Trên Hugging Face (HF Columns Schema):
+
+Cả 3 dataset trên Hugging Face đều lưu cặp câu dưới dạng Dictionary lồng nhau bên trong cột `translation` (nested dict):
+
+#### 1. Ba Na – Tiếng Việt (`FiveC/bahnaric_vietnamese`):
+* **Cấu trúc JSON trong cột `translation`:**
+  ```json
+  {
+    "bahnaric": "Potao ku'm perm hornet. Anih 'Long...",
+    "vietnamese": "Vua lập một. Nơi. Cực. Thánh ở giữa đền. Thờ..."
+  }
+  ```
+* **Splits:** `train` ($\sim 51.9\text{k}$) và `test` ($\sim 2.0\text{k}$).
+* **Trích xuất:** `src_key = "bahnaric"`, `tgt_key = "vietnamese"`.
+
+#### 2. Ê Đê – Tiếng Việt (`NIRVLab/rhade-vietnamese-mt`):
+* **Cấu trúc JSON trong cột `translation`:**
+  ```json
+  {
+    "ede": "Amai kâo dŏk mă abăn.",
+    "vi": "Chị tôi đang lấy chăn."
+  }
+  ```
+* **Splits:** `train` ($14.9\text{k}$) và `test` ($1.0\text{k}$).
+* **Trích xuất:** `src_key = ["ede", "cdc"]`, `tgt_key = "vi"`.
+
+#### 3. Tày – Tiếng Việt (`HeyDunaX/tay-vietnamese-nmt`):
+* **Cấu trúc JSON trong cột `translation`:**
+  ```json
+  {
+    "tay": "noọng ấc cải",
+    "viet": "em ngực bự"
+  }
+  ```
+* **Splits:** `train` ($20.6\text{k}$) và `val` ($2.2\text{k}$).
+* **Trích xuất:** `src_key = "tay"`, `tgt_key = ["viet", "vietnamese", "vi"]`. *(Lưu ý: Split `val` trên HuggingFace được đồng nhất lưu thành file `test.csv` cho pipeline kiểm thử)*.
+
+---
+
 ### 🛠️ Chi Tiết 4 Bước Tiền Xử Lý Tự Động (`data/download_and_preprocess.py`):
 
 1. **Chuẩn Hóa Unicode Dựng Sẵn (Unicode NFC):**
@@ -79,11 +118,13 @@ Hệ thống hỗ trợ 3 ngữ hệ dân tộc thiểu số với nguồn Huggi
    * Chuẩn hóa khoảng trắng kép: `re.sub(r'\s+', ' ', text).strip()`.
    * Lọc bỏ hoàn toàn các cặp câu rỗng hoặc bị gán nhãn `None`.
 3. **Bảo Vệ Tính Toàn Vẹn & Khử Rò Rỉ Tuyệt Đối (Strict Leak-Free Deduplication):**
-   * Loại bỏ trùng lặp nội bộ trong từng tập: `df.drop_duplicates()`.
+   * Giải nén dictionary `translation` thành 2 cột phẳng: `src_text` (tiếng dân tộc) và `tgt_text` (tiếng Việt).
+   * Loại bỏ trùng lặp nội bộ: `df.drop_duplicates()`.
    * Khử rò rỉ tập kiểm thử: `train_df = train_df[~train_df["src_text"].isin(test_df["src_text"])]`. Đảm bảo không có bất kỳ câu nào trong tập kiểm thử xuất hiện trong tập huấn luyện.
 4. **Định Dạng Lưu Trữ Chuẩn & Cắt Độ Dài (Truncation):**
-   * Dữ liệu xuất ra file `train.csv` và `test.csv` gồm 2 cột chuẩn: `src_text` và `tgt_text` (mã hóa `utf-8`).
+   * Dữ liệu xuất ra file `data_processed/<lang>/train.csv` và `data_processed/<lang>/test.csv` gồm 2 cột chuẩn: `src_text` và `tgt_text` (mã hóa `utf-8`).
    * Khi đưa vào DataLoader, áp dụng cắt độ dài chuẩn `max_source_length = 256` và `max_target_length = 256` bằng tokenizer `vinai/bartpho-syllable`.
+
 
 ---
 

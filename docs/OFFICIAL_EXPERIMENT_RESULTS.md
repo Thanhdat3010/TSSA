@@ -61,14 +61,39 @@ Toàn bộ các phương pháp đều được huấn luyện trên **cùng Back
 
 ---
 
-## IV. Lệnh Tái Lập Thí Nghiệm & Đánh Giá
+## IV. Bảng Bóc Tách Thành Phần (Ablation Study Results - Table 2)
+
+Đánh giá tác động độc lập của 3 module: $\mathcal{L}_{\text{struct}}$ (Token Barycenter), $\mathcal{L}_{\text{prime}}$ (Sentence InfoNCE), và $\mathcal{L}_{\text{route}}$ (Dynamic Head Routing).
+
+| Ngôn Ngữ | Cấu Hình / Biến Thể | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Δ vs Full BLEU |
+| :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Tày (`tay` → `vi`)** | **Full TSSA** | **25.46** | **36.31** | **26.29** | **-0.5086** | **Mốc đối chuẩn (0.0)** |
+| | `w/o Dynamic Head Routing` ($\lambda_3 = 0$) | 25.44 | 36.41 | 26.41 | -- | -0.02 |
+| | `w/o Barycenter Struct Anchoring` ($\lambda_1 = 0$) | 25.27 | 36.28 | 26.22 | -- | **-0.19** *(Tụt sâu nhất)* |
+| | `w/o Contrastive Priming` ($\lambda_2 = 0$) | 25.44 | 36.36 | 26.28 | -- | -0.02 |
+| | **Vanilla BARTpho (No Anchoring)** | 24.67 | 35.74 | 25.68 | -0.5291 | -0.79 |
+| **Ê Đê (`rhade` → `vi`)** | **Full TSSA** | **24.11** | **40.43** | **34.81** | **-0.3264** | **Mốc đối chuẩn (0.0)** |
+| | *Các biến thể Ablation* | *[Đang chạy]* | *...* | *...* | *...* | *...* |
+| | **Vanilla BARTpho (No Anchoring)** | 23.41 | 39.33 | 33.91 | -0.3678 | -0.70 |
+| **Ba Na (`bahnaric` → `vi`)** | **Full TSSA** | **9.66** | **23.89** | **18.46** | **-0.8376** | **Mốc đối chuẩn (0.0)** |
+| | *Các biến thể Ablation* | *[Đang chạy]* | *...* | *...* | *...* | *...* |
+| | **Vanilla BARTpho (No Anchoring)** | 9.63 | 23.47 | 18.15 | -0.8507 | -0.03 |
+
+---
+
+## V. Lệnh Tái Lập Thí Nghiệm & Đánh Giá
 
 ### 1. Xuất Báo Cáo Nhanh Toàn Diện (Full 4 Metrics):
 ```bash
 python summary_results.py --comet
 ```
 
-### 2. Đánh giá Checkpoint Cụ Thể:
+### 2. Xuất Báo Cáo Bóc Tách (Ablation Study):
+```bash
+python summary_results.py --ablation
+```
+
+### 3. Đánh giá Checkpoint Cụ Thể:
 ```bash
 python eval_checkpoint.py --checkpoint checkpoints/tssa_rhade --comet
 ```

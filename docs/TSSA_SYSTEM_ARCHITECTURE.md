@@ -148,3 +148,66 @@ TSSA/
 ├── summary_results.py            # Công cụ trích xuất báo cáo full 4 metrics & cache JSON
 └── train.py                      # File thực thi huấn luyện trung tâm
 ```
+
+---
+
+## V. Hướng Dẫn Bộ Tham Số Dòng Lệnh (`train.py` CLI Arguments Guide)
+
+Hệ thống hỗ trợ đầy đủ các cờ tham số dòng lệnh qua `argparse`:
+
+```bash
+# 1. Tham số dữ liệu & Ngôn ngữ:
+--lang                  # Ngôn ngữ nguồn: 'rhade', 'tay', 'bahnaric' (Mặc định: 'rhade')
+--data_dir              # Thư mục chứa dữ liệu processed (Mặc định: 'data_processed')
+--max_source_length     # Độ dài tối đa câu nguồn (Mặc định: 256)
+--max_target_length     # Độ dài tối đa câu đích (Mặc định: 256)
+
+# 2. Tham số Backbone & Phương pháp:
+--model_ckpt            # Backbone mô hình học sinh (Mặc định: 'vinai/bartpho-syllable')
+--teacher_ckpt          # Backbone mô hình giáo viên (Mặc định: 'vinai/bartpho-syllable')
+--model_type            # Phương pháp: 'tssa', 'bartpho_vanilla', 'align_to_distill', 
+                        #             'shift_aet', 'awesome_align', 'cl_lsa', 'structural_supervision'
+
+# 3. Tham số Hàm Mất Mát TSSA (Ablation Flags):
+--use_struct            # Bật/tắt L_struct (Token-level Barycenter Anchoring)
+--use_prime             # Bật/tắt L_prime (Sentence-level InfoNCE Priming)
+--use_route             # Bật/tắt L_route (Decoder Dynamic Routing Gate)
+--teacher_mode          # Chế độ Teacher: 'frozen', 'trainable', 'ema' (Mặc định: 'frozen')
+--lambda_struct         # Trọng số max của L_struct (Mặc định: 0.10)
+--lambda_prime          # Trọng số max của L_prime (Mặc định: 0.05)
+--lambda_route          # Trọng số max của L_route (Mặc định: 0.10)
+
+# 4. Tham số Tối Ưu & Tăng Tốc:
+--batch_size            # Kích thước mẻ huấn luyện (Mặc định: 16)
+--learning_rate         # Tốc độ học (Mặc định: 2e-5 với AdamW)
+--num_train_epochs      # Số epoch huấn luyện (Mặc định: 5)
+--fp16                  # Bật tính toán chính xác hỗn hợp FP16 (Mặc định: True)
+--seed                  # Random seed tái lập (Mặc định: 42)
+--skip_if_exists        # Bỏ qua huấn luyện nếu đã có kết quả kiểm thử (Tiết kiệm thời gian)
+```
+
+---
+
+## VI. Thiết Kế 6 Thí Nghiệm Bóc Tách & Cơ Chế (6 Ablation & Mechanistic Blueprints)
+
+Sau khi hoàn thành Bảng 1 chính thức, hệ thống hỗ trợ sẵn 6 thí nghiệm chuyên sâu phục vụ viết bài báo:
+
+### 1. Ablation 1: Bóc Tách Thành Phần Độc Lập (Factorial Loss Matrix $2^3$)
+* **Mục tiêu:** Kiểm chứng đóng góp độc lập và tính cộng hưởng của 3 hàm Loss ($\mathcal{L}_{\text{struct}}, \mathcal{L}_{\text{prime}}, \mathcal{L}_{\text{route}}$).
+* **Các cấu hình:** Base NMT (Vanilla), Token-Only, Sentence-Only, Router-Only, Token+Sentence, Full TSSA.
+
+### 2. Ablation 2: Thẩm Định Chế Độ Giáo Viên (Teacher Mode Analysis)
+* **Mục tiêu:** Chứng minh việc đóng băng Teacher (`frozen`) vượt trội hơn Teacher huấn luyện cập nhật liên tục (`trainable`) nhờ chặn đứng hiện tượng trôi dạt biểu diễn (Representation Drift).
+
+### 3. Ablation 3: Cắt Tỉa Đầu Chú Ý Nhân Quả (Causal Head-Pruning Study)
+* **Mục tiêu:** Dùng `head_router.py` để cắt tỉa Top-K Anchor Heads so với Random-K và Bottom-K Heads, chứng minh cổng Decoder thực sự phát hiện đúng các Head chuyên trách dịch thuật ngữ nghĩa.
+
+### 4. Ablation 4: Phân Tích Độ Sắc Nét & Entropy Chú Ý (Attention Entropy & Sink Elimination)
+* **Mục tiêu:** Đo lường độ giảm Entropy $\mathcal{H}(\alpha)$ và tỷ lệ tập trung khối lượng chú ý Top-1 vào các từ mang nội dung ngữ nghĩa thay vì chìm vào `<s>` và `<pad>`.
+
+### 5. Ablation 5: Kiểm Thử Độ Bền Bỉ Trước Nhiễu (Robustness under Orthographic Noise)
+* **Mục tiêu:** Đánh giá khả năng dịch khi câu nguồn bị nhiễu chính tả (Typo), thiếu từ (Word Drop), hoặc hoán vị trật tự từ (Permutation).
+
+### 6. Ablation 6: Trực Quan Hóa Biểu Đồ Nhiệt (Qualitative Cross-Attention Heatmaps)
+* **Mục tiêu:** Xuất file ảnh ma trận Cross-Attention trực quan đặt cạnh nhau giữa Vanilla BARTpho và TSSA trên các câu thực tế.
+

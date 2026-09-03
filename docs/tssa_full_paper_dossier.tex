@@ -25,15 +25,8 @@
     urlcolor=darkblue
 }
 
-\title{\textbf{Target-Side Semantic Anchoring and Dynamic Cross-Attention Routing for Low-Resource Neural Machine Translation}}
-
-\author{
-  \textbf{Thanh Dat Nguyen}$^{1}$, \textbf{Research Team}$^{1,2}$ \\
-  $^1$Department of Computer Science, Faculty of Information Technology \\
-  $^2$AI \& NLP Research Laboratory \\
-  \texttt{\{thanhdat, research\}@univ.edu.vn}
-}
-
+\title{\textbf{Technical Documentation: Target-Side Semantic Anchoring (TSSA 2.0) for Low-Resource Neural Machine Translation}}
+\author{\textbf{Comprehensive System Architecture, Theoretical Formulation \& Experimental Benchmark}}
 \date{\today}
 
 \begin{document}
@@ -41,162 +34,133 @@
 \maketitle
 
 \begin{abstract}
-Neural Machine Translation (NMT) for extremely low-resource, non-isomorphic languages faces acute representation degradation, attention diffusion, and semantic drift. When fine-tuning massively pre-trained sequence-to-sequence backbones (such as BARTpho) on small parallel corpora (15K--50K sentence pairs), standard cross-attention mechanisms suffer from severe \textit{attention sinking} (up to 93\% of attention mass collapsing onto punctuation or boundary tokens) and anisotropic representation collapse. While existing word alignment and distillation methods attempt to enforce structural constraints, they either rely on external dependency parsers, introduce noisy pseudo-labels via uncalibrated autoregressive shifts, or impose rigid layer-wide penalties that disrupt decoder fluency. 
+This technical report documents the theoretical formulation, architectural design, and empirical validation of \textbf{Target-Side Semantic Anchoring 2.0 (TSSA 2.0)} for low-resource Neural Machine Translation (NMT). When fine-tuning massively pre-trained sequence-to-sequence backbones (BARTpho) on low-resource, typologically distant minority language pairs (15K--50K sentence pairs), standard cross-attention mechanisms suffer from severe attention sinking (up to 93\% of attention mass collapsing onto boundary tokens) and anisotropic representation distortion. Existing alignment techniques (e.g., token-level InfoNCE, autoregressive shift alignment, dependency graph supervision) degrade significantly in low-resource settings due to false-negative penalties, noisy pseudo-label confirmation bias, and lack of parser support.
 
-In this work, we propose \textbf{Target-Side Semantic Anchoring 2.0 (TSSA 2.0)}, a self-contained, end-to-end framework that regularizes cross-lingual latent spaces without external tools or offline caches. TSSA 2.0 integrates three novel mechanisms: (1) an \textit{Online Frozen Target Teacher} that dynamically extracts clean target-to-source alignment posteriors in real time (0.001s); (2) a \textit{Residual Semantic Projector} ($\Phi_\theta$) that prevents representation collapse via non-linear residual mappings; and (3) a \textit{Dynamic Head Routing Gate} supervised by teacher agreement that decouples semantic alignment heads from syntactic generation heads. 
+TSSA 2.0 provides an end-to-end, self-contained solution without requiring external parsers, statistical alignment tools, or offline disk caches. It unifies three core mechanisms: (1) an \textit{Online Frozen Target Teacher} extracting clean target-to-source alignment posteriors in real time (0.001s); (2) a \textit{Residual Semantic Projector} ($\Phi_\theta$) preserving latent geometry via non-linear residual mappings; and (3) a \textit{Dynamic Head Routing Gate} supervised by teacher agreement that decouples semantic translation heads from syntactic generation heads. 
 
-Extensive empirical evaluations across three distinct, typologically diverse Vietnamese minority language families---Rhade (Austronesian, 15.1K pairs), Tay (Tai-Kadai, 20.6K pairs), and Bahnaric (Mon-Khmer, 51.9K pairs)---demonstrate that TSSA 2.0 consistently outperforms the vanilla BARTpho baseline and four state-of-the-art alignment paradigms (Align-to-Distill, AWESOME-align, Shift-AET, and CL-LSA) across all four official evaluation metrics: SacreBLEU (+0.70 to +0.79), chrF++ (+0.42 to +1.10), METEOR (+0.31 to +0.90), and COMET (+0.0131 to +0.0414). Intrinsic attention analyses reveal that TSSA 2.0 cuts attention entropy by 50.7\% and boosts keyword concentration by $2.2\times$, establishing a new state-of-the-art benchmark for low-resource cross-lingual transfer.
+Empirical evaluations across three distinct Vietnamese minority language families---Rhade (Austronesian, 15.1K pairs), Tay (Tai-Kadai, 20.6K pairs), and Bahnaric (Mon-Khmer, 51.9K pairs)---demonstrate that TSSA 2.0 consistently outperforms the vanilla BARTpho baseline and four representative alignment paradigms (Align-to-Distill, AWESOME-align, Shift-AET, and CL-LSA) across all four standard metrics: SacreBLEU (+0.70 to +0.79), chrF++ (+0.42 to +1.10), METEOR (+0.31 to +0.90), and COMET (+0.0131 to +0.0414). Intrinsic attention analysis confirms a 50.7\% reduction in cross-attention entropy and a $2.2\times$ increase in semantic keyword concentration.
 \end{abstract}
-
-\paragraph{Keywords:} Low-Resource Neural Machine Translation, Word Alignment, Cross-Attention Distillation, Semantic Anchoring, Dynamic Routing Gate, BARTpho.
 
 \newpage
 \tableofcontents
 \newpage
 
 % ==============================================================================
-\section{Introduction}
-\label{sec:introduction}
+\section{Problem Formulation \& Core Challenges}
+\label{sec:problem_formulation}
 % ==============================================================================
 
-Neural Machine Translation (NMT) powered by the Transformer architecture \cite{vaswani2017attention} has revolutionized multilingual communication. However, the remarkable performance of state-of-the-art NMT models relies heavily on massive parallel corpora containing millions of paired sentences. For the vast majority of the world's endangered and minority languages, available parallel data is severely limited, typically spanning only 10,000 to 50,000 sentences. In such low-resource regimes, training deep autoregressive models from scratch results in catastrophic overfitting, while standard fine-tuning of pre-trained multilingual language models (e.g., mBART, BARTpho \cite{tran2021bartpho}) frequently encounters representation collapse and semantic disorientation.
+In low-resource neural machine translation, we are given a parallel dataset $\mathcal{D} = \{(\mathcal{X}^{(k)}, \mathcal{Y}^{(k)})\}_{k=1}^{|\mathcal{D}|}$, where $\mathcal{X} = (x_1, \dots, x_S)$ is a source sentence in an under-resourced minority language and $\mathcal{Y} = (y_1, \dots, y_T)$ is the target sentence in Vietnamese. The parallel corpus size $|\mathcal{D}|$ is extremely constrained (ranging from 15,000 to 52,000 sentence pairs).
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.92\textwidth]{figures/aflow_solution_overview.png}
-\caption{\textbf{Architectural Overview of TSSA 2.0.} An Online Frozen Target Teacher $\mathcal{E}_T$ extracts rich target contextual states $h^T$. The Residual Semantic Projector $\Phi_\theta$ regularizes source states via Barycenter Anchoring ($\mathcal{L}_{\text{struct}}$) and sentence contrastive priming ($\mathcal{L}_{\text{prime}}$). Dynamic Routing Gates $g_{\ell h t}$ selectively gate decoder cross-attention heads supervised by teacher cosine agreement ($\mathcal{L}_{\text{route}}$).}
-\label{fig:solution_overview}
-\end{figure}
+Under these data-scarce conditions and across non-isomorphic language families (Austronesian, Tai-Kadai, and Mon-Khmer paired with Vietnamese), standard sequence-to-sequence fine-tuning faces three fundamental challenges:
 
-A primary vulnerability of Transformer-based sequence-to-sequence models on low-resource pairs lies in the unregularized cross-attention distribution $\alpha_{t, s} = \text{softmax}(q_t k_s^\top / \sqrt{d_k})$. In rich-resource scenarios, cross-attention implicitly learns to approximate soft bilingual alignments. In contrast, under data scarcity across non-isomorphic language families (e.g., Austronesian, Tai-Kadai, and Mon-Khmer paired with Vietnamese), cross-attention distributions degenerate into two pathological failure modes:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Attention Sinking (Pathological Diffusion):} Up to 90\%--93\% of decoder attention mass concentrates on non-informative special tokens (e.g., \texttt{<s>}, \texttt{<pad>}, commas), starving content words of source semantic context.
-    \item \textbf{Spurious Alignment \& Semantic Drift:} Due to vocabulary disparities and morphological richness, cross-attention matrices produce diffuse, multi-modal probability clouds with high entropy, failing to anchor critical nouns and verbs to their respective source positions.
-\end{enumerate}
-
-To combat these limitations, previous research has explored various alignment-guided objectives, including:
-\begin{itemize}[leftmargin=*]
-    \item \textit{Feature \& Attention Distillation} (e.g., Align-to-Distill \cite{jin2024align}, Structural Supervision \cite{li2022structural}): Transferring attention maps via pointwise convolutions or syntactic dependency graphs.
-    \item \textit{Shifted Autoregressive State Alignment} (e.g., Shift-AET \cite{chen2020accurate}): Extracting alignments at decoding step $t+1$ where target token $y_t$ serves as decoder input.
-    \item \textit{Cross-Lingual Embedding Alignment} (e.g., AWESOME-align \cite{dou2021word}, CrossInit \cite{ai2024zero}, DM-BLI \cite{hu2024dm}): Enforcing bidirectional consistency traces or Zipfian rank spans.
-    \item \textit{Contrastive Representation Learning} (e.g., Token-level InfoNCE \cite{chi2021infoxlm}, DPO-Align \cite{wu2024direct}): Pulling aligned token representations together within mini-batches.
-\end{itemize}
-
-However, as revealed in our empirical investigations, \textbf{all four existing paradigms suffer severe performance degradation when applied to low-resource, non-isomorphic language pairs} (see Table~\ref{tab:main_benchmark_3langs}). Rigid token-level InfoNCE suffers from false-negative penalties that distort the latent space; dependency-guided methods fail because robust parsers do not exist for low-resource languages; and uncalibrated pseudo-label distillation introduces confirmation bias that cripples autoregressive generation.
-
-\paragraph{Contributions.} To address these fundamental challenges, we introduce \textbf{Target-Side Semantic Anchoring 2.0 (TSSA 2.0)}, an end-to-end framework featuring four primary scientific contributions:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Self-Contained Online Frozen Target Teacher:} We leverage the pre-trained model's own target-language representation capacity to dynamically extract bilingual posterior alignment matrices $A \in \mathbb{R}^{B \times T \times S}$ on GPU in 0.001s, eliminating all dependencies on external aligners (LaBSE, GIZA++, FastAlign) or static disk caches.
-    \item \textbf{Non-Linear Residual Semantic Projection ($\Phi_\theta$):} We propose a residual MLP projection architecture $\Phi_\theta(x) = W_2 \text{GELU}(W_1 x) + x$ with LayerNorm, mathematically preventing representation collapse during contrastive sentence priming ($\mathcal{L}_{\text{prime}}$).
-    \item \textbf{Confidence-Weighted Barycenter Anchoring ($\mathcal{L}_{\text{struct}}$):} We supervise top-layer encoder representations toward dynamic target barycenters weighted by posterior confidence $c_i = \max_j A_{ij}$, filtering out unaligned noise while preserving source geometry.
-    \item \textbf{Dynamic Decoder Cross-Attention Routing ($\mathcal{L}_{\text{route}}$):} We introduce head-wise scalar gates $g_{\ell h t} \in [0, 1]$ supervised by teacher cosine agreement targets $r_{\ell h t}$, selectively regularizing semantic translation heads while leaving syntactic heads unconstrained to maintain target fluency.
-    \item \textbf{State-of-the-Art Results Across 3 Language Families:} Across Rhade (Austronesian), Tay (Tai-Kadai), and Bahnaric (Mon-Khmer), TSSA 2.0 achieves unanimous state-of-the-art performance across 12 out of 12 evaluation settings, outperforming vanilla BARTpho and all four baseline paradigms on SacreBLEU, chrF++, METEOR, and COMET.
+    \item \textbf{Attention Sinking \& Contextual Starvation:} Standard cross-attention $\alpha_{t, s} = \text{softmax}(q_t k_s^\top / \sqrt{d_k})$ degenerates such that up to 90\%--93\% of attention mass is absorbed by special delimiter tokens (\texttt{<s>}, \texttt{<pad>}), leaving content words ungrounded.
+    \item \textbf{Representation Collapse in High-Dimensional Spaces:} High-dimensional embeddings ($d_{\text{model}} = 1024$) fine-tuned on limited samples undergo anisotropic collapse, where sentence representations occupy a narrow cone in representation space.
+    \item \textbf{Failure of Existing Alignment Paradigms on Low-Resource Data:}
+    \begin{itemize}
+        \item \textit{Token-level InfoNCE (CL-LSA):} Treating all other in-batch tokens as negative instances severely penalizes morphological variants and synonyms (false negative penalty), degrading performance ($17.85$ BLEU on Rhade, $4.49$ on Bahnaric).
+        \item \textit{Shifted Autoregressive States (Shift-AET):} Symmetrized pseudo-alignment labels extracted from unregularized models contain substantial noise, causing error propagation during autoregressive decoding ($19.44$ BLEU on Tay vs. $24.67$ baseline).
+        \item \textit{Syntactic Supervision:} Low-resource minority languages lack robust dependency parsers, introducing corrupted graph structures.
+    \end{itemize}
 \end{enumerate}
 
 % ==============================================================================
-\section{Related Work \& Theoretical Landscape}
-\label{sec:related_work}
+\section{System Architecture: TSSA 2.0}
+\label{sec:system_architecture}
 % ==============================================================================
 
-\subsection{Cross-Attention in Sequence-to-Sequence Transformers}
-In autoregressive NMT \cite{vaswani2017attention,bahdanau2015neural}, the decoder generates target tokens $y_t$ conditioned on encoder representations $h^S = (h_1^S, \dots, h_S^S)$ via multi-head cross-attention:
+TSSA 2.0 addresses these challenges through a fully integrated, multi-task sequence-to-sequence framework built on top of the pre-trained BARTpho-syllable backbone ($d_{\text{model}} = 1024, H = 16, L_{\text{enc}} = L_{\text{dec}} = 6$).
+
+\subsection{1. Online Frozen Target Teacher ($\mathcal{E}_T$)}
+Instead of relying on external aligners (LaBSE, GIZA++, FastAlign) or static disk caches, TSSA 2.0 embeds a parameter-frozen copy of the target language encoder:
 \begin{equation}
-    \text{MHA}(Q, K, V) = \text{Concat}(\text{head}_1, \dots, \text{head}_H) W^O, \quad \text{head}_h = \text{softmax}\left(\frac{Q W_h^Q (K W_h^K)^\top}{\sqrt{d_k}}\right) V W_h^V.
+    \mathcal{E}_T = \text{stop\_gradient}(f_{\text{enc}}), \quad h^T = \mathcal{E}_T(\mathcal{Y}) \in \mathbb{R}^{T \times d_{\text{model}}}.
 \end{equation}
-Voita et al. \cite{voita2019analyzing} demonstrated that multi-head attention exhibits strong functional specialization: certain heads track positional offsets, syntactic agreement, and sentence boundaries, while only a sparse subset acts as semantic alignment heads. Forcing uniform alignment constraints across all attention heads destroys this functional division, leading to degraded translation quality.
+Because the student decoder and teacher encoder share the identical Vietnamese tokenizer and vocabulary, target position $t$ in the teacher maps directly to position $t$ in the decoder without tokenization mismatches.
 
-\subsection{Taxonomy of Alignment Baselines}
-Existing cross-lingual alignment literature can be categorized into four methodological paradigms:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Attention Distillation \& Structural Guidance:} Align-to-Distill (A2D) \cite{jin2024align} employs a $1\times 1$ pointwise convolution module (AAM) to map student attention maps to teacher attention maps via Kullback-Leibler divergence. Structural Supervision \cite{li2022structural} integrates dependency graphs from source and target sentences into graph convolution networks.
-    \item \textbf{Shifted Autoregressive Hidden State Alignment:} Shift-AET \cite{chen2020accurate} observes that decoder hidden states at step $t$ represent input $y_{t-1}$, and thus induces alignments at step $t+1$ using an auxiliary multi-head attention module supervised by symmetrized attention labels.
-    \item \textbf{Cross-Lingual Embedding \& Subspace Alignment:} AWESOME-align \cite{dou2021word} optimizes self-training objective $\mathcal{L}_{\text{SO}}$ and consistency trace objective $\mathcal{L}_{\text{CO}} = -\text{trace}(S_{xy}^\top S_{yx}) / \min(m, n)$. CrossInit \cite{ai2024zero} initializes word embeddings by contrastive learning across Zipfian frequency rank spans. DM-BLI \cite{hu2024dm} partitions representations into dynamic 64-dimensional subspaces with intra- and inter-cluster contrastive objectives.
-    \item \textbf{Contrastive Learning \& Preference Tuning:} Token-level Cross-Lingual InfoNCE (CL-LSA) \cite{chi2021infoxlm} maximizes mutual information between paired subwords across languages. DPO-Align \cite{wu2024direct} formulates word alignment coverage as preference optimization pairs.
-\end{enumerate}
-
-% ==============================================================================
-\section{Methodology: The TSSA 2.0 Framework}
-\label{sec:methodology}
-% ==============================================================================
-
-\subsection{System Architecture}
-Let $\mathcal{X} = (x_1, \dots, x_S)$ denote a source sentence in a low-resource minority language, and $\mathcal{Y} = (y_1, \dots, y_T)$ denote the corresponding reference in Vietnamese. The TSSA 2.0 architecture consists of three core components:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Student Model ($f_\theta$):} A pre-trained sequence-to-sequence model (BARTpho-syllable, $d_{\text{model}} = 1024, H = 16, L_{\text{enc}} = L_{\text{dec}} = 6$) with trainable parameters $\theta$.
-    \item \textbf{Online Frozen Target Teacher ($\mathcal{E}_T$):} A parameter-frozen copy of the BARTpho encoder, $\mathcal{E}_T = \text{sg}(f_{\text{enc}})$, processing target text $\mathcal{Y}$ during training to extract canonical Vietnamese contextual representations $h^T = \mathcal{E}_T(\mathcal{Y}) \in \mathbb{R}^{T \times d_{\text{model}}}$.
-    \item \textbf{Residual Semantic Projector ($\Phi_\theta$):} A non-linear projection module mapping high-dimensional hidden states into a regularized semantic space:
-    \begin{equation}
-        \Phi_\theta(h) = \text{LayerNorm}(W_2 \cdot \text{GELU}(W_1 h + b_1) + b_2 + h),
-    \end{equation}
-    where $W_1 \in \mathbb{R}^{d_{\text{proj}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{proj}}}$, and $d_{\text{proj}} = 256$.
-\end{enumerate}
-
-\subsection{Online Target-to-Source Alignment Posterior ($A$)}
-At each forward pass, the model extracts source encoder states $h^S \in \mathbb{R}^{S \times d}$ and teacher states $h^T \in \mathbb{R}^{T \times d}$. The cross-lingual similarity matrix $M \in \mathbb{R}^{T \times S}$ is computed via normalized dot-product:
+\subsection{2. Dynamic Posterior Alignment Matrix ($A$)}
+During training, the student encoder outputs source states $h^S = f_{\text{enc}}(\mathcal{X}) \in \mathbb{R}^{S \times d_{\text{model}}}$. The cross-lingual token similarity matrix $M \in \mathbb{R}^{T \times S}$ is computed on-the-fly:
 \begin{equation}
-    M_{t, s} = \frac{\tilde{h}_t^T \cdot (\tilde{h}_s^S)^\top}{\tau_{\text{align}}}, \quad \tilde{h} = \frac{h}{\|h\|_2},
+    M_{t, s} = \frac{\tilde{h}_t^T \cdot (\tilde{h}_s^S)^\top}{\tau_{\text{align}}}, \quad \tilde{h} = \frac{h}{\|h\|_2}, \quad \tau_{\text{align}} = 0.1.
 \end{equation}
-where $\tau_{\text{align}} = 0.1$. The posterior target-to-source alignment distribution $A \in \mathbb{R}^{T \times S}$ and source confidence vector $c \in \mathbb{R}^S$ are given by:
+The target-to-source alignment posterior matrix $A \in \mathbb{R}^{T \times S}$ and source token alignment confidence $c \in \mathbb{R}^S$ are defined as:
 \begin{equation}
     A_{t, s} = \frac{\exp(M_{t, s})}{\sum_{s'=1}^S \exp(M_{t, s'})}, \quad c_s = \min\left(1.0, \sum_{t=1}^T A_{t, s}\right) \cdot \mathbb{I}(x_s \neq \texttt{<pad>}).
 \end{equation}
 
-\subsection{Tripartite Loss Formulation}
+\subsection{3. Residual Semantic Projector ($\Phi_\theta$)}
+To prevent representation collapse, representations are projected through a non-linear residual network with LayerNorm:
+\begin{equation}
+    \Phi_\theta(h) = \text{LayerNorm}(W_2 \cdot \text{GELU}(W_1 h + b_1) + b_2 + h),
+\end{equation}
+where $W_1 \in \mathbb{R}^{d_{\text{proj}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{proj}}}$, and $d_{\text{proj}} = 256$.
 
-\subsubsection{1. Token-level Barycenter Anchoring Loss ($\mathcal{L}_{\text{struct}}$)}
-For each source position $s$, we construct the target semantic barycenter $\bar{h}_s^T = \sum_{t=1}^T A_{t, s} h_t^T$. The structural anchoring loss minimizes the confidence-weighted Smooth L1 discrepancy:
+% ==============================================================================
+\section{Mathematical Formulation of Losses}
+\label{sec:losses}
+% ==============================================================================
+
+\subsection{1. Token-level Barycenter Anchoring Loss ($\mathcal{L}_{\text{struct}}$)}
+For each source token $s$, we compute its corresponding target semantic barycenter $\bar{h}_s^T = \sum_{t=1}^T A_{t, s} h_t^T$. The structural loss regularizes source encoder states toward their target barycenters weighted by confidence $c_s$:
 \begin{equation}
     \mathcal{L}_{\text{struct}} = \frac{1}{\sum_s c_s + \epsilon} \sum_{s=1}^S c_s \cdot \text{Smooth}_{L1}\left(\Phi_\theta(h_s^S), \text{sg}(\Phi_\theta(\bar{h}_s^T))\right).
 \end{equation}
 
-\subsubsection{2. Sentence-level Contrastive Priming Loss ($\mathcal{L}_{\text{prime}}$)}
-To prevent representation collapse and align global sentence semantics, we pool sequence representations $z^S = \text{MeanPool}(\Phi_\theta(h^S))$ and $z^T = \text{MeanPool}(\Phi_\theta(h^T))$. With in-batch negatives, the symmetric InfoNCE objective is:
+\subsection{2. Sentence-level Contrastive Priming Loss ($\mathcal{L}_{\text{prime}}$)}
+Global sentence vectors are obtained by masked mean-pooling: $z^S = \text{MeanPool}(\Phi_\theta(h^S))$ and $z^T = \text{MeanPool}(\Phi_\theta(h^T))$. With in-batch negative sampling, the symmetric InfoNCE loss is formulated as:
 \begin{equation}
     \mathcal{L}_{\text{prime}} = -\frac{1}{2B} \sum_{i=1}^B \left[ \log \frac{\exp(z_i^S \cdot z_i^T / \tau)}{\sum_{j=1}^B \exp(z_i^S \cdot z_j^T / \tau)} + \log \frac{\exp(z_i^T \cdot z_i^S / \tau)}{\sum_{j=1}^B \exp(z_i^T \cdot z_j^S / \tau)} \right],
 \end{equation}
-where $\tau = 0.07$ and teacher states are detached from gradient propagation ($\text{sg}$).
+where temperature $\tau = 0.07$ and teacher gradients are detached ($\text{sg}$).
 
-\subsubsection{3. Dynamic Decoder Cross-Attention Routing Loss ($\mathcal{L}_{\text{route}}$)}
-At decoder layer $\ell$ and head $h$, the query representation $q_{\ell h t}$ and pooled source summary $s_{\ell h} = W^s \text{MeanPool}(h^S)$ generate a scalar gate $g_{\ell h t} \in [0, 1]$:
+\subsection{3. Dynamic Cross-Attention Routing Loss ($\mathcal{L}_{\text{route}}$)}
+At decoder layer $\ell$ and head $h$, the query state $q_{\ell h t}$ and pooled source summary $s_{\ell h} = W^s \text{MeanPool}(h^S)$ generate an adaptive scalar gate $g_{\ell h t} \in [0, 1]$:
 \begin{equation}
     g_{\ell h t} = \sigma\left(\text{MLP}\left([q_{\ell h t}; s_{\ell h}; q_{\ell h t} \odot s_{\ell h}]\right)\right).
 \end{equation}
-The gate is supervised by the cosine agreement target $r_{\ell h t}$ between the projected head output $o_{\ell h t}$ and the teacher contextual state $h_t^T$:
+The gate is supervised by the cosine agreement target $r_{\ell h t}$ between the projected head representation $o_{\ell h t}$ and the teacher state $h_t^T$:
 \begin{equation}
-    r_{\ell h t} = \text{sg}\left(\frac{1 + \cos(R_h o_{\ell h t}, \Phi_\theta(h_t^T))}{2}\right), \quad \mathcal{L}_{\text{route}} = -\frac{1}{|\mathcal{Y}|} \sum_{t=1}^T \sum_{\ell, h} \left[ r_{\ell h t} \log g_{\ell h t} + (1 - r_{\ell h t}) \log (1 - g_{\ell h t}) \right].
+    r_{\ell h t} = \text{sg}\left(\frac{1 + \cos(R_h o_{\ell h t}, \Phi_\theta(h_t^T))}{2}\right),
+\end{equation}
+\begin{equation}
+    \mathcal{L}_{\text{route}} = -\frac{1}{|\mathcal{Y}|} \sum_{t=1}^T \sum_{\ell, h} \left[ r_{\ell h t} \log g_{\ell h t} + (1 - r_{\ell h t}) \log (1 - g_{\ell h t}) \right].
 \end{equation}
 
-\subsubsection{Total Multi-Task Objective}
-The complete training objective combines sequence-to-sequence translation loss with scheduled auxiliary terms:
+\subsection{Total Multi-Task Objective \& Annealing Schedule}
+The overall training objective combines translation cross-entropy with the three auxiliary terms:
 \begin{equation}
-    \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{MT}} + \lambda_1(t) \mathcal{L}_{\text{struct}} + \lambda_2(t) \mathcal{L}_{\text{prime}} + \lambda_3(t) \mathcal{L}_{\text{route}},
+    \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{MT}} + \lambda_1(t) \mathcal{L}_{\text{struct}} + \lambda_2(t) \mathcal{L}_{\text{prime}} + \lambda_3(t) \mathcal{L}_{\text{route}}.
 \end{equation}
-where $\lambda_1(t), \lambda_2(t), \lambda_3(t)$ follow a 3-phase annealing schedule:
+The weights $\lambda_1, \lambda_2, \lambda_3$ follow a calibrated three-phase schedule:
 \begin{itemize}[leftmargin=*]
-    \item \textbf{Phase 1 (Warmup, Epochs 1--2):} $\lambda_1: 0 \rightarrow 0.10, \lambda_2: 0 \rightarrow 0.05, \lambda_3 = 0.0$ (stabilizing translation backbone).
-    \item \textbf{Phase 2 (Co-adaptation, Epochs 3--4):} $\lambda_1 = 0.10, \lambda_2 = 0.05, \lambda_3: 0 \rightarrow 0.10$ (activating routing gates).
-    \item \textbf{Phase 3 (Decoupled Fine-tuning, Epoch 5):} Fixed $(\lambda_1, \lambda_2, \lambda_3) = (0.10, 0.05, 0.10)$ with early stopping.
+    \item \textbf{Phase 1 (Warmup, Epochs 1--2):} $\lambda_1(t): 0 \rightarrow 0.10, \lambda_2(t): 0 \rightarrow 0.05, \lambda_3 = 0.0$.
+    \item \textbf{Phase 2 (Co-adaptation, Epochs 3--4):} $\lambda_1 = 0.10, \lambda_2 = 0.05, \lambda_3(t): 0 \rightarrow 0.10$.
+    \item \textbf{Phase 3 (Fine-tuning, Epoch 5):} Fixed $(\lambda_1, \lambda_2, \lambda_3) = (0.10, 0.05, 0.10)$ with validation-based early stopping.
 \end{itemize}
 
 % ==============================================================================
-\section{Experiments \& Benchmark Results}
-\label{sec:experiments}
+\section{Empirical Validation \& Experimental Results}
+\label{sec:experimental_results}
 % ==============================================================================
 
-\subsection{Datasets \& Experimental Setup}
-We evaluate all models on three low-resource language pairs from distinct language families paired with Vietnamese:
+\subsection{Datasets \& Experimental Configuration}
+Experiments are conducted on three distinct low-resource language pairs paired with Vietnamese:
 \begin{itemize}[leftmargin=*]
-    \item \textbf{Rhade (Ê Đê $\rightarrow$ Vi):} Austronesian family; 14,969 training pairs, 1,000 test pairs.
-    \item \textbf{Tay (Tày $\rightarrow$ Vi):} Tai-Kadai family; 20,600 training pairs, 2,295 test pairs.
-    \item \textbf{Bahnaric (Ba Na $\rightarrow$ Vi):} Mon-Khmer family; 51,900 training pairs, 2,001 test pairs.
+    \item \textbf{Rhade (Ê Đê $\rightarrow$ Vi):} Austronesian family; 14,969 train pairs, 1,000 test pairs.
+    \item \textbf{Tay (Tày $\rightarrow$ Vi):} Tai-Kadai family; 20,600 train pairs, 2,295 test pairs.
+    \item \textbf{Bahnaric (Ba Na $\rightarrow$ Vi):} Mon-Khmer family; 51,900 train pairs, 2,001 test pairs.
 \end{itemize}
-All models are trained for 5 epochs with batch size 16, AdamW optimizer ($\text{lr} = 2\times 10^{-5}$, weight decay 0.01), maximum sequence length 256, and mixed precision FP16 on NVIDIA A100 GPUs.
 
-\subsection{Main Benchmark Results (Table 1)}
+All models are fine-tuned from \texttt{vinai/bartpho-syllable} for 5 epochs with batch size 16, learning rate $2\times 10^{-5}$ (AdamW, weight decay 0.01), sequence length 256, and mixed-precision FP16 on NVIDIA A100 GPUs.
+
+\subsection{Official 4-Metric Benchmark Results}
+
+Table~\ref{tab:main_benchmark_3langs} reports the complete evaluation across all models on SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}).
 
 \begin{table*}[htbp]
 \centering
-\caption{\textbf{Comprehensive Main Benchmark Results across Three Language Families (5 Epochs).} SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}) evaluated on official test sets. \textbf{Bold} indicates the top score per language.}
+\caption{\textbf{Official Full 4-Metric Benchmark Results across Three Language Families (5 Epochs).} Performance evaluation across Rhade, Tay, and Bahnaric showing SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}). \textbf{Bold} indicates the top performance per column.}
 \label{tab:main_benchmark_3langs}
 \vspace{4pt}
 \resizebox{\textwidth}{!}{
@@ -224,28 +188,16 @@ CL-LSA (InfoNCE) & Token-level Contrastive & 17.85 & 33.33 & 28.19 & -0.5969 & 2
 }
 \end{table*}
 
-% ==============================================================================
-\section{In-depth Analysis \& Discussion}
-\label{sec:analysis}
-% ==============================================================================
+\subsection{Intrinsic Attention Sharpness \& Entropy Analysis}
 
-\subsection{Why Existing Alignment Baselines Collapse in Low-Resource Regimes}
-Our empirical findings in Table~\ref{tab:main_benchmark_3langs} present a striking contrast: baseline methods that achieved state-of-the-art results on high-resource Indo-European language pairs (e.g., German-English 1.9M) exhibit significant degradation on low-resource minority languages. We identify three distinct root causes:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{False-Negative Penalties in Token-level InfoNCE (CL-LSA):} In small corpora (15K pairs), treating all other in-batch tokens as negative instances severely penalizes semantic synonyms and morphological variants, distorting the latent embedding geometry ($17.85$ BLEU on Rhade, $4.49$ on Bahnaric).
-    \item \textbf{Confirmation Bias in Autoregressive Shift Aligners (Shift-AET):} Symmetrized pseudo-alignment labels extracted from unregularized attention maps contain substantial noise. Enforcing decoder attention to fit noisy pseudo-labels causes severe autoregressive compounding error ($19.44$ BLEU on Tay vs. $24.67$ baseline).
-    \item \textbf{Loss of Head Specialization in Uniform Distillation (A2D \& AWESOME):} Distilling attention uniformly across all heads prevents the decoder from allocating dedicated heads for target-language syntax and punctuation, blunting translation gains.
-\end{enumerate}
-
-\subsection{Intrinsic Attention Analysis: Entropy \& Attention Sinks}
-Table~\ref{tab:attention_entropy} quantifies the intrinsic properties of the learned cross-attention distributions. On Rhade, TSSA 2.0 reduces attention entropy $\mathcal{H}(\alpha)$ by \textbf{50.7\%} ($0.4835 \rightarrow 0.2383$) while boosting Top-1 concentration mass from $41.28\%$ to $\mathbf{90.39\%}$ ($2.2\times$ increase). On Tay and Bahnaric, TSSA 2.0 eliminates pathological attention sinks, reducing boundary token sink mass from $93.11\%$ and $89.93\%$ to healthy, distributed allocations of $40.17\%$ and $48.79\%$.
+Table~\ref{tab:attention_entropy} presents the quantitative measurements of cross-attention entropy $\mathcal{H}(\alpha) = -\sum_s \alpha_{t, s} \log(\alpha_{t, s} + \epsilon)$ and attention mass allocation. On Rhade, TSSA 2.0 reduces attention entropy by \textbf{50.7\%} ($0.4835 \rightarrow 0.2383$) while increasing Top-1 concentration mass from $41.28\%$ to $\mathbf{90.39\%}$ ($2.2\times$ increase). On Tay and Bahnaric, TSSA 2.0 eliminates attention sinking, redistributing attention mass from special tokens to informative semantic tokens.
 
 \begin{table}[htbp]
 \centering
 \small
 \begin{tabular}{llccc}
 \toprule
-\textbf{Language Pair} & \textbf{Metric} & \textbf{Vanilla BARTpho} & \textbf{TSSA 2.0 (Ours)} & \textbf{Impact Analysis} \\
+\textbf{Language Pair} & \textbf{Evaluation Criterion} & \textbf{Vanilla BARTpho} & \textbf{TSSA 2.0 (Ours)} & \textbf{Quantitative Impact} \\
 \midrule
 \multirow{2}{*}{\textbf{Rhade} ($\rightarrow$ \textbf{vi})} & Attention Entropy $\mathcal{H}(\alpha)$ $\downarrow$ & 0.4835 & \textbf{0.2383} & \textbf{-50.7\% Entropy Reduction} \\
  & Top-1 Concentration Mass $\uparrow$ & 41.28\% & \textbf{90.39\%} & \textbf{$2.2\times$ Sharper Concentration} \\
@@ -254,43 +206,23 @@ Table~\ref{tab:attention_entropy} quantifies the intrinsic properties of the lea
 \textbf{Bahnaric} ($\rightarrow$ \textbf{vi}) & Semantic Token Allocation & 89.93\% (Sink on \texttt{<s>}) & \textbf{48.79\%} (Distributed) & Sinks Eliminated \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Intrinsic Cross-Attention Sharpness and Entropy Analysis.} Demonstrating the transition from diffuse attention clouds to sharp, semantically anchored diagonal alignments.}
+\caption{\textbf{Intrinsic Cross-Attention Sharpness and Entropy Measurements.}}
 \label{tab:attention_entropy}
 \end{table}
 
-\subsection{Factorial Ablation Study ($2^3$ Matrix)}
-Table~\ref{tab:ablation_study} validates the necessity and synergistic interaction of all three loss components ($\mathcal{L}_{\text{struct}}, \mathcal{L}_{\text{prime}}, \mathcal{L}_{\text{route}}$) on Rhade $\rightarrow$ Vietnamese translation.
-
-\begin{table}[htbp]
-\centering
-\small
-\begin{tabular}{lcccccc}
-\toprule
-\textbf{Configuration} & $\mathcal{L}_{\text{struct}}$ & $\mathcal{L}_{\text{prime}}$ & $\mathcal{L}_{\text{route}}$ & \textbf{BLEU} $\uparrow$ & \textbf{chrF++} $\uparrow$ & \textbf{COMET} $\uparrow$ \\
-\midrule
-B1: Base NMT (Vanilla) & ❌ & ❌ & ❌ & 23.41 & 39.33 & -0.3678 \\
-B2: Token-level Barycenter Only & ✅ & ❌ & ❌ & 23.68 & 39.75 & -0.3541 \\
-B3: Sentence Priming Only & ❌ & ✅ & ❌ & 23.72 & 39.81 & -0.3510 \\
-B4: Dynamic Router Only & ❌ & ❌ & ✅ & 23.55 & 39.49 & -0.3602 \\
-B5: Token + Sentence (No Router) & ✅ & ✅ & ❌ & 23.89 & 40.12 & -0.3412 \\
-\midrule
-\rowcolor{highlightgreen}
-\textbf{B6: Full TSSA 2.0 (Ours 🏆)} & ✅ & ✅ & ✅ & \textbf{24.11} & \textbf{40.43} & \textbf{-0.3264} \\
-\bottomrule
-\end{tabular}
-\caption{\textbf{Factorial Component Ablation Study on Rhade $\rightarrow$ Vietnamese (5 Epochs).} Validating the incremental and synergistic contributions of token anchoring, sentence priming, and head routing.}
-\label{tab:ablation_study}
-\end{table}
-
 % ==============================================================================
-\section{Conclusion}
-\label{sec:conclusion}
+\section{Summary of Technical Findings}
+\label{sec:findings}
 % ==============================================================================
 
-In this paper, we introduced \textbf{Target-Side Semantic Anchoring 2.0 (TSSA 2.0)}, a self-contained, end-to-end framework for low-resource neural machine translation. By unifying an Online Frozen Target Teacher, a Residual Semantic Projector, and Dynamic Decoder Routing Gates, TSSA 2.0 resolves the long-standing tension between cross-lingual alignment regularization and autoregressive decoder fluency. Extensive experiments on three typologically distinct Vietnamese minority languages demonstrate that TSSA 2.0 achieves unanimous gains across all translation metrics (BLEU, chrF++, METEOR, COMET) and reduces attention entropy by over 50\%. Our framework offers a robust, generalizable foundation for preserving and translating low-resource and endangered languages worldwide.
+The empirical results document the following technical conclusions:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Unanimous Superiority of TSSA 2.0:} Across all three distinct language families and across all four evaluation metrics (BLEU, chrF++, METEOR, COMET), TSSA 2.0 consistently outperforms the vanilla backbone and all four alignment paradigms.
+    \item \textbf{Decoupled Routing Preserves Fluency:} Gating cross-attention heads based on teacher cosine agreement prevents rigid alignment penalties from degrading target syntactic fluency.
+    \item \textbf{Autonomous Operation:} By deriving alignment posteriors on-the-fly from the Online Frozen Teacher in 0.001s, TSSA 2.0 operates without any external dependencies, providing a robust and reproducible foundation for low-resource translation.
+\end{enumerate}
 
 % ==============================================================================
-\bibliographystyle{plain}
 \begin{thebibliography}{99}
 
 \bibitem{vaswani2017attention}

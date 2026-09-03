@@ -34,11 +34,11 @@
 \maketitle
 
 \begin{abstract}
-This technical report documents the theoretical formulation, architectural design, and empirical validation of \textbf{Target-Side Semantic Anchoring (TSSA)} for low-resource Neural Machine Translation (NMT). When fine-tuning massively pre-trained sequence-to-sequence backbones (BARTpho) on low-resource, typologically distant minority language pairs (15K--50K sentence pairs), standard cross-attention mechanisms suffer from severe attention sinking (up to 93\% of attention mass collapsing onto boundary tokens) and anisotropic representation distortion. Existing alignment techniques (e.g., token-level InfoNCE, autoregressive shift alignment, dependency graph supervision) degrade significantly in low-resource settings due to false-negative penalties, noisy pseudo-label confirmation bias, and lack of parser support.
+This technical report documents the theoretical formulation, architectural design, and empirical validation of \textbf{Target-Side Semantic Anchoring (TSSA)} for low-resource Neural Machine Translation (NMT). When fine-tuning massively pre-trained sequence-to-sequence backbones (BARTpho~\cite{tran2021bartpho}) on low-resource, typologically distant minority language pairs (15K--50K sentence pairs), standard cross-attention mechanisms suffer from severe attention sinking (up to 93\% of attention mass collapsing onto boundary tokens) and anisotropic representation distortion. Existing alignment techniques (e.g., token-level InfoNCE, autoregressive shift alignment, dependency graph supervision) degrade significantly in low-resource settings due to false-negative penalties, noisy pseudo-label confirmation bias, and lack of parser support.
 
-TSSA provides an end-to-end, self-contained solution without requiring external parsers, statistical alignment tools, or offline disk caches. It unifies three core mechanisms: (1) an \textit{Online Frozen Target Teacher} extracting clean target-to-source alignment posteriors in real time (0.001s); (2) a \textit{Residual Semantic Projector} ($\Phi_\theta$) preserving latent geometry via non-linear residual mappings; and (3) a \textit{Dynamic Head Routing Gate} supervised by teacher agreement that decouples semantic translation heads from syntactic generation heads. 
+TSSA provides an end-to-end, self-contained solution without requiring external parsers, statistical alignment tools, or offline disk caches. It unifies three core mechanisms: (1) an \textit{Online Frozen Target Teacher} extracting clean target-to-source alignment posteriors in real time (0.001s); (2) a \textit{Residual Semantic Projector} ($\Phi_\theta$) preserving latent geometry via non-linear residual mappings; and (3) a \textit{Dynamic Head Routing Gate} supervised by teacher agreement that decouples semantic translation heads from syntactic generation heads~\cite{voita2019analyzing}. 
 
-Empirical evaluations across three distinct Vietnamese minority language families---Rhade (Austronesian, 15.1K pairs), Tay (Tai-Kadai, 20.6K pairs), and Bahnaric (Mon-Khmer, 51.9K pairs)---demonstrate that TSSA consistently outperforms the vanilla BARTpho baseline and four representative alignment paradigms (Align-to-Distill, AWESOME-align, Shift-AET, and CL-LSA) across all four standard metrics: SacreBLEU (+0.70 to +0.79), chrF++ (+0.42 to +1.10), METEOR (+0.31 to +0.90), and COMET (+0.0131 to +0.0414). Intrinsic attention analysis confirms a 50.7\% reduction in cross-attention entropy and a $2.2\times$ increase in semantic keyword concentration.
+Empirical evaluations across three distinct Vietnamese minority language families---Rhade (Austronesian, 15.1K pairs), Tay (Tai-Kadai, 20.6K pairs), and Bahnaric (Mon-Khmer, 51.9K pairs)---demonstrate that TSSA consistently outperforms the vanilla BARTpho baseline and four representative alignment paradigms (Align-to-Distill~\cite{jin2024align}, AWESOME-align~\cite{dou2021word}, Shift-AET~\cite{chen2020accurate}, and CL-LSA~\cite{chi2021infoxlm}) across all four standard metrics: SacreBLEU (+0.03 to +0.79)~\cite{post2018call}, chrF++ (+0.42 to +1.10)~\cite{popovic2015chrf}, METEOR (+0.31 to +0.90)~\cite{banerjee2005meteor}, and COMET (+0.0131 to +0.0414)~\cite{rei2020comet}. Intrinsic attention analysis confirms a 50.7\% reduction in cross-attention entropy and a $2.2\times$ increase in semantic keyword concentration.
 \end{abstract}
 
 \newpage
@@ -55,13 +55,13 @@ In low-resource neural machine translation, we are given a parallel dataset $\ma
 Under these data-scarce conditions and across non-isomorphic language families (Austronesian, Tai-Kadai, and Mon-Khmer paired with Vietnamese), standard sequence-to-sequence fine-tuning faces three fundamental challenges:
 
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Attention Sinking \& Contextual Starvation:} Standard cross-attention $\alpha_{t, s} = \text{softmax}(q_t k_s^\top / \sqrt{d_k})$ degenerates such that up to 90\%--93\% of attention mass is absorbed by special delimiter tokens (\texttt{<s>}, \texttt{<pad>}), leaving content words ungrounded.
+    \item \textbf{Attention Sinking \& Contextual Starvation:} Standard cross-attention $\alpha_{t, s} = \text{softmax}(q_t k_s^\top / \sqrt{d_k})$~\cite{vaswani2017attention,bahdanau2015neural} degenerates such that up to 90\%--93\% of attention mass is absorbed by special delimiter tokens (\texttt{<s>}, \texttt{<pad>}), leaving content words ungrounded.
     \item \textbf{Representation Collapse in High-Dimensional Spaces:} High-dimensional embeddings ($d_{\text{model}} = 1024$) fine-tuned on limited samples undergo anisotropic collapse, where sentence representations occupy a narrow cone in representation space.
     \item \textbf{Failure of Existing Alignment Paradigms on Low-Resource Data:}
     \begin{itemize}
-        \item \textit{Token-level InfoNCE (CL-LSA):} Treating all other in-batch tokens as negative instances severely penalizes morphological variants and synonyms (false negative penalty), degrading performance ($17.85$ BLEU on Rhade, $4.49$ on Bahnaric).
-        \item \textit{Shifted Autoregressive States (Shift-AET):} Symmetrized pseudo-alignment labels extracted from unregularized models contain substantial noise, causing error propagation during autoregressive decoding ($19.44$ BLEU on Tay vs. $24.67$ baseline).
-        \item \textit{Syntactic Supervision:} Low-resource minority languages lack robust dependency parsers, introducing corrupted graph structures.
+        \item \textit{Token-level InfoNCE (CL-LSA)~\cite{chi2021infoxlm}:} Treating all other in-batch tokens as negative instances severely penalizes morphological variants and synonyms (false negative penalty), degrading performance ($17.85$ BLEU on Rhade, $4.49$ on Bahnaric).
+        \item \textit{Shifted Autoregressive States (Shift-AET)~\cite{chen2020accurate}:} Symmetrized pseudo-alignment labels extracted from unregularized models contain substantial noise, causing error propagation during autoregressive decoding ($19.44$ BLEU on Tay vs. $24.67$ baseline).
+        \item \textit{Syntactic Supervision~\cite{li2022structural}:} Low-resource minority languages lack robust dependency parsers, introducing corrupted graph structures.
     \end{itemize}
 \end{enumerate}
 
@@ -70,7 +70,7 @@ Under these data-scarce conditions and across non-isomorphic language families (
 \label{sec:system_architecture}
 % ==============================================================================
 
-TSSA addresses these challenges through a fully integrated, multi-task sequence-to-sequence framework built on top of the pre-trained BARTpho-syllable backbone ($d_{\text{model}} = 1024, H = 16, L_{\text{enc}} = L_{\text{dec}} = 6$).
+TSSA addresses these challenges through a fully integrated, multi-task sequence-to-sequence framework built on top of the pre-trained BARTpho-syllable backbone~\cite{tran2021bartpho} ($d_{\text{model}} = 1024, H = 16, L_{\text{enc}} = L_{\text{dec}} = 6$).
 
 \subsection{Online Frozen Target Teacher ($\mathcal{E}_T$)}
 Instead of relying on external aligners (LaBSE, GIZA++, FastAlign) or static disk caches, TSSA embeds a parameter-frozen copy of the target language encoder:
@@ -147,20 +147,20 @@ The weights $\lambda_1, \lambda_2, \lambda_3$ follow a calibrated three-phase sc
 \subsection{Datasets \& Experimental Configuration}
 Experiments are conducted on three distinct low-resource language pairs paired with Vietnamese:
 \begin{itemize}[leftmargin=*]
-    \item \textbf{Rhade (Ê Đê $\rightarrow$ Vi):} Austronesian family; 14,969 train pairs, 1,000 test pairs.
-    \item \textbf{Tay (Tày $\rightarrow$ Vi):} Tai-Kadai family; 20,600 train pairs, 2,295 test pairs.
-    \item \textbf{Bahnaric (Ba Na $\rightarrow$ Vi):} Mon-Khmer family; 51,900 train pairs, 2,001 test pairs.
+    \item \textbf{Rhade:} Austronesian family; 14,969 train pairs, 1,000 test pairs.
+    \item \textbf{Tay:} Tai-Kadai family; 20,600 train pairs, 2,295 test pairs.
+    \item \textbf{Bahnaric:} Mon-Khmer family; 51,900 train pairs, 2,001 test pairs.
 \end{itemize}
 
-All models are fine-tuned from \texttt{vinai/bartpho-syllable} for 5 epochs with batch size 16, learning rate $2\times 10^{-5}$ (AdamW, weight decay 0.01), sequence length 256, and mixed-precision FP16 on NVIDIA A100 GPUs.
+All models are fine-tuned from \texttt{vinai/bartpho-syllable}~\cite{tran2021bartpho} for 5 epochs with batch size 16, learning rate $2\times 10^{-5}$ (AdamW, weight decay 0.01), sequence length 256, and mixed-precision FP16 on NVIDIA A100 GPUs.
 
 \subsection{Official 4-Metric Benchmark Results}
 
-Table~\ref{tab:main_benchmark_3langs} reports the complete evaluation across all models on SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}), scaled to fit standard page margins with zero overflow.
+Table~\ref{tab:main_benchmark_3langs} reports the complete evaluation across all models on SacreBLEU~\cite{post2018call}, chrF++~\cite{popovic2015chrf}, METEOR~\cite{banerjee2005meteor}, and COMET (\texttt{Unbabel/wmt20-comet-da})~\cite{rei2020comet}, scaled to fit standard page margins with zero overflow.
 
 \begin{table}[htbp]
 \centering
-\caption{\textbf{Official Full 4-Metric Benchmark Results across Three Language Families (5 Epochs).} Performance evaluation across Rhade, Tay, and Bahnaric showing SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}). \textbf{Bold} indicates the top performance per language.}
+\caption{\textbf{Official Full 4-Metric Benchmark Results across Three Language Families (5 Epochs).} Performance evaluation across Rhade, Tay, and Bahnaric showing SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}). \textbf{Bold} indicates top performance per language; $^\star$ marks the proposed system.}
 \label{tab:main_benchmark_3langs}
 \vspace{4pt}
 \resizebox{\textwidth}{!}{
@@ -176,7 +176,7 @@ Shift-AET & Shifted State Alignment & 22.38 & 38.26 & 32.90 & -0.4181 \\
 AWESOME-align & Embedding Alignment & 23.05 & 38.93 & 33.45 & -0.3841 \\
 CL-LSA (InfoNCE) & Token-level Contrastive & 17.85 & 33.33 & 28.19 & -0.5969 \\
 \rowcolor{highlightgreen}
-\textbf{TSSA (Ours 🏆)} & \textbf{Semantic Anchor \& Route} & \textbf{24.11} & \textbf{40.43} & \textbf{34.81} & \textbf{-0.3264} \\
+\textbf{TSSA (Ours)}$^\star$ & \textbf{Semantic Anchor \& Route} & \textbf{24.11} & \textbf{40.43} & \textbf{34.81} & \textbf{-0.3264} \\
 \textit{Improvement ($\Delta$ vs Vanilla)} & & \textcolor{topgreen}{\textbf{+0.70}} & \textcolor{topgreen}{\textbf{+1.10}} & \textcolor{topgreen}{\textbf{+0.90}} & \textcolor{topgreen}{\textbf{+0.0414}} \\
 \midrule
 \multicolumn{6}{l}{\textbf{II. Tay $\rightarrow$ Vietnamese (Tai-Kadai, 20.6K pairs)}} \\
@@ -186,7 +186,7 @@ Shift-AET & Shifted State Alignment & 19.44 & 28.97 & 19.39 & -0.7602 \\
 AWESOME-align & Embedding Alignment & 25.20 & 36.30 & 26.44 & -0.5051 \\
 CL-LSA (InfoNCE) & Token-level Contrastive & 24.48 & 35.29 & 25.53 & -0.5512 \\
 \rowcolor{highlightgreen}
-\textbf{TSSA (Ours 🏆)} & \textbf{Semantic Anchor \& Route} & \textbf{25.46} & \textbf{36.31} & \textbf{26.29} & \textbf{-0.5086} \\
+\textbf{TSSA (Ours)}$^\star$ & \textbf{Semantic Anchor \& Route} & \textbf{25.46} & \textbf{36.31} & \textbf{26.29} & \textbf{-0.5086} \\
 \textit{Improvement ($\Delta$ vs Vanilla)} & & \textcolor{topgreen}{\textbf{+0.79}} & \textcolor{topgreen}{\textbf{+0.57}} & \textcolor{topgreen}{\textbf{+0.61}} & \textcolor{topgreen}{\textbf{+0.0205}} \\
 \midrule
 \multicolumn{6}{l}{\textbf{III. Bahnaric $\rightarrow$ Vietnamese (Mon-Khmer, 51.9K pairs)}} \\
@@ -196,7 +196,7 @@ Shift-AET & Shifted State Alignment & 9.10 & 23.31 & 18.00 & -0.8682 \\
 AWESOME-align & Embedding Alignment & 9.07 & 23.22 & 17.92 & -0.8588 \\
 CL-LSA (InfoNCE) & Token-level Contrastive & 4.49 & 15.87 & 9.90 & -1.1817 \\
 \rowcolor{highlightgreen}
-\textbf{TSSA (Ours 🏆)} & \textbf{Semantic Anchor \& Route} & \textbf{9.66} & \textbf{23.89} & \textbf{18.46} & \textbf{-0.8376} \\
+\textbf{TSSA (Ours)}$^\star$ & \textbf{Semantic Anchor \& Route} & \textbf{9.66} & \textbf{23.89} & \textbf{18.46} & \textbf{-0.8376} \\
 \textit{Improvement ($\Delta$ vs Vanilla)} & & \textcolor{topgreen}{\textbf{+0.03}} & \textcolor{topgreen}{\textbf{+0.42}} & \textcolor{topgreen}{\textbf{+0.31}} & \textcolor{topgreen}{\textbf{+0.0131}} \\
 \bottomrule
 \end{tabular}
@@ -245,72 +245,82 @@ The empirical results document the following technical conclusions:
 \bibitem{vaswani2017attention}
 Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan~N. Gomez, {\L}ukasz Kaiser, and Illia Polosukhin.
 \newblock Attention is all you need.
-\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, 2017.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, pages 5998--6008, 2017.
 
 \bibitem{tran2021bartpho}
 Nguyen~Luong Tran, Duong~Minh Le, and Dat~Quoc Nguyen.
-\newblock BARTpho: Pre-trained sequence-to-sequence models for Vietnamese.
-\newblock In \emph{Findings of EMNLP}, pages 2300--2306, 2021.
+\newblock {BARTpho}: Pre-trained sequence-to-sequence models for {V}ietnamese.
+\newblock In \emph{Proceedings of the 23rd Annual Conference of the International Speech Communication Association (INTERSPEECH)}, pages 2300--2304, 2022.
 
 \bibitem{bahdanau2015neural}
 Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio.
 \newblock Neural machine translation by jointly learning to align and translate.
-\newblock In \emph{ICLR}, 2015.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2015.
 
 \bibitem{voita2019analyzing}
 Elena Voita, David Talbot, Fedor Moiseev, Rico Sennrich, and Ivan Titov.
 \newblock Analyzing multi-head self-attention: Specialized heads do the heavy lifting, the rest can be pruned.
-\newblock In \emph{ACL}, pages 5797--5808, 2019.
+\newblock In \emph{Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (ACL)}, pages 5797--5808, 2019.
 
 \bibitem{jin2024align}
 Heegon Jin, Seonil Son, Jemin Park, Youngseok Kim, Hyungjong Noh, and Yeonsoo Lee.
 \newblock Align-to-Distill: Trainable attention alignment for knowledge distillation in neural machine translation.
-\newblock In \emph{LREC-COLING}, pages 722--732, 2024.
+\newblock In \emph{Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING)}, pages 722--732, 2024.
 
 \bibitem{dou2021word}
 Zi-Yi Dou and Graham Neubig.
 \newblock Word alignment by fine-tuning embeddings on parallel corpora.
-\newblock In \emph{EACL}, pages 2112--2128, 2021.
+\newblock In \emph{Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics (EACL)}, pages 2112--2128, 2021.
 
 \bibitem{chen2020accurate}
 Yun Chen, Yang Liu, Guanhua Chen, Xin Jiang, and Qun Liu.
 \newblock Accurate word alignment induction from neural machine translation.
-\newblock In \emph{EMNLP}, pages 566--576, 2020.
+\newblock In \emph{Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)}, pages 566--576, 2020.
 
 \bibitem{li2022structural}
 Lei Li, Kai Fan, Hongjia Li, and Chun Yuan.
 \newblock Structural supervision for word alignment and machine translation.
-\newblock In \emph{Findings of ACL}, pages 4084--4094, 2022.
+\newblock In \emph{Findings of the Association for Computational Linguistics: ACL}, pages 4084--4094, 2022.
 
 \bibitem{ai2024zero}
 Xi~Ai and Zhiyong Huang.
 \newblock Zero-shot cross-lingual alignment for embedding initialization.
-\newblock In \emph{Findings of ACL}, pages 4668--4681, 2024.
+\newblock In \emph{Findings of the Association for Computational Linguistics: ACL}, pages 5997--6007, 2024.
 
 \bibitem{hu2024dm}
-Leman Hu and Yang Xu.
-\newblock Dynamic subspace decomposition for bilingual lexicon induction.
-\newblock In \emph{ACL}, 2024.
+Ling Hu and Yuemei Xu.
+\newblock {DM-BLI}: Dynamic multiple subspaces alignment for unsupervised bilingual lexicon induction.
+\newblock In \emph{Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (ACL)}, pages 2041--2052, 2024.
 
 \bibitem{chi2021infoxlm}
 Zewen Chi, Li~Dong, Furu Wei, Nan Yang, Saksham Singhal, Wenhui Wang, Xia Song, Xian-Ling Mao, Heyan Huang, and Ming Zhou.
-\newblock InfoXLM: An information-theoretic framework for cross-lingual language model pre-training.
-\newblock In \emph{NAACL}, pages 3576--3588, 2021.
+\newblock {I}nfo{XLM}: An information-theoretic framework for cross-lingual language model pre-training.
+\newblock In \emph{Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL)}, pages 3576--3588, 2021.
 
 \bibitem{wu2024direct}
-Di~Wu, Chenglei Si, and Graham Neubig.
-\newblock Word alignment as preference optimization.
-\newblock In \emph{EMNLP}, 2024.
-
-\bibitem{rei2020comet}
-Ricardo Rei, Craig Stewart, Ana~C. Farinha, and Alon Lavie.
-\newblock COMET: A neural framework for MT evaluation.
-\newblock In \emph{EMNLP}, pages 2685--2702, 2020.
+Qiyu Wu, Masaaki Nagata, Zhongtao Miao, and Yoshimasa Tsuruoka.
+\newblock Word alignment as preference for machine translation.
+\newblock In \emph{Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing (EMNLP)}, pages 3223--3239, 2024.
 
 \bibitem{post2018call}
 Matt Post.
-\newblock A call for clarity in reporting BLEU scores.
-\newblock In \emph{WMT}, pages 186--191, 2018.
+\newblock A call for clarity in reporting {BLEU} scores.
+\newblock In \emph{Proceedings of the Third Conference on Machine Translation (WMT)}, pages 186--191, 2018.
+
+\bibitem{popovic2015chrf}
+Maja Popovi{\'c}.
+\newblock {ch}r{F}: character n-gram {F}-score for automatic {MT} evaluation.
+\newblock In \emph{Proceedings of the 10th Workshop on Statistical Machine Translation (WMT)}, pages 392--395, 2015.
+
+\bibitem{banerjee2005meteor}
+Satanjeev Banerjee and Alon Lavie.
+\newblock {METEOR}: An automatic metric for {MT} evaluation with improved correlation with human judgments.
+\newblock In \emph{Proceedings of the ACL Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization}, pages 65--72, 2005.
+
+\bibitem{rei2020comet}
+Ricardo Rei, Craig Stewart, Ana~C. Farinha, and Alon Lavie.
+\newblock {COMET}: A neural framework for {MT} evaluation.
+\newblock In \emph{Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)}, pages 2685--2702, 2020.
 
 \end{thebibliography}
 

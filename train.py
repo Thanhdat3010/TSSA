@@ -59,10 +59,12 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size trên mỗi GPU")
     parser.add_argument("--learning_rate", type=float, default=2e-5, help="Learning rate chuẩn")
     parser.add_argument("--weight_decay", type=float, default=0.01)
-    parser.add_argument("--num_epochs", type=int, default=10)
+    parser.add_argument("--num_epochs", type=int, default=5)
     parser.add_argument("--fp16", action="store_true", default=True)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output_dir", type=str, default="checkpoints")
+    parser.add_argument("--exp_name", type=str, default=None,
+                        help="Tùy chỉnh tên thí nghiệm/thư mục lưu (nếu None sẽ tự động suy luận theo ablation)")
 
     return parser.parse_args()
 
@@ -140,7 +142,21 @@ def main():
         ).to(device)
 
     # 6. Thiết lập Training Arguments
-    exp_name = f"{args.model_type}_{args.lang}"
+    if args.exp_name is not None and args.exp_name.strip():
+        exp_name = args.exp_name.strip()
+    else:
+        if args.model_type == "tssa":
+            parts = ["tssa"]
+            if not args.use_route:
+                parts.append("no_route")
+            if not args.use_struct:
+                parts.append("no_struct")
+            if not args.use_prime:
+                parts.append("no_prime")
+            parts.append(args.lang)
+            exp_name = "_".join(parts)
+        else:
+            exp_name = f"{args.model_type}_{args.lang}"
     save_dir = os.path.join(args.output_dir, exp_name)
 
     training_args = Seq2SeqTrainingArguments(

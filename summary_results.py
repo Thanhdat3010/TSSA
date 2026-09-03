@@ -183,10 +183,75 @@ def summarize_checkpoints_in_dir(target_dir, compute_comet=False):
 
     return results
 
+def generate_ablation_summary(compute_comet=False):
+    """
+    Tạo bảng tổng hợp Ablation Study so sánh độ sụt giảm của các biến thể với Full TSSA.
+    """
+    languages = ["rhade", "tay", "bahnaric"]
+    variants = [
+        ("Full TSSA", "tssa_{lang}"),
+        ("w/o Dynamic Head Routing", "tssa_no_route_{lang}"),
+        ("w/o Barycenter Struct Anchoring", "tssa_no_struct_{lang}"),
+        ("w/o Contrastive Priming", "tssa_no_prime_{lang}"),
+        ("Vanilla BARTpho (No Anchoring)", "bartpho_vanilla_{lang}")
+    ]
+
+    ablation_rows = []
+    for lang in languages:
+        full_bleu = None
+        for var_name, pattern in variants:
+            folder_name = pattern.format(lang=lang)
+            pred_file = os.path.join("checkpoints", folder_name, "test_predictions.csv")
+            m_dict = None
+            if os.path.exists(pred_file):
+                try:
+                    m_dict = compute_metrics_for_pred_file(pred_file, compute_comet=compute_comet)
+                except Exception:
+                    pass
+
+            b_score = m_dict["bleu"] if m_dict and m_dict.get("bleu") is not None else None
+            c_score = m_dict["chrf"] if m_dict and m_dict.get("chrf") is not None else None
+            m_score = m_dict["meteor"] if m_dict and m_dict.get("meteor") is not None else None
+            comet_score = m_dict["comet"] if m_dict and m_dict.get("comet") is not None else None
+
+            if var_name == "Full TSSA" and b_score is not None:
+                full_bleu = b_score
+
+            delta_str = "-"
+            if b_score is not None and full_bleu is not None:
+                diff = b_score - full_bleu
+                if var_name == "Full TSSA":
+                    delta_str = "Baseline (0.0)"
+                else:
+                    delta_str = f"{diff:+.2f}"
+
+            ablation_rows.append({
+                "Ngôn Ngữ": lang.upper(),
+                "Cấu Hình / Biến Thể": var_name,
+                "SacreBLEU ↑": f"{b_score:.2f}" if b_score is not None else "[Chưa chạy]",
+                "chrF++ ↑": f"{c_score:.2f}" if c_score is not None else "-",
+                "METEOR ↑": f"{m_score}" if m_score is not None else "-",
+                "COMET ↑": f"{comet_score}" if comet_score is not None else "-",
+                "Δ vs Full BLEU": delta_str
+            })
+
+    return ablation_rows
+
 def main():
     parser = argparse.ArgumentParser(description="Summarize evaluation results across all models.")
     parser.add_argument("--comet", action="store_true", default=False, help="Tính thêm điểm COMET (Unbabel/wmt20-comet-da)")
+    parser.add_argument("--ablation", action="store_true", default=False, help="Chỉ xuất bảng tổng kết Ablation Study")
     args = parser.parse_args()
+
+    if args.ablation:
+        print("=" * 115)
+        print("                 🔬 BÁO CÁO KẾT QUẢ ABLATION STUDY TRÊN 3 BỘ DỮ LIỆU")
+        print("=" * 115)
+        ablation_rows = generate_ablation_summary(compute_comet=args.comet)
+        df_ab = pd.DataFrame(ablation_rows)
+        print(df_ab.to_markdown(index=False))
+        print("=" * 115)
+        return
 
     print("=" * 130)
     print("      📊 BÁO CÁO TOÀN DIỆN 4 CHỈ SỐ CHUẨN (BLEU, chrF++, METEOR, COMET)")
@@ -205,6 +270,17 @@ def main():
     df_res = pd.DataFrame(all_results)
     print(df_res.to_markdown(index=False))
     print("=" * 130)
+
+    # Nếu phát hiện có checkpoint ablation, tự động in thêm bảng Ablation
+    ablation_exist = any("tssa_no_" in r["Mô Hình / Experiment"] for r in all_results)
+    if ablation_exist:
+        print("\n" + "=" * 115)
+        print("                 🔬 BẢNG BÓC TÁCH THÀNH PHẦN ABLATION STUDY")
+        print("=" * 115)
+        ab_df = pd.DataFrame(generate_ablation_summary(compute_comet=args.comet))
+        print(ab_df.to_markdown(index=False))
+        print("=" * 115)
+
     if not args.comet:
         print("💡 Gợi ý: Gõ 'python summary_results.py --comet' để tính thêm chỉ số COMET trên GPU!")
         print("=" * 130)

@@ -99,30 +99,41 @@ python train.py --lang bahnaric --model_type tssa --num_epochs 10 --batch_size 1
 
 ---
 
-## V. Nhật Ký Kết Quả Thực Nghiệm Thực Tế (Live Experiment Log)
+## V. Nhật Ký Kết Quả Thực Nghiệm Thực Tế (Official Full 4-Metric Benchmark Log)
 
-### 1. Tiếng Ê Đê (`rhade` $\rightarrow$ `vi`):
-| Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | 23.41 | 39.33 | 33.91 | 0.6556 | ✅ Đã hoàn tất |
-| `align_to_distill` | -- | -- | -- | -- | Chờ chạy |
-| `shift_aet` | -- | -- | -- | -- | Chờ chạy |
-| `cross_init` | -- | -- | -- | -- | Chờ chạy |
-| `awesome_align` | -- | -- | -- | -- | Chờ chạy |
-| `dm_bli` | -- | -- | -- | -- | Chờ chạy |
-| `cl_lsa` | -- | -- | -- | -- | Chờ chạy |
-| `dpo_align` | -- | -- | -- | -- | Chờ chạy |
-| **`tssa` (TSSA 2.0 - Ours 🏆)** | **24.11** | **40.43** | **34.81** | **0.6634** | **🏆 Vượt đỉnh (+0.70 BLEU, +1.10 chrF++)** |
+### 1. Tiếng Ê Đê (`rhade` → `vi` - 1,000 test samples):
+| Mô hình / Phương pháp | Thuộc Nhóm | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Trạng thái |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `bartpho_vanilla` | Mốc sàn cơ sở (Vanilla) | 23.41 | 39.33 | 33.91 | -0.3678 | ✅ Hoàn tất |
+| `align_to_distill` | 1. Attention Distillation | 22.93 | 39.12 | 33.51 | -0.3693 | ✅ Hoàn tất |
+| `structural_supervision` | 1. Attention Structure | 20.48 | 35.91 | 31.21 | -0.4860 | ✅ Hoàn tất |
+| `shift_aet` | 2. Shifted State Align | 22.38 | 38.26 | 32.90 | -0.4181 | ✅ Hoàn tất |
+| `awesome_align` | 3. Embedding Alignment | 23.05 | 38.93 | 33.45 | -0.3841 | ✅ Hoàn tất |
+| `cl_lsa` | 4. Contrastive InfoNCE | 17.85 | 33.33 | 28.19 | -0.5969 | ✅ Hoàn tất |
+| **`tssa` (TSSA 2.0 - Ours 🏆)** | **⭐ Đề Xuất (This Work)** | **24.11** | **40.43** | **34.81** | **-0.3264** | **🏆 Vô địch 4/4 chỉ số (+0.70 BLEU, +1.10 chrF++)** |
 
-### 2. Tiếng Ba Na (`bahnaric` $\rightarrow$ `vi`):
-| Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | 9.63 | 23.47 | 18.15 | 0.5462 | ✅ Đã hoàn tất |
-| **`tssa` (TSSA 2.0 - Ours 🏆)** | **9.66** | **23.89** | **18.46** | **0.5506** | **🏆 Tăng toàn diện 4/4 chỉ số** |
+---
 
-### 3. Tiếng Tày (`tay` $\rightarrow$ `vi`):
-| Mô hình | SacreBLEU | chrF++ | METEOR | COMET | Trạng thái |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| `bartpho_vanilla` (Mốc cơ sở) | 24.67 | 35.74 | 25.68 | 0.6530 | ✅ Đã hoàn tất |
-| **`tssa` (TSSA 2.0 - Ours 🏆)** | **25.46** | **36.31** | **26.29** | **0.6552** | **🏆 Vượt đỉnh (+0.79 BLEU, +0.57 chrF++)** |
+### 2. Tiếng Tày (`tay` → `vi` - 2,295 test samples):
+| Mô hình / Phương pháp | Thuộc Nhóm | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Trạng thái |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `bartpho_vanilla` | Mốc sàn cơ sở (Vanilla) | 24.67 | 35.74 | 25.68 | -0.5291 | ✅ Hoàn tất |
+| `align_to_distill` | 1. Attention Distillation | 24.67 | 35.84 | 26.17 | -0.5138 | ✅ Hoàn tất |
+| `shift_aet` | 2. Shifted State Align | 19.44 | 28.97 | 19.39 | -0.7602 | ✅ Hoàn tất |
+| `awesome_align` | 3. Embedding Alignment | 25.20 | 36.30 | 26.44 | -0.5051 | ✅ Hoàn tất |
+| `cl_lsa` | 4. Contrastive InfoNCE | 24.48 | 35.29 | 25.53 | -0.5512 | ✅ Hoàn tất |
+| **`tssa` (TSSA 2.0 - Ours 🏆)** | **⭐ Đề Xuất (This Work)** | **25.46** | **36.31** | **26.29** | **-0.5086** | **🏆 Vô địch BLEU & chrF++ (+0.79 BLEU, +0.57 chrF++)** |
+
+---
+
+### 3. Tiếng Ba Na (`bahnaric` → `vi` - 2,001 test samples):
+| Mô hình / Phương pháp | Thuộc Nhóm | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Trạng thái |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `bartpho_vanilla` | Mốc sàn cơ sở (Vanilla) | 9.63 | 23.47 | 18.15 | -0.8507 | ✅ Hoàn tất |
+| `align_to_distill` | 1. Attention Distillation | 9.15 | 23.17 | 18.05 | -0.8598 | ✅ Hoàn tất |
+| `shift_aet` | 2. Shifted State Align | 9.10 | 23.31 | 18.00 | -0.8682 | ✅ Hoàn tất |
+| `awesome_align` | 3. Embedding Alignment | 9.07 | 23.22 | 17.92 | -0.8588 | ✅ Hoàn tất |
+| `cl_lsa` | 4. Contrastive InfoNCE | 4.49 | 15.87 | 9.90 | -1.1817 | ✅ Hoàn tất |
+| **`tssa` (TSSA 2.0 - Ours 🏆)** | **⭐ Đề Xuất (This Work)** | **9.66** | **23.89** | **18.46** | **-0.8376** | **🏆 Vô địch 4/4 chỉ số (+0.03 BLEU, +0.42 chrF++)** |
+
 

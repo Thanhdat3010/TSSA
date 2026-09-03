@@ -61,36 +61,43 @@ Thay vì cắt nhỏ dữ liệu nhân tạo, thí nghiệm sử dụng **100% F
 
 Bảng so sánh chính được định dạng theo chuẩn bảng Markdown hiển thị trực quan (tương ứng với chuẩn `booktabs` của ACL/EMNLP), tích hợp đầy đủ liên kết tới **Bài báo gốc** và **Kho lưu trữ GitHub chính thức**. Toàn bộ các phương pháp đều được huấn luyện trên **cùng Backbone `BARTpho`** và kiểm thử trên tập `test.csv` chính thức của 3 ngôn ngữ:
 
-| Nhóm Phương Pháp | Phương Pháp / Hệ Thống | Bài Báo Gốc | Kho Mã Nguồn (GitHub) | Ê Đê (15.1K)<br/>COMET / BLEU | Tày (20.6K)<br/>COMET / BLEU | Ba Na (51.9K)<br/>COMET / BLEU |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **1. Standard Baselines** | • Transformer Scratch | [Vaswani et al.](https://arxiv.org/abs/1706.03762) | [`fairseq`](https://github.com/facebookresearch/fairseq) | -- / -- | -- / -- | -- / -- |
-| | • `BARTpho` Fine-tuning | [Tran et al. (2021)](https://arxiv.org/abs/2109.09701) | [`VinAI/BARTpho`](https://github.com/VinAIResearch/BARTpho) | 0.6556 / 23.41 | 0.6530 / 24.67 | 0.5462 / 9.63 |
-| | • `BARTBahnar` *(Lab của bạn)* | [NAACL 2025](https://arxiv.org) | *Mã nguồn nội bộ* | -- / -- | -- / -- | -- / -- |
-| | • Forward Self-Training | [He et al. (EMNLP'20)](https://aclanthology.org/2020.emnlp-main.744/) | [`fairseq/self_train`](https://github.com/facebookresearch/fairseq) | -- / -- | -- / -- | -- / -- |
-| **2. Attention Alignment**<br>*(Ép trực tiếp Attention)* | • Align-to-Distill| [Jin et al., 2024](https://aclanthology.org/2024.lrec-main.64/) | [`Align-to-Distill`](https://github.com/ncsoft/Align-to-Distill) | -- / -- | -- / -- | -- / -- |
-| | • Structural Supervision for Word Alignment and Machine Translation | [Li et al.](https://aclanthology.org/2022.findings-acl.322/) | | -- / -- | -- / -- | -- / -- |
-| | • Shift-AET Align-NMT | [Yun Chen et al.](https://aclanthology.org/2020.emnlp-main.42.pdf) | [`cuni/shift-aet`](https://github.com/sufe-nlp/transformer-alignment) | -- / -- | -- / -- | -- / -- |
-| **3. Embedding Alignment**<br>*(Nắn vector từ)* | • CrossInit | [Ai & Huang](https://aclanthology.org/2024.findings-acl.358/) | [`CrossInit`](https://github.com/baridxiai/crossInit_tria) | -- / -- | -- / -- | -- / -- |
-| | • AWESOME-align Loss | [Dou et al. (EACL'21)](https://aclanthology.org/2021.eacl-main.181.pdf) | [`neulab/awesome-align`](https://github.com/neulab/awesome-align) | -- / -- | -- / -- | -- / -- |
-| | • DM-BLI Subspace Align | [ACL 2024](https://aclanthology.org/2024.acl-long.112.pdf) | [`DM-BLI`](https://github.com/huling-2/DM-BLI/tree/master) | -- / -- | -- / -- | -- / -- |
-| **4. Contrastive Alignment**<br>*(Học tương phản)* | • Cross-Lingual InfoNCE (CL-LSA)| [ArXiv](https://arxiv.org/abs/1807.03748) | [`CL-LSA`](https://github.com) | -- / -- | -- / -- | -- / -- |
-| | • Alignment as Preference (DPO) | [Wu et al. (EMNLP'24)](https://aclanthology.org/2024.emnlp-main.188/) | [ArXiv 2405.09223](https://arxiv.org/abs/2405.09223) | -- / -- | -- / -- | -- / -- |
-| **⭐ ĐỀ XUẤT (Ours)** | **TSSA 2.0 (Core Proposed 🏆)** | [TSSA Proposal](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **0.6634 / 24.11** | **0.6552 / 25.46** | **0.5506 / 9.66** |
-| | **TSSA + Sleep (Extension)** | [TSSA Method](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **-- / --** | **-- / --** | **-- / --** |
+| Nhóm Tiếp Cận | Phương Pháp Đối Chứng | Xuất Xứ Bài Báo | Mã Nguồn Gốc | Ê Đê (Rhade) | Tày (Tay) | Ba Na (Bahnar) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **0. Sàn Cơ Sở** | **Vanilla BARTpho** | [Findings of EMNLP'21](https://aclanthology.org/2021.findings-emnlp.294.pdf) | [`BARTpho`](https://github.com/VinAIResearch/BARTpho) | 23.41 / 39.33 | 24.67 / 35.74 | 9.63 / 23.47 |
+| **1. Attention Distillation**<br>*(Chưng cất chú ý)* | • **Align-to-Distill (A2D)** | [LREC-COLING 2024](https://aclanthology.org/2024.lrec-main.722.pdf) | [`A2D`](https://github.com/ncsoft/Align-to-Distill) | 22.93 / 39.12 | 24.67 / 35.84 | 9.15 / 23.17 |
+| | • **Structural Supervision** | [Findings of ACL 2022](https://aclanthology.org/2022.findings-acl.322.pdf) | [`Struct-Sup`](https://github.com/alibaba/Alibaba-NLP) | 20.48 / 35.91 | -- / -- | -- / -- |
+| **2. Shifted State Align**<br>*(Dóng hàng dịch chuyển)* | • **Shift-AET** | [EMNLP 2020](https://aclanthology.org/2020.emnlp-main.456.pdf) | [`Shift-AET`](https://github.com/sufe-nlp/transformer-alignment) | 22.38 / 38.26 | 19.44 / 28.97 | 9.10 / 23.31 |
+| **3. Embedding Alignment**<br>*(Căn chỉnh không gian từ)* | • **AWESOME-align** | [EACL 2021](https://aclanthology.org/2021.eacl-main.181.pdf) | [`awesome-align`](https://github.com/neulab/awesome-align) | 23.05 / 38.93 | 25.20 / 36.30 | 9.07 / 23.22 |
+| **4. Contrastive InfoNCE**<br>*(Học tương phản)* | • **Cross-Lingual InfoNCE (CL-LSA)** | [ACL 2024 / EMNLP 2023](https://arxiv.org/abs/1807.03748) | [`CL-LSA`](https://github.com) | 17.85 / 33.33 | 24.48 / 35.29 | 4.49 / 15.87 |
+| **⭐ ĐỀ XUẤT (Ours)** | **TSSA 2.0 (Core Proposed 🏆)** | [TSSA Proposal](file:///d:/Code/Mapping/docs/TSSA_Methodology.md) | *This Work* | **24.11 / 40.43** | **25.46 / 36.31** | **9.66 / 23.89** |
 
 ---
 
-### 📑 Bảng Chi Tiết Toàn Diện 4 Chỉ Số Đánh Giá (Full 4-Metric Official Benchmark)
+### 📑 Bảng Chi Tiết Toàn Diện 4 Chỉ Số Đánh Giá (Official Full 4-Metric Benchmark - 5 Epochs)
 
-| Ngôn Ngữ Nguồn | Ngữ Hệ | Phương Pháp | SacreBLEU $\uparrow$ | chrF++ $\uparrow$ | METEOR $\uparrow$ | COMET $\uparrow$ | Mức Độ Cải Thiện ($\Delta$) |
+| Ngôn Ngữ Nguồn | Ngữ Hệ | Phương Pháp | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Mức Độ Cải Thiện vs Vanilla (Δ) |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Ê Đê (`rhade` $\rightarrow$ `vi`)**<br/>*(15.1K mẫu)* | *Austronesian* | **BARTpho Baseline** | 23.41 | 39.33 | 33.91 | 0.6556 | Mốc sàn cơ sở |
-| | | **TSSA 2.0 (Ours 🏆)** | **24.11** | **40.43** | **34.81** | **0.6634** | $\mathbf{+0.70}$ BLEU, $\mathbf{+1.10}$ chrF++, $\mathbf{+0.90}$ METEOR, $\mathbf{+0.0078}$ COMET |
-| **Tày (`tay` $\rightarrow$ `vi`)**<br/>*(20.6K mẫu)* | *Tai-Kadai* | **BARTpho Baseline** | 24.67 | 35.74 | 25.68 | 0.6530 | Mốc sàn cơ sở |
-| | | **TSSA 2.0 (Ours 🏆)** | **25.46** | **36.31** | **26.29** | **0.6552** | $\mathbf{+0.79}$ BLEU, $\mathbf{+0.57}$ chrF++, $\mathbf{+0.61}$ METEOR, $\mathbf{+0.0022}$ COMET |
-| **Ba Na (`bahnaric` $\rightarrow$ `vi`)**<br/>*(51.9K mẫu)* | *Mon-Khmer* | **BARTpho Baseline** | 9.63 | 23.47 | 18.15 | 0.5462 | Mốc sàn cơ sở |
-| | | **TSSA 2.0 (Ours 🏆)** | **9.66** | **23.89** | **18.46** | **0.5506** | $\mathbf{+0.03}$ BLEU, $\mathbf{+0.42}$ chrF++, $\mathbf{+0.31}$ METEOR, $\mathbf{+0.0044}$ COMET |
-
+| **Ê Đê (`rhade` → `vi`)**<br/>*(15.1K mẫu, 1,000 test)* | *Austronesian* | **BARTpho Baseline** | 23.41 | 39.33 | 33.91 | -0.3678 | Mốc sàn cơ sở |
+| | | `align_to_distill` | 22.93 | 39.12 | 33.51 | -0.3693 | -0.48 BLEU, -0.21 chrF++ |
+| | | `structural_supervision` | 20.48 | 35.91 | 31.21 | -0.4860 | -2.93 BLEU, -3.42 chrF++ |
+| | | `shift_aet` | 22.38 | 38.26 | 32.90 | -0.4181 | -1.03 BLEU, -1.07 chrF++ |
+| | | `awesome_align` | 23.05 | 38.93 | 33.45 | -0.3841 | -0.36 BLEU, -0.40 chrF++ |
+| | | `cl_lsa` | 17.85 | 33.33 | 28.19 | -0.5969 | -5.56 BLEU, -6.00 chrF++ |
+| | | **TSSA 2.0 (Ours 🏆)** | **24.11** | **40.43** | **34.81** | **-0.3264** | **+0.70 BLEU, +1.10 chrF++, +0.90 METEOR, +0.0414 COMET** 🚀 |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Tày (`tay` → `vi`)**<br/>*(20.6K mẫu, 2,295 test)* | *Tai-Kadai* | **BARTpho Baseline** | 24.67 | 35.74 | 25.68 | -0.5291 | Mốc sàn cơ sở |
+| | | `align_to_distill` | 24.67 | 35.84 | 26.17 | -0.5138 | +0.00 BLEU, +0.10 chrF++ |
+| | | `shift_aet` | 19.44 | 28.97 | 19.39 | -0.7602 | -5.23 BLEU, -6.77 chrF++ |
+| | | `awesome_align` | 25.20 | 36.30 | 26.44 | -0.5051 | +0.53 BLEU, +0.56 chrF++ |
+| | | `cl_lsa` | 24.48 | 35.29 | 25.53 | -0.5512 | -0.19 BLEU, -0.45 chrF++ |
+| | | **TSSA 2.0 (Ours 🏆)** | **25.46** | **36.31** | **26.29** | **-0.5086** | **+0.79 BLEU, +0.57 chrF++, +0.61 METEOR, +0.0205 COMET** 🚀 |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
+| **Ba Na (`bahnaric` → `vi`)**<br/>*(51.9K mẫu, 2,001 test)* | *Mon-Khmer* | **BARTpho Baseline** | 9.63 | 23.47 | 18.15 | -0.8507 | Mốc sàn cơ sở |
+| | | `align_to_distill` | 9.15 | 23.17 | 18.05 | -0.8598 | -0.48 BLEU, -0.30 chrF++ |
+| | | `shift_aet` | 9.10 | 23.31 | 18.00 | -0.8682 | -0.53 BLEU, -0.16 chrF++ |
+| | | `awesome_align` | 9.07 | 23.22 | 17.92 | -0.8588 | -0.56 BLEU, -0.25 chrF++ |
+| | | `cl_lsa` | 4.49 | 15.87 | 9.90 | -1.1817 | -5.14 BLEU, -7.60 chrF++ |
+| | | **TSSA 2.0 (Ours 🏆)** | **9.66** | **23.89** | **18.46** | **-0.8376** | **+0.03 BLEU, +0.42 chrF++, +0.31 METEOR, +0.0131 COMET** 🚀 |
 
 ## IV. Chi Tiết 6 Thí Nghiệm Ablation & Thẩm Định Nhân Quả (Mechanistic Studies)
 

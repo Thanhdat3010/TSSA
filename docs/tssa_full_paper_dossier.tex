@@ -72,14 +72,14 @@ Under these data-scarce conditions and across non-isomorphic language families (
 
 TSSA addresses these challenges through a fully integrated, multi-task sequence-to-sequence framework built on top of the pre-trained BARTpho-syllable backbone ($d_{\text{model}} = 1024, H = 16, L_{\text{enc}} = L_{\text{dec}} = 6$).
 
-\subsection{1. Online Frozen Target Teacher ($\mathcal{E}_T$)}
+\subsection{Online Frozen Target Teacher ($\mathcal{E}_T$)}
 Instead of relying on external aligners (LaBSE, GIZA++, FastAlign) or static disk caches, TSSA embeds a parameter-frozen copy of the target language encoder:
 \begin{equation}
     \mathcal{E}_T = \text{stop\_gradient}(f_{\text{enc}}), \quad h^T = \mathcal{E}_T(\mathcal{Y}) \in \mathbb{R}^{T \times d_{\text{model}}}.
 \end{equation}
 Because the student decoder and teacher encoder share the identical Vietnamese tokenizer and vocabulary, target position $t$ in the teacher maps directly to position $t$ in the decoder without tokenization mismatches.
 
-\subsection{2. Dynamic Posterior Alignment Matrix ($A$)}
+\subsection{Dynamic Posterior Alignment Matrix ($A$)}
 During training, the student encoder outputs source states $h^S = f_{\text{enc}}(\mathcal{X}) \in \mathbb{R}^{S \times d_{\text{model}}}$. The cross-lingual token similarity matrix $M \in \mathbb{R}^{T \times S}$ is computed on-the-fly:
 \begin{equation}
     M_{t, s} = \frac{\tilde{h}_t^T \cdot (\tilde{h}_s^S)^\top}{\tau_{\text{align}}}, \quad \tilde{h} = \frac{h}{\|h\|_2}, \quad \tau_{\text{align}} = 0.1.
@@ -89,32 +89,32 @@ The target-to-source alignment posterior matrix $A \in \mathbb{R}^{T \times S}$ 
     A_{t, s} = \frac{\exp(M_{t, s})}{\sum_{s'=1}^S \exp(M_{t, s'})}, \quad c_s = \min\left(1.0, \sum_{t=1}^T A_{t, s}\right) \cdot \mathbb{I}(x_s \neq \texttt{<pad>}).
 \end{equation}
 
-\subsection{3. Residual Semantic Projector ($\Phi_\theta$)}
+\subsection{Residual Semantic Projector ($\Phi_\theta$)}
 To prevent representation collapse, representations are projected through a non-linear residual network with LayerNorm:
 \begin{equation}
     \Phi_\theta(h) = \text{LayerNorm}(W_2 \cdot \text{GELU}(W_1 h + b_1) + b_2 + h),
 \end{equation}
-where $W_1 \in \mathbb{R}^{d_{\text{proj}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{proj}}}$, and $d_{\text{proj}} = 256$.
+where $W_1 \in \mathbb{R}^{d_{\text{proj}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{proj}}}$, $d_{\text{model}} = 1024$, and $d_{\text{proj}} = 2048$.
 
 % ==============================================================================
 \section{Mathematical Formulation of Losses}
 \label{sec:losses}
 % ==============================================================================
 
-\subsection{1. Token-level Barycenter Anchoring Loss ($\mathcal{L}_{\text{struct}}$)}
+\subsection{Token-level Barycenter Anchoring Loss ($\mathcal{L}_{\text{struct}}$)}
 For each source token $s$, we compute its corresponding target semantic barycenter $\bar{h}_s^T = \sum_{t=1}^T A_{t, s} h_t^T$. The structural loss regularizes source encoder states toward their target barycenters weighted by confidence $c_s$:
 \begin{equation}
     \mathcal{L}_{\text{struct}} = \frac{1}{\sum_s c_s + \epsilon} \sum_{s=1}^S c_s \cdot \text{Smooth}_{L1}\left(\Phi_\theta(h_s^S), \text{sg}(\Phi_\theta(\bar{h}_s^T))\right).
 \end{equation}
 
-\subsection{2. Sentence-level Contrastive Priming Loss ($\mathcal{L}_{\text{prime}}$)}
+\subsection{Sentence-level Contrastive Priming Loss ($\mathcal{L}_{\text{prime}}$)}
 Global sentence vectors are obtained by masked mean-pooling: $z^S = \text{MeanPool}(\Phi_\theta(h^S))$ and $z^T = \text{MeanPool}(\Phi_\theta(h^T))$. With in-batch negative sampling, the symmetric InfoNCE loss is formulated as:
 \begin{equation}
     \mathcal{L}_{\text{prime}} = -\frac{1}{2B} \sum_{i=1}^B \left[ \log \frac{\exp(z_i^S \cdot z_i^T / \tau)}{\sum_{j=1}^B \exp(z_i^S \cdot z_j^T / \tau)} + \log \frac{\exp(z_i^T \cdot z_i^S / \tau)}{\sum_{j=1}^B \exp(z_i^T \cdot z_j^S / \tau)} \right],
 \end{equation}
 where temperature $\tau = 0.07$ and teacher gradients are detached ($\text{sg}$).
 
-\subsection{3. Dynamic Cross-Attention Routing Loss ($\mathcal{L}_{\text{route}}$)}
+\subsection{Dynamic Cross-Attention Routing Loss ($\mathcal{L}_{\text{route}}$)}
 At decoder layer $\ell$ and head $h$, the query state $q_{\ell h t}$ and pooled source summary $s_{\ell h} = W^s \text{MeanPool}(h^S)$ generate an adaptive scalar gate $g_{\ell h t} \in [0, 1]$:
 \begin{equation}
     g_{\ell h t} = \sigma\left(\text{MLP}\left([q_{\ell h t}; s_{\ell h}; q_{\ell h t} \odot s_{\ell h}]\right)\right).
@@ -156,52 +156,51 @@ All models are fine-tuned from \texttt{vinai/bartpho-syllable} for 5 epochs with
 
 \subsection{Official 4-Metric Benchmark Results}
 
-Table~\ref{tab:main_benchmark_3langs} reports the complete evaluation across all models on SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}), structured cleanly by language pair for maximum readability.
+Table~\ref{tab:main_benchmark_3langs} reports the complete evaluation across all models on SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}), scaled to fit standard page margins with zero overflow.
 
 \begin{table}[htbp]
 \centering
-\small
-\setlength{\tabcolsep}{6pt}
-\renewcommand{\arraystretch}{1.15}
 \caption{\textbf{Official Full 4-Metric Benchmark Results across Three Language Families (5 Epochs).} Performance evaluation across Rhade, Tay, and Bahnaric showing SacreBLEU, chrF++, METEOR, and COMET (\texttt{Unbabel/wmt20-comet-da}). \textbf{Bold} indicates the top performance per language.}
 \label{tab:main_benchmark_3langs}
 \vspace{4pt}
+\resizebox{\textwidth}{!}{
 \begin{tabular}{llcccc}
 \toprule
 \textbf{Method / System} & \textbf{Paradigm} & \textbf{SacreBLEU} $\uparrow$ & \textbf{chrF++} $\uparrow$ & \textbf{METEOR} $\uparrow$ & \textbf{COMET} $\uparrow$ \\
 \midrule
 \multicolumn{6}{l}{\textbf{I. Rhade $\rightarrow$ Vietnamese (Austronesian, 15.1K pairs)}} \\
 Vanilla BARTpho & Standard Seq2Seq & 23.41 & 39.33 & 33.91 & -0.3678 \\
-Align-to-Distill (A2D) & 1. Attention Distillation & 22.93 & 39.12 & 33.51 & -0.3693 \\
-Structural Supervision & 1. Attention Structure & 20.48 & 35.91 & 31.21 & -0.4860 \\
-Shift-AET & 2. Shifted State Align & 22.38 & 38.26 & 32.90 & -0.4181 \\
-AWESOME-align & 3. Embedding Alignment & 23.05 & 38.93 & 33.45 & -0.3841 \\
-Cross-Lingual InfoNCE (CL-LSA) & 4. Token-level Contrastive & 17.85 & 33.33 & 28.19 & -0.5969 \\
+Align-to-Distill (A2D) & Attention Distillation & 22.93 & 39.12 & 33.51 & -0.3693 \\
+Structural Supervision & Attention Structure & 20.48 & 35.91 & 31.21 & -0.4860 \\
+Shift-AET & Shifted State Alignment & 22.38 & 38.26 & 32.90 & -0.4181 \\
+AWESOME-align & Embedding Alignment & 23.05 & 38.93 & 33.45 & -0.3841 \\
+CL-LSA (InfoNCE) & Token-level Contrastive & 17.85 & 33.33 & 28.19 & -0.5969 \\
 \rowcolor{highlightgreen}
 \textbf{TSSA (Ours 🏆)} & \textbf{Semantic Anchor \& Route} & \textbf{24.11} & \textbf{40.43} & \textbf{34.81} & \textbf{-0.3264} \\
 \textit{Improvement ($\Delta$ vs Vanilla)} & & \textcolor{topgreen}{\textbf{+0.70}} & \textcolor{topgreen}{\textbf{+1.10}} & \textcolor{topgreen}{\textbf{+0.90}} & \textcolor{topgreen}{\textbf{+0.0414}} \\
 \midrule
 \multicolumn{6}{l}{\textbf{II. Tay $\rightarrow$ Vietnamese (Tai-Kadai, 20.6K pairs)}} \\
 Vanilla BARTpho & Standard Seq2Seq & 24.67 & 35.74 & 25.68 & -0.5291 \\
-Align-to-Distill (A2D) & 1. Attention Distillation & 24.67 & 35.84 & 26.17 & -0.5138 \\
-Shift-AET & 2. Shifted State Align & 19.44 & 28.97 & 19.39 & -0.7602 \\
-AWESOME-align & 3. Embedding Alignment & 25.20 & 36.30 & 26.44 & -0.5051 \\
-Cross-Lingual InfoNCE (CL-LSA) & 4. Token-level Contrastive & 24.48 & 35.29 & 25.53 & -0.5512 \\
+Align-to-Distill (A2D) & Attention Distillation & 24.67 & 35.84 & 26.17 & -0.5138 \\
+Shift-AET & Shifted State Alignment & 19.44 & 28.97 & 19.39 & -0.7602 \\
+AWESOME-align & Embedding Alignment & 25.20 & 36.30 & 26.44 & -0.5051 \\
+CL-LSA (InfoNCE) & Token-level Contrastive & 24.48 & 35.29 & 25.53 & -0.5512 \\
 \rowcolor{highlightgreen}
 \textbf{TSSA (Ours 🏆)} & \textbf{Semantic Anchor \& Route} & \textbf{25.46} & \textbf{36.31} & \textbf{26.29} & \textbf{-0.5086} \\
 \textit{Improvement ($\Delta$ vs Vanilla)} & & \textcolor{topgreen}{\textbf{+0.79}} & \textcolor{topgreen}{\textbf{+0.57}} & \textcolor{topgreen}{\textbf{+0.61}} & \textcolor{topgreen}{\textbf{+0.0205}} \\
 \midrule
 \multicolumn{6}{l}{\textbf{III. Bahnaric $\rightarrow$ Vietnamese (Mon-Khmer, 51.9K pairs)}} \\
 Vanilla BARTpho & Standard Seq2Seq & 9.63 & 23.47 & 18.15 & -0.8507 \\
-Align-to-Distill (A2D) & 1. Attention Distillation & 9.15 & 23.17 & 18.05 & -0.8598 \\
-Shift-AET & 2. Shifted State Align & 9.10 & 23.31 & 18.00 & -0.8682 \\
-AWESOME-align & 3. Embedding Alignment & 9.07 & 23.22 & 17.92 & -0.8588 \\
-Cross-Lingual InfoNCE (CL-LSA) & 4. Token-level Contrastive & 4.49 & 15.87 & 9.90 & -1.1817 \\
+Align-to-Distill (A2D) & Attention Distillation & 9.15 & 23.17 & 18.05 & -0.8598 \\
+Shift-AET & Shifted State Alignment & 9.10 & 23.31 & 18.00 & -0.8682 \\
+AWESOME-align & Embedding Alignment & 9.07 & 23.22 & 17.92 & -0.8588 \\
+CL-LSA (InfoNCE) & Token-level Contrastive & 4.49 & 15.87 & 9.90 & -1.1817 \\
 \rowcolor{highlightgreen}
 \textbf{TSSA (Ours 🏆)} & \textbf{Semantic Anchor \& Route} & \textbf{9.66} & \textbf{23.89} & \textbf{18.46} & \textbf{-0.8376} \\
 \textit{Improvement ($\Delta$ vs Vanilla)} & & \textcolor{topgreen}{\textbf{+0.03}} & \textcolor{topgreen}{\textbf{+0.42}} & \textcolor{topgreen}{\textbf{+0.31}} & \textcolor{topgreen}{\textbf{+0.0131}} \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
 \subsection{Intrinsic Attention Sharpness \& Entropy Analysis}
@@ -210,9 +209,6 @@ Table~\ref{tab:attention_entropy} presents the quantitative measurements of cros
 
 \begin{table}[htbp]
 \centering
-\small
-\setlength{\tabcolsep}{5pt}
-\renewcommand{\arraystretch}{1.15}
 \caption{\textbf{Intrinsic Cross-Attention Sharpness and Entropy Measurements.} Demonstrating significant reduction in cross-attention entropy and elimination of attention sinks.}
 \label{tab:attention_entropy}
 \vspace{4pt}

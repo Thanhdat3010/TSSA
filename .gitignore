@@ -47,3 +47,7 @@ data_processed/
 # Temporary files
 *.tmp
 *.log
+
+# Paper PDFs and Baseline Papers (Keep local only)
+*.pdf
+docs/baseline_papers/

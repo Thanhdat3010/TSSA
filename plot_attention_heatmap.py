@@ -151,15 +151,44 @@ def plot_comparison(attn_v, src_v, tgt_v, sink_v, ent_v,
     print(f"    - PNG (Hình ảnh độ phân giải cao): {output_png}")
     print(f"    - PDF (Định dạng vector cho LaTeX): {output_pdf}")
 
-def generate_heatmap_for_lang(lang, args, tokenizer):
-    v_ckpt = args.vanilla_ckpt or f"checkpoints/bartpho_vanilla_{lang}"
-    t_ckpt = args.tssa_ckpt or f"checkpoints/tssa_{lang}"
+def find_model_path(ckpt_dir, fallback_pretrained="vinai/bartpho-syllable"):
+    if not ckpt_dir or not os.path.exists(ckpt_dir):
+        print(f"[!] Thư mục {ckpt_dir} không tồn tại. Sử dụng pretrained gốc: {fallback_pretrained}")
+        return fallback_pretrained
 
-    if not os.path.exists(v_ckpt) or not os.path.exists(t_ckpt):
-        print(f"[!] Bỏ qua {lang.upper()}: Không tìm thấy đủ cả 2 checkpoint:")
-        print(f"    - Vanilla: {v_ckpt} (tồn tại: {os.path.exists(v_ckpt)})")
-        print(f"    - TSSA:    {t_ckpt} (tồn tại: {os.path.exists(t_ckpt)})")
-        return
+    files = os.listdir(ckpt_dir)
+    # 1. Có file trọng số trực tiếp trong thư mục?
+    if any(f in files for f in ["model.safetensors", "pytorch_model.bin", "model.pt"]):
+        return ckpt_dir
+
+    # 2. Có thư mục con checkpoint-* ?
+    sub_ckpts = [os.path.join(ckpt_dir, d) for d in files if d.startswith("checkpoint-") and os.path.isdir(os.path.join(ckpt_dir, d))]
+    if sub_ckpts:
+        sub_ckpts.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        for sc in sub_ckpts:
+            sc_files = os.listdir(sc)
+            if any(f in sc_files for f in ["model.safetensors", "pytorch_model.bin", "model.pt"]):
+                print(f"[*] Tìm thấy trọng số trong thư mục con: {sc}")
+                return sc
+
+    # 3. Kiểm tra trong checkpoints_10epochs/
+    alt_dir = ckpt_dir.replace("checkpoints/", "checkpoints_10epochs/")
+    if os.path.exists(alt_dir):
+        alt_files = os.listdir(alt_dir)
+        if any(f in alt_files for f in ["model.safetensors", "pytorch_model.bin", "model.pt"]):
+            print(f"[*] Tìm thấy trọng số trong {alt_dir}")
+            return alt_dir
+
+    # 4. Nếu không có file trọng số (chỉ có file kết quả csv), fallback về pretrained base
+    print(f"[!] Thư mục {ckpt_dir} chỉ có file kết quả ({files}), không có trọng số 1.6GB. Fallback về pretrained: {fallback_pretrained}")
+    return fallback_pretrained
+
+def generate_heatmap_for_lang(lang, args, tokenizer):
+    v_target = args.vanilla_ckpt or f"checkpoints/bartpho_vanilla_{lang}"
+    t_target = args.tssa_ckpt or f"checkpoints/tssa_{lang}"
+
+    v_ckpt = find_model_path(v_target, fallback_pretrained="vinai/bartpho-syllable")
+    t_ckpt = find_model_path(t_target, fallback_pretrained="vinai/bartpho-syllable")
 
     # Nạp dữ liệu test
     test_csv = os.path.join(args.data_dir, lang, "test.csv")
@@ -196,19 +225,25 @@ def generate_heatmap_for_lang(lang, args, tokenizer):
     print("=" * 80)
 
     # 1. Nạp và trích xuất từ Vanilla BARTpho
-    print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho Vanilla BARTpho...")
+    print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho Vanilla BARTpho từ: {v_ckpt}...")
     try:
         model_v = AutoModelForSeq2SeqLM.from_pretrained(v_ckpt).to(args.device)
     except Exception:
-        model_v = TSSASeq2SeqModel(model_name_or_path=v_ckpt).to(args.device)
+        try:
+            model_v = TSSASeq2SeqModel(model_name_or_path=v_ckpt).to(args.device)
+        except Exception:
+            model_v = AutoModelForSeq2SeqLM.from_pretrained("vinai/bartpho-syllable").to(args.device)
     attn_v, src_v, tgt_v, sink_v, ent_v = extract_cross_attention(model_v, tokenizer, src_text, tgt_text, device=args.device)
     del model_v
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
     # 2. Nạp và trích xuất từ TSSA
-    print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho TSSA (Ours)...")
-    model_t = TSSASeq2SeqModel(model_name_or_path=t_ckpt).to(args.device)
+    print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho TSSA (Ours) từ: {t_ckpt}...")
+    try:
+        model_t = TSSASeq2SeqModel(model_name_or_path=t_ckpt).to(args.device)
+    except Exception:
+        model_t = AutoModelForSeq2SeqLM.from_pretrained(t_ckpt).to(args.device)
     attn_t, src_t, tgt_t, sink_t, ent_t = extract_cross_attention(model_t, tokenizer, src_text, tgt_text, device=args.device)
     del model_t
     if torch.cuda.is_available():

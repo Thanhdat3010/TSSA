@@ -67,16 +67,20 @@ Toàn bộ các phương pháp đều được huấn luyện trên **cùng Back
 
 | Ngôn Ngữ | Cấu Hình / Biến Thể | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Δ vs Full BLEU |
 | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Tày (`tay` → `vi`)** | **Full TSSA** | **25.46** | **36.31** | **26.29** | **-0.5086** | **Mốc đối chuẩn (0.0)** |
-| | `w/o Dynamic Head Routing` ($\lambda_3 = 0$) | 25.44 | 36.41 | 26.41 | -- | -0.02 |
-| | `w/o Barycenter Struct Anchoring` ($\lambda_1 = 0$) | 25.27 | 36.28 | 26.22 | -- | **-0.19** *(Tụt sâu nhất)* |
-| | `w/o Contrastive Priming` ($\lambda_2 = 0$) | 25.44 | 36.36 | 26.28 | -- | -0.02 |
-| | **Vanilla BARTpho (No Anchoring)** | 24.67 | 35.74 | 25.68 | -0.5291 | -0.79 |
 | **Ê Đê (`rhade` → `vi`)** | **Full TSSA** | **24.11** | **40.43** | **34.81** | **-0.3264** | **Mốc đối chuẩn (0.0)** |
-| | *Các biến thể Ablation* | *[Đang chạy]* | *...* | *...* | *...* | *...* |
+| | `w/o Dynamic Head Routing` ($\lambda_3 = 0$) | 24.12 | 40.22 | 34.83 | -0.3344 | +0.01 (COMET tụt -0.0080) |
+| | `w/o Barycenter Struct Anchoring` ($\lambda_1 = 0$) | 24.14 | 40.33 | 34.68 | -0.3266 | +0.03 |
+| | `w/o Contrastive Priming` ($\lambda_2 = 0$) | 24.24 | 40.36 | 34.77 | -0.3346 | +0.13 (COMET tụt -0.0082) |
 | | **Vanilla BARTpho (No Anchoring)** | 23.41 | 39.33 | 33.91 | -0.3678 | -0.70 |
+| **Tày (`tay` → `vi`)** | **Full TSSA** | **25.46** | **36.31** | **26.29** | **-0.5086** | **Mốc đối chuẩn (0.0)** |
+| | `w/o Dynamic Head Routing` ($\lambda_3 = 0$) | 25.44 | 36.41 | 26.41 | -0.4988 | -0.02 |
+| | `w/o Barycenter Struct Anchoring` ($\lambda_1 = 0$) | 25.27 | 36.28 | 26.22 | -0.5169 | **-0.19** *(Tụt sâu nhất)* |
+| | `w/o Contrastive Priming` ($\lambda_2 = 0$) | 25.44 | 36.36 | 26.28 | -0.5076 | -0.02 |
+| | **Vanilla BARTpho (No Anchoring)** | 24.67 | 35.74 | 25.68 | -0.5291 | -0.79 |
 | **Ba Na (`bahnaric` → `vi`)** | **Full TSSA** | **9.66** | **23.89** | **18.46** | **-0.8376** | **Mốc đối chuẩn (0.0)** |
-| | *Các biến thể Ablation* | *[Đang chạy]* | *...* | *...* | *...* | *...* |
+| | `w/o Dynamic Head Routing` ($\lambda_3 = 0$) | 9.43 | 23.87 | 18.63 | -0.8367 | -0.23 |
+| | `w/o Barycenter Struct Anchoring` ($\lambda_1 = 0$) | 9.53 | 24.06 | 18.68 | -0.8283 | -0.13 |
+| | `w/o Contrastive Priming` ($\lambda_2 = 0$) | 9.19 | 23.43 | 18.05 | -0.8606 | **-0.47** *(Tụt sâu nhất, COMET tụt -0.0230)* |
 | | **Vanilla BARTpho (No Anchoring)** | 9.63 | 23.47 | 18.15 | -0.8507 | -0.03 |
 
 ---

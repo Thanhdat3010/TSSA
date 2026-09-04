@@ -13,6 +13,12 @@ import csv
 import numpy as np
 import sacrebleu
 
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable, **kwargs):
+        return iterable
+
 def load_predictions(file_path):
     if not os.path.exists(file_path):
         return None, None, None
@@ -35,7 +41,7 @@ def load_predictions(file_path):
             preds.append(r[pred_col].strip())
     return srcs, refs, preds
 
-def paired_bootstrap_test(tssa_preds, comp_preds, refs, num_samples=1000, seed=42):
+def paired_bootstrap_test(tssa_preds, comp_preds, refs, num_samples=1000, seed=42, desc=""):
     """
     Thực hiện Paired Bootstrap Resampling với B lần lấy mẫu có hoàn lại.
     Trả về p-value và khoảng tin cậy 95% cho BLEU và chrF++.
@@ -55,8 +61,9 @@ def paired_bootstrap_test(tssa_preds, comp_preds, refs, num_samples=1000, seed=4
     delta_bleu_samples = []
     delta_chrf_samples = []
 
-    # Tiến hành lấy mẫu
-    for _ in range(num_samples):
+    # Tiến hành lấy mẫu với Progress Bar trực quan
+    pbar = tqdm(range(num_samples), desc=f"   {desc:<35}", unit="iter", ncols=100)
+    for _ in pbar:
         idx = np.random.choice(n, size=n, replace=True)
         sub_refs = [refs[i] for i in idx]
         sub_tssa = [tssa_preds[i] for i in idx]
@@ -140,17 +147,19 @@ def main():
             print(f"[!] Bỏ qua {lang.upper()}: Không tìm thấy file {tssa_path}")
             continue
 
+        print(f"\n[*] Đang kiểm định cho ngôn ngữ: {lang.upper()} ({len(refs)} câu test)")
+
         # 1. So với Vanilla BARTpho (Bắt buộc)
         _, _, v_preds = load_predictions(vanilla_path)
         if v_preds:
-            res_v = paired_bootstrap_test(tssa_preds, v_preds, refs, args.num_samples, args.seed)
+            res_v = paired_bootstrap_test(tssa_preds, v_preds, refs, args.num_samples, args.seed, desc=f"vs. Vanilla BARTpho")
             results.append((lang.upper(), "Vanilla BARTpho", res_v))
 
         # 2. So với Strongest Baseline (Điểm cộng lớn)
         if strong_path and os.path.exists(strong_path):
             _, _, s_preds = load_predictions(strong_path)
             if s_preds:
-                res_s = paired_bootstrap_test(tssa_preds, s_preds, refs, args.num_samples, args.seed)
+                res_s = paired_bootstrap_test(tssa_preds, s_preds, refs, args.num_samples, args.seed, desc=f"vs. {strong_model}")
                 results.append((lang.upper(), f"Strongest ({strong_model})", res_s))
 
     # In kết quả định dạng bảng rõ ràng

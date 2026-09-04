@@ -28,20 +28,41 @@ except ImportError:
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from models.tssa_seq2seq import TSSASeq2SeqModel
 
+def get_decoder_layers_and_config(model):
+    """Truy xuất an toàn decoder layers và config từ mọi cấp độ wrapper của mô hình."""
+    m = model
+    # Bóc tách qua các lớp wrapper nếu có
+    if hasattr(m, "model"):
+        m = m.model
+    if hasattr(m, "model"):
+        m = m.model
+    
+    decoder = getattr(m, "decoder", None)
+    layers = getattr(decoder, "layers", None) if decoder is not None else None
+    
+    cfg = getattr(model, "config", getattr(m, "config", None))
+    return layers, cfg
+
 def extract_cross_attention(model, tokenizer, src_text, tgt_text, device="cpu", layer_idx=-1):
     """
-    Runs forward pass and extracts cross-attention matrix [T, S] from the specified decoder layer.
+    Chạy forward pass và trích xuất ma trận Cross-Attention [T, S] từ tầng decoder chỉ định.
     """
     model.eval()
-    src_enc = tokenizer(src_text, max_length=64, truncation=True, return_tensors="pt").to(device)
-    with tokenizer.as_target_tokenizer():
-        tgt_enc = tokenizer(tgt_text, max_length=64, truncation=True, return_tensors="pt").to(device)
+    
+    # Đảm bảo bật eager attention và output_attentions trên config
+    for m_obj in [model, getattr(model, "model", None), getattr(getattr(model, "model", None), "model", None)]:
+        if m_obj is not None and hasattr(m_obj, "config"):
+            setattr(m_obj.config, "_attn_implementation", "eager")
+            setattr(m_obj.config, "output_attentions", True)
 
-    # Subword token lists for axis labels
+    src_enc = tokenizer(src_text, max_length=64, truncation=True, return_tensors="pt").to(device)
+    tgt_enc = tokenizer(text_target=tgt_text, max_length=64, truncation=True, return_tensors="pt").to(device)
+
+    # Danh sách token subword cho nhãn trục
     src_tokens = tokenizer.convert_ids_to_tokens(src_enc["input_ids"][0])
     tgt_tokens = tokenizer.convert_ids_to_tokens(tgt_enc["input_ids"][0])
     
-    # Clean token strings for display
+    # Làm sạch chuỗi token để hiển thị đẹp
     src_labels = [t.replace("@@", "").replace(" ", "") if t != " " else " " for t in src_tokens]
     tgt_labels = [t.replace("@@", "").replace(" ", "") if t != " " else " " for t in tgt_tokens]
 
@@ -54,7 +75,7 @@ def extract_cross_attention(model, tokenizer, src_text, tgt_text, device="cpu", 
             output_hidden_states=True
         )
 
-        # Trích xuất cross-attention tuple
+        # 1. Trích xuất trực tiếp từ outputs.cross_attentions
         cross_attns = outputs.get("cross_attentions") if isinstance(outputs, dict) else getattr(outputs, "cross_attentions", None)
 
         if cross_attns is not None and len(cross_attns) > 0 and cross_attns[layer_idx] is not None:
@@ -62,22 +83,25 @@ def extract_cross_attention(model, tokenizer, src_text, tgt_text, device="cpu", 
             attn_layer = cross_attns[layer_idx][0] # [H, T, S]
             attn_map = attn_layer.mean(dim=0).cpu().numpy() # [T, S]
         else:
-            # Fallback tính qua Q, K
+            # 2. Fallback tính qua Q @ K^T an toàn
             dec_states = outputs["decoder_hidden_states"] if isinstance(outputs, dict) else outputs.decoder_hidden_states
             enc_states = outputs["encoder_last_hidden_state"] if isinstance(outputs, dict) else outputs.encoder_last_hidden_state
             
-            inner = getattr(model, "model", model)
-            dec_layer = inner.model.decoder.layers[layer_idx]
-            dec_state = dec_states[layer_idx]
-            
-            D = dec_state.size(-1)
-            H = inner.config.decoder_attention_heads
-            d_k = D // H
-            
-            q = dec_layer.encoder_attn.q_proj(dec_state).view(1, -1, H, d_k).transpose(1, 2)
-            k = dec_layer.encoder_attn.k_proj(enc_states).view(1, -1, H, d_k).transpose(1, 2)
-            scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
-            attn_map = F.softmax(scores, dim=-1)[0].mean(dim=0).cpu().numpy()
+            dec_layers, cfg = get_decoder_layers_and_config(model)
+            if dec_layers is not None:
+                dec_layer = dec_layers[layer_idx]
+                dec_state = dec_states[layer_idx]
+                
+                D = dec_state.size(-1)
+                H = getattr(cfg, "decoder_attention_heads", 16)
+                d_k = D // H
+                
+                q = dec_layer.encoder_attn.q_proj(dec_state).view(1, -1, H, d_k).transpose(1, 2)
+                k = dec_layer.encoder_attn.k_proj(enc_states).view(1, -1, H, d_k).transpose(1, 2)
+                scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5)
+                attn_map = F.softmax(scores, dim=-1)[0].mean(dim=0).cpu().numpy()
+            else:
+                raise RuntimeError("Không thể tìm thấy decoder layers để trích xuất attention.")
 
     # Tính toán chỉ số Attention Sink & Entropy
     T, S = attn_map.shape
@@ -256,12 +280,15 @@ def generate_heatmap_for_lang(lang, args, tokenizer):
     # 1. Nạp và trích xuất từ Vanilla BARTpho
     print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho Vanilla BARTpho từ: {v_ckpt}...")
     try:
-        model_v = AutoModelForSeq2SeqLM.from_pretrained(v_ckpt).to(args.device)
+        model_v = AutoModelForSeq2SeqLM.from_pretrained(v_ckpt, attn_implementation="eager").to(args.device)
     except Exception:
         try:
-            model_v = TSSASeq2SeqModel(model_name_or_path=v_ckpt).to(args.device)
+            model_v = AutoModelForSeq2SeqLM.from_pretrained(v_ckpt).to(args.device)
         except Exception:
-            model_v = AutoModelForSeq2SeqLM.from_pretrained("vinai/bartpho-syllable").to(args.device)
+            try:
+                model_v = TSSASeq2SeqModel(model_name_or_path=v_ckpt).to(args.device)
+            except Exception:
+                model_v = AutoModelForSeq2SeqLM.from_pretrained("vinai/bartpho-syllable", attn_implementation="eager").to(args.device)
     attn_v, src_v, tgt_v, sink_v, ent_v = extract_cross_attention(model_v, tokenizer, src_text, tgt_text, device=args.device)
     del model_v
     if torch.cuda.is_available():
@@ -272,7 +299,10 @@ def generate_heatmap_for_lang(lang, args, tokenizer):
     try:
         model_t = TSSASeq2SeqModel(model_name_or_path=t_ckpt).to(args.device)
     except Exception:
-        model_t = AutoModelForSeq2SeqLM.from_pretrained(t_ckpt).to(args.device)
+        try:
+            model_t = AutoModelForSeq2SeqLM.from_pretrained(t_ckpt, attn_implementation="eager").to(args.device)
+        except Exception:
+            model_t = AutoModelForSeq2SeqLM.from_pretrained(t_ckpt).to(args.device)
     attn_t, src_t, tgt_t, sink_t, ent_t = extract_cross_attention(model_t, tokenizer, src_text, tgt_text, device=args.device)
     del model_t
     if torch.cuda.is_available():

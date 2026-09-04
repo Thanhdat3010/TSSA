@@ -331,13 +331,6 @@ The hard-instance slicing resolves the question of Bahnaric translation performa
     \item Similarly on Tay, vanilla BARTpho completely collapses to $0.00$ BLEU on the bottom 25\%, whereas TSSA restores generation ability to $0.76$ BLEU and increases chrF++ by $2.6\times$ ($1.52 \rightarrow 3.97$).
 \end{itemize}
 
-\subsection{Attention Map Interpretability and Sink Mitigation}
-\label{sec:attention_interpretability}
-
-To inspect the mechanistic basis of TSSA's gains, we extract decoder cross-attention distributions $\alpha_{t, s}$ from both vanilla BARTpho and TSSA. In standard seq2seq models, cross-attention suffers from severe attention sinking: up to $90\%$--$93\%$ of the attention mass is absorbed by special boundary tokens (\texttt{<s>}, \texttt{</s>}), leaving target tokens weakly grounded on source content. 
-
-In TSSA, the token barycenter loss ($\mathcal{L}_{\text{struct}}$) forces cross-attention mass to ground sharply onto semantically aligned source tokens. Visual inspection of cross-attention heatmaps (saved in \texttt{docs/figures/attention\_heatmap\_*.pdf}) verifies that TSSA sharply concentrates attention along the diagonal semantic correspondence matrix, eliminating off-target diffusion and preventing repetitive token generation.
-
 % ==============================================================================
 \section{Summary of Technical Findings}
 \label{sec:findings}

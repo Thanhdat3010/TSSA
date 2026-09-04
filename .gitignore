@@ -50,4 +50,6 @@ data_processed/
 
 # Paper PDFs and Baseline Papers (Keep local only)
 *.pdf
+!docs/figures/*.pdf
+!docs/figures/*.png
 docs/baseline_papers/

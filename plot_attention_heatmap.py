@@ -151,31 +151,20 @@ def plot_comparison(attn_v, src_v, tgt_v, sink_v, ent_v,
     print(f"    - PNG (Hình ảnh độ phân giải cao): {output_png}")
     print(f"    - PDF (Định dạng vector cho LaTeX): {output_pdf}")
 
-def main():
-    parser = argparse.ArgumentParser(description="Cross-Attention Heatmap Generator (TSSA vs. Vanilla)")
-    parser.add_argument("--lang", type=str, default="rhade", choices=["rhade", "tay", "bahnaric"],
-                        help="Ngôn ngữ cần trực quan hóa")
-    parser.add_argument("--vanilla_ckpt", type=str, default=None, help="Đường dẫn checkpoint Vanilla BARTpho")
-    parser.add_argument("--tssa_ckpt", type=str, default=None, help="Đường dẫn checkpoint TSSA")
-    parser.add_argument("--data_dir", type=str, default="data_processed", help="Thư mục dữ liệu")
-    parser.add_argument("--sample_idx", type=int, default=None, help="Chỉ mục câu cần vẽ (tự động chọn nếu None)")
-    parser.add_argument("--output_dir", type=str, default="docs/figures", help="Thư mục lưu hình")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
-    args = parser.parse_args()
-
-    v_ckpt = args.vanilla_ckpt or f"checkpoints/bartpho_vanilla_{args.lang}"
-    t_ckpt = args.tssa_ckpt or f"checkpoints/tssa_{args.lang}"
+def generate_heatmap_for_lang(lang, args, tokenizer):
+    v_ckpt = args.vanilla_ckpt or f"checkpoints/bartpho_vanilla_{lang}"
+    t_ckpt = args.tssa_ckpt or f"checkpoints/tssa_{lang}"
 
     if not os.path.exists(v_ckpt) or not os.path.exists(t_ckpt):
-        print(f"[!] Không tìm thấy đủ cả 2 checkpoint:")
+        print(f"[!] Bỏ qua {lang.upper()}: Không tìm thấy đủ cả 2 checkpoint:")
         print(f"    - Vanilla: {v_ckpt} (tồn tại: {os.path.exists(v_ckpt)})")
         print(f"    - TSSA:    {t_ckpt} (tồn tại: {os.path.exists(t_ckpt)})")
         return
 
     # Nạp dữ liệu test
-    test_csv = os.path.join(args.data_dir, args.lang, "test.csv")
+    test_csv = os.path.join(args.data_dir, lang, "test.csv")
     if not os.path.exists(test_csv):
-        alt_csv = os.path.join("data", args.lang, "test.csv")
+        alt_csv = os.path.join("data", lang, "test.csv")
         if os.path.exists(alt_csv):
             test_csv = alt_csv
         else:
@@ -183,7 +172,6 @@ def main():
             return
 
     df = pd.read_csv(test_csv)
-    tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-syllable")
 
     # Chọn câu phù hợp (8 đến 18 từ để ma trận hiển thị đẹp, rõ ràng nhất)
     if args.sample_idx is not None:
@@ -202,13 +190,13 @@ def main():
     tgt_text = str(sample_row["tgt_text"])
 
     print("=" * 80)
-    print(f"[*] Trực quan hóa Attention Heatmap cho: {args.lang.upper()} (Mẫu #{idx})")
-    print(f"    - Nguồn ({args.lang}): {src_text}")
-    print(f"    - Đích (Việt):  {tgt_text}")
+    print(f"[*] Trực quan hóa Attention Heatmap cho: {lang.upper()} (Mẫu #{idx})")
+    print(f"    - Nguồn ({lang}): {src_text}")
+    print(f"    - Đích (Việt):   {tgt_text}")
     print("=" * 80)
 
     # 1. Nạp và trích xuất từ Vanilla BARTpho
-    print("[*] Đang tính toán Cross-Attention cho Vanilla BARTpho...")
+    print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho Vanilla BARTpho...")
     try:
         model_v = AutoModelForSeq2SeqLM.from_pretrained(v_ckpt).to(args.device)
     except Exception:
@@ -219,16 +207,16 @@ def main():
         torch.cuda.empty_cache()
 
     # 2. Nạp và trích xuất từ TSSA
-    print("[*] Đang tính toán Cross-Attention cho TSSA (Ours)...")
+    print(f"[*] [{lang.upper()}] Đang tính toán Cross-Attention cho TSSA (Ours)...")
     model_t = TSSASeq2SeqModel(model_name_or_path=t_ckpt).to(args.device)
     attn_t, src_t, tgt_t, sink_t, ent_t = extract_cross_attention(model_t, tokenizer, src_text, tgt_text, device=args.device)
     del model_t
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    lang_display = {"rhade": "Rhade / Ê Đê", "tay": "Tay / Tày", "bahnaric": "Bahnaric / Ba Na"}.get(args.lang, args.lang)
-    out_png = os.path.join(args.output_dir, f"attention_heatmap_{args.lang}.png")
-    out_pdf = os.path.join(args.output_dir, f"attention_heatmap_{args.lang}.pdf")
+    lang_display = {"rhade": "Rhade / Ê Đê", "tay": "Tay / Tày", "bahnaric": "Bahnaric / Ba Na"}.get(lang, lang)
+    out_png = os.path.join(args.output_dir, f"attention_heatmap_{lang}.png")
+    out_pdf = os.path.join(args.output_dir, f"attention_heatmap_{lang}.pdf")
 
     plot_comparison(
         attn_v, src_v, tgt_v, sink_v, ent_v,
@@ -237,6 +225,24 @@ def main():
         output_png=out_png,
         output_pdf=out_pdf
     )
+
+def main():
+    parser = argparse.ArgumentParser(description="Cross-Attention Heatmap Generator (TSSA vs. Vanilla)")
+    parser.add_argument("--lang", type=str, default="all", choices=["all", "rhade", "tay", "bahnaric"],
+                        help="Ngôn ngữ cần trực quan hóa (mặc định: all để vẽ cả 3 tiếng)")
+    parser.add_argument("--vanilla_ckpt", type=str, default=None, help="Đường dẫn checkpoint Vanilla BARTpho")
+    parser.add_argument("--tssa_ckpt", type=str, default=None, help="Đường dẫn checkpoint TSSA")
+    parser.add_argument("--data_dir", type=str, default="data_processed", help="Thư mục dữ liệu")
+    parser.add_argument("--sample_idx", type=int, default=None, help="Chỉ mục câu cần vẽ (tự động chọn nếu None)")
+    parser.add_argument("--output_dir", type=str, default="docs/figures", help="Thư mục lưu hình")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    args = parser.parse_args()
+
+    tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-syllable")
+    langs = ["rhade", "tay", "bahnaric"] if args.lang == "all" else [args.lang]
+
+    for lang in langs:
+        generate_heatmap_for_lang(lang, args, tokenizer)
 
 if __name__ == "__main__":
     main()

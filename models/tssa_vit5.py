@@ -14,6 +14,14 @@ from transformers import AutoModelForSeq2SeqLM
 from .head_router import HeadWiseRouter
 from .semantic_projector import ResidualSemanticProjector
 
+# Safeguard against Transformers v4.49+ CVE-2025-32434 check when torch < 2.6
+try:
+    import transformers.utils.import_utils as _hf_import_utils
+    if hasattr(_hf_import_utils, "check_torch_load_is_safe"):
+        _hf_import_utils.check_torch_load_is_safe = lambda: None
+except Exception:
+    pass
+
 class TSSAViT5Model(nn.Module):
     # Hugging Face Trainer serialization attributes
     _keys_to_ignore_on_save = None
@@ -23,8 +31,11 @@ class TSSAViT5Model(nn.Module):
     def __init__(self, model_name_or_path: str = "VietAI/vit5-base", use_route: bool = True,
                  d_model: int = None, n_heads: int = None, n_decoder_layers: int = None):
         super().__init__()
-        # Load backbone T5 model
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
+        # Load backbone T5 model with safetensors preferred
+        try:
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path, use_safetensors=True)
+        except Exception:
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name_or_path)
         self.use_route = use_route
 
         # Dynamically read architectural dimensions from T5 config

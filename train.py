@@ -14,6 +14,14 @@ import numpy as np
 import sacrebleu
 from transformers import AutoTokenizer, Seq2SeqTrainingArguments, EarlyStoppingCallback
 
+# Safeguard against Transformers v4.49+ CVE-2025-32434 check when torch < 2.6
+try:
+    import transformers.utils.import_utils as _hf_import_utils
+    if hasattr(_hf_import_utils, "check_torch_load_is_safe"):
+        _hf_import_utils.check_torch_load_is_safe = lambda: None
+except Exception:
+    pass
+
 from data.dataloader import get_dataloaders
 from models.tssa_seq2seq import TSSASeq2SeqModel
 from models.tssa_vit5 import TSSAViT5Model

@@ -16,6 +16,7 @@ from transformers import AutoTokenizer, Seq2SeqTrainingArguments, EarlyStoppingC
 
 from data.dataloader import get_dataloaders
 from models.tssa_seq2seq import TSSASeq2SeqModel
+from models.tssa_vit5 import TSSAViT5Model
 from losses.unified_criterion import TSSAUnifiedCriterion
 from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
@@ -36,7 +37,7 @@ def parse_args():
     parser.add_argument("--model_ckpt", type=str, default="vinai/bartpho-syllable", help="Pretrained Backbone checkpoint")
     parser.add_argument("--model_type", type=str, default="tssa",
                         choices=[
-                            "tssa", "bartpho_vanilla",
+                            "tssa", "bartpho_vanilla", "vanilla", "vit5_vanilla",
                             "align_to_distill", "structural_supervision", "shift_aet",
                             "cross_init", "awesome_align", "dm_bli",
                             "cl_lsa", "dpo_align"
@@ -96,10 +97,19 @@ def main():
     # 4. Khởi tạo Mô hình
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[*] Đang khởi tạo mô hình trên thiết bị: {device}")
-    model = TSSASeq2SeqModel(
-        model_name_or_path=args.model_ckpt,
-        use_route=args.use_route and (args.model_type == "tssa")
-    ).to(device)
+    is_t5 = "t5" in args.model_ckpt.lower()
+    if is_t5:
+        print(f"[+] Khởi tạo kiến trúc ViT5 (TSSAViT5Model) với checkpoint: {args.model_ckpt}")
+        model = TSSAViT5Model(
+            model_name_or_path=args.model_ckpt,
+            use_route=args.use_route and (args.model_type == "tssa")
+        ).to(device)
+    else:
+        print(f"[+] Khởi tạo kiến trúc BARTpho (TSSASeq2SeqModel) với checkpoint: {args.model_ckpt}")
+        model = TSSASeq2SeqModel(
+            model_name_or_path=args.model_ckpt,
+            use_route=args.use_route and (args.model_type == "tssa")
+        ).to(device)
 
     # 5. Khởi tạo Hàm Loss
     criterion = None
@@ -119,9 +129,9 @@ def main():
             max_l2=args.lambda_prime,
             max_l3=args.lambda_route
         )
-    elif args.model_type != "bartpho_vanilla":
-        d_model = getattr(model, "d_model", 1024)
-        n_heads = getattr(model.config, "decoder_attention_heads", 16)
+    elif args.model_type not in ["bartpho_vanilla", "vanilla", "vit5_vanilla"]:
+        d_model = getattr(model, "d_model", getattr(model.config, "d_model", getattr(model.config, "hidden_size", 1024)))
+        n_heads = getattr(model, "n_heads", getattr(model.config, "num_heads", getattr(model.config, "decoder_attention_heads", 16)))
         config = {
             "hidden_dim": d_model,
             "embed_dim": d_model,
@@ -145,8 +155,9 @@ def main():
     if args.exp_name is not None and args.exp_name.strip():
         exp_name = args.exp_name.strip()
     else:
+        prefix = "vit5_" if is_t5 else ""
         if args.model_type == "tssa":
-            parts = ["tssa"]
+            parts = [f"{prefix}tssa"]
             if not args.use_route:
                 parts.append("no_route")
             if not args.use_struct:
@@ -155,8 +166,16 @@ def main():
                 parts.append("no_prime")
             parts.append(args.lang)
             exp_name = "_".join(parts)
+        elif args.model_type in ["vanilla", "bartpho_vanilla", "vit5_vanilla"]:
+            if is_t5:
+                exp_name = f"vit5_vanilla_{args.lang}"
+            else:
+                exp_name = f"bartpho_vanilla_{args.lang}"
         else:
-            exp_name = f"{args.model_type}_{args.lang}"
+            if is_t5:
+                exp_name = f"{prefix}{args.model_type}_{args.lang}"
+            else:
+                exp_name = f"{args.model_type}_{args.lang}"
     save_dir = os.path.join(args.output_dir, exp_name)
 
     training_args = Seq2SeqTrainingArguments(

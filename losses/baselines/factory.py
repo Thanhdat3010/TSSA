@@ -77,7 +77,7 @@ class UnifiedAlignmentLossFactory(nn.Module):
             self.loss_fn = AlignmentDPOLoss(
                 beta=self.config.get("beta", 0.1)
             )
-        elif self.method_name in ["bartpho_vanilla", "transformer_scratch", "bart_bahnar"]:
+        elif self.method_name in ["bartpho_vanilla", "vanilla", "vit5_vanilla", "transformer_scratch", "bart_bahnar"]:
             self.loss_fn = None
         else:
             self.loss_fn = None

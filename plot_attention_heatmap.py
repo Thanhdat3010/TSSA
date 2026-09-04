@@ -153,34 +153,63 @@ def plot_comparison(attn_v, src_v, tgt_v, sink_v, ent_v,
 
 def find_model_path(ckpt_dir, fallback_pretrained="vinai/bartpho-syllable"):
     if not ckpt_dir or not os.path.exists(ckpt_dir):
-        print(f"[!] Thư mục {ckpt_dir} không tồn tại. Sử dụng pretrained gốc: {fallback_pretrained}")
+        print(f"[!] Thư mục {ckpt_dir} không tồn tại. Fallback về: {fallback_pretrained}")
         return fallback_pretrained
 
     files = os.listdir(ckpt_dir)
-    # 1. Có file trọng số trực tiếp trong thư mục?
-    if any(f in files for f in ["model.safetensors", "pytorch_model.bin", "model.pt"]):
+    
+    # 1. Có file trọng số trực tiếp trong thư mục gốc?
+    if any(f.endswith((".safetensors", ".bin", ".pt")) for f in files):
+        print(f"[*] Tìm thấy file trọng số trong thư mục gốc: {ckpt_dir}")
         return ckpt_dir
 
-    # 2. Có thư mục con checkpoint-* ?
+    # 2. Có các sub-checkpoint (như trường hợp của bartpho_vanilla)?
     sub_ckpts = [os.path.join(ckpt_dir, d) for d in files if d.startswith("checkpoint-") and os.path.isdir(os.path.join(ckpt_dir, d))]
     if sub_ckpts:
-        sub_ckpts.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-        for sc in sub_ckpts:
-            sc_files = os.listdir(sc)
-            if any(f in sc_files for f in ["model.safetensors", "pytorch_model.bin", "model.pt"]):
-                print(f"[*] Tìm thấy trọng số trong thư mục con: {sc}")
-                return sc
+        # Kiểm tra xem có trainer_state.json ghi nhận best_model_checkpoint không
+        best_cand = None
+        ts_path = os.path.join(ckpt_dir, "trainer_state.json")
+        if os.path.exists(ts_path):
+            try:
+                data = json.load(open(ts_path))
+                b_path = data.get("best_model_checkpoint")
+                if b_path and os.path.exists(b_path):
+                    best_cand = b_path
+            except Exception:
+                pass
 
-    # 3. Kiểm tra trong checkpoints_10epochs/
-    alt_dir = ckpt_dir.replace("checkpoints/", "checkpoints_10epochs/")
-    if os.path.exists(alt_dir):
-        alt_files = os.listdir(alt_dir)
-        if any(f in alt_files for f in ["model.safetensors", "pytorch_model.bin", "model.pt"]):
-            print(f"[*] Tìm thấy trọng số trong {alt_dir}")
-            return alt_dir
+        if not best_cand:
+            for sc in sub_ckpts:
+                sc_ts = os.path.join(sc, "trainer_state.json")
+                if os.path.exists(sc_ts):
+                    try:
+                        data = json.load(open(sc_ts))
+                        b_path = data.get("best_model_checkpoint")
+                        if b_path and os.path.exists(b_path):
+                            best_cand = b_path
+                            break
+                    except Exception:
+                        pass
 
-    # 4. Nếu không có file trọng số (chỉ có file kết quả csv), fallback về pretrained base
-    print(f"[!] Thư mục {ckpt_dir} chỉ có file kết quả ({files}), không có trọng số 1.6GB. Fallback về pretrained: {fallback_pretrained}")
+        if best_cand and os.path.exists(best_cand):
+            print(f"[*] [Best Model] Đã chọn chuẩn xác checkpoint tốt nhất theo Trainer: {best_cand}")
+            return best_cand
+
+        # Nếu không có ghi nhận best, sắp xếp theo step cao nhất (checkpoint hội tụ cuối)
+        def get_step(sc_path):
+            bn = os.path.basename(sc_path)
+            try:
+                return int(bn.split("-")[-1])
+            except Exception:
+                return 0
+
+        sub_ckpts.sort(key=get_step, reverse=True)
+        chosen = sub_ckpts[0]
+        print(f"[*] Đã tự động chọn sub-checkpoint có step cao nhất: {chosen}")
+        return chosen
+
+    # 3. Fallback nếu không tìm thấy file trọng số
+    print(f"[!] Thư mục {ckpt_dir} chỉ có file kết quả ({files}), không có trọng số. Fallback: {fallback_pretrained}")
     return fallback_pretrained
 
 def generate_heatmap_for_lang(lang, args, tokenizer):

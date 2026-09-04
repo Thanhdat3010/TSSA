@@ -150,11 +150,12 @@ def main():
         if not selected_cases[lang]:
             continue
         c = selected_cases[lang][0]
-        latex_output += f"\\multicolumn{{2}}{{l}}{{\\textbf{{{lang.title()} $\\rightarrow$ Vietnamese (Test Instance \\#{c['idx']})}}} \\\\\n"
-        latex_output += f"\\textbf{{Source ({lang.title()})}} & {c['src']} \\\\\n"
-        latex_output += f"\\textbf{{Reference}} & {c['ref']} \\\\\n"
-        latex_output += f"\\textbf{{Vanilla}} & \\textcolor{{red!80!black}}{{{c['v_pred']}}} \\\\\n"
-        latex_output += f"\\textbf{{TSSA (Ours)}} & \\textcolor{{topgreen}}{{{c['t_pred']}}} \\\\\n"
+        title_str = f"{lang.title()} $\\rightarrow$ Vietnamese (Test Instance #{c['idx']})"
+        latex_output += "\\multicolumn{2}{l}{\\textbf{" + title_str + "}} \\\\\n"
+        latex_output += "\\textbf{Source (" + lang.title() + ")} & " + c['src'] + " \\\\\n"
+        latex_output += "\\textbf{Reference} & " + c['ref'] + " \\\\\n"
+        latex_output += "\\textbf{Vanilla} & \\textcolor{red!80!black}{" + c['v_pred'] + "} \\\\\n"
+        latex_output += "\\textbf{TSSA (Ours)} & \\textcolor{topgreen}{" + c['t_pred'] + "} \\\\\n"
         latex_output += "\\midrule\n"
         
     latex_output = latex_output.rstrip("\\midrule\n") + "\n\\bottomrule\n\\end{tabular}\n\\end{table*}\n"

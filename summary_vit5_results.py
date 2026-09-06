@@ -101,7 +101,7 @@ def compute_metrics_for_pred_file(pred_file, compute_comet=False):
             try:
                 data = [{"src": s, "mt": p, "ref": r} for s, p, r in zip(srcs, preds, refs)]
                 comet_output = c_model.predict(data, batch_size=32, gpus=1 if torch.cuda.is_available() else 0)
-                comet_val = round(float(comet_output.system_score) * 100, 2)
+                comet_val = round(float(comet_output.system_score), 4)
             except Exception as e:
                 print(f"[!] Lỗi tính COMET: {e}")
                 comet_val = "--"
@@ -128,12 +128,12 @@ def summarize_vit5(checkpoints_dir="checkpoints", compute_comet=False):
     ]
     
     methods = [
-        ("vanilla", "Vanilla ViT5"),
+        ("vanilla", "Vanilla ViT5 Base"),
         ("align_to_distill", "Align-to-Distill (A2D)"),
         ("shift_aet", "Shift-AET"),
         ("awesome_align", "AWESOME-align"),
-        ("cl_lsa", "CL-LSA (InfoNCE)"),
-        ("tssa", "TSSA (Proposed)")
+        ("cl_lsa", "CL-LSA"),
+        ("tssa", "TSSA (Ours)")
     ]
 
     all_data = []
@@ -211,7 +211,7 @@ def generate_latex_table7(all_data):
         b_str = f"{row['BLEU']:.2f}" if row['BLEU'] is not None else "--"
         c_str = f"{row['chrF++']:.2f}" if row['chrF++'] is not None else "--"
         m_str = f"{row['METEOR']}" if row['METEOR'] is not None else "--"
-        co_str = f"{row['COMET']}" if row['COMET'] is not None else "--"
+        co_str = f"{row['COMET']:.4f}" if row['COMET'] is not None and row['COMET'] != "--" else "--"
 
         if row["method_key"] == "tssa" and row['BLEU'] is not None:
             b_str = f"\\textbf{{{b_str}}}"
@@ -249,7 +249,7 @@ def main():
     done_count = sum(1 for r in data if r["BLEU"] is not None)
     print(f"[*] Tiến độ: {done_count} / {len(data)} mô hình đã có kết quả.")
     
-    if args.latex or done_count > 0:
+    if args.latex:
         print("\n" + "=" * 110)
         print("                 📜 LATEX CODE CHO BẢNG 7 (TABLE 7 DOSSIER)")
         print("=" * 110)

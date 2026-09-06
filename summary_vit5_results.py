@@ -8,6 +8,7 @@ import os
 import glob
 import json
 import argparse
+import torch
 import pandas as pd
 import sacrebleu
 

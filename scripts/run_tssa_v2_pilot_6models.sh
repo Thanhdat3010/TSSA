@@ -73,19 +73,11 @@ done
 echo "[✓] BƯỚC 0 HOÀN TẤT: Toàn bộ baseline và vanilla checkpoints được giữ nguyên 100%!"
 
 # ------------------------------------------------------------------------------
-# BƯỚC 1: SMOKE TEST AN TOÀN TRÊN SERVER
-# ------------------------------------------------------------------------------
-echo ""
-echo ">>> [BƯỚC 1/4] ĐANG CHẠY SMOKE TEST TSSA 2.1 TRÊN SERVER..."
-python smoke_test_tssa_v2.py
-echo "[✓] BƯỚC 1 HOÀN TẤT: Smoke test vượt qua 100%!"
-
-# ------------------------------------------------------------------------------
-# BƯỚC 2: HUẤN LUYỆN 3 MÔ HÌNH BARTpho VỚI TSSA 2.1 (C_opt)
+# BƯỚC 1: HUẤN LUYỆN 3 MÔ HÌNH BARTpho VỚI TSSA 2.1 (C_opt)
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo ">>> [BƯỚC 2/4] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH BARTpho (vinai/bartpho-syllable)"
+echo ">>> [BƯỚC 1/3] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH BARTpho (vinai/bartpho-syllable)"
 echo "========================================================================"
 
 for LANG in "${LANGUAGES[@]}"; do
@@ -121,11 +113,11 @@ for LANG in "${LANGUAGES[@]}"; do
 done
 
 # ------------------------------------------------------------------------------
-# BƯỚC 3: HUẤN LUYỆN 3 MÔ HÌNH ViT5 VỚI TSSA 2.1 (C_opt)
+# BƯỚC 2: HUẤN LUYỆN 3 MÔ HÌNH ViT5 VỚI TSSA 2.1 (C_opt)
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo ">>> [BƯỚC 3/4] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH ViT5 (VietAI/vit5-base)"
+echo ">>> [BƯỚC 2/3] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH ViT5 (VietAI/vit5-base)"
 echo "========================================================================"
 
 for LANG in "${LANGUAGES[@]}"; do
@@ -161,11 +153,11 @@ for LANG in "${LANGUAGES[@]}"; do
 done
 
 # ------------------------------------------------------------------------------
-# BƯỚC 4: ĐÁNH GIÁ TỔNG KẾT & KIỂM ĐỊNH Ý NGHĨA THỐNG KÊ
+# BƯỚC 3: ĐÁNH GIÁ TỔNG KẾT & KIỂM ĐỊNH Ý NGHĨA THỐNG KÊ
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo ">>> [BƯỚC 4/4] ĐANG TIẾN HÀNH TỔNG HỢP KẾT QUẢ & KIỂM ĐỊNH THỐNG KÊ..."
+echo ">>> [BƯỚC 3/3] ĐANG TIẾN HÀNH TỔNG HỢP KẾT QUẢ & KIỂM ĐỊNH THỐNG KÊ..."
 echo "========================================================================"
 
 echo ""

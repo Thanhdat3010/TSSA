@@ -68,6 +68,7 @@ class TSSAViT5Model(nn.Module):
             labels=labels,
             decoder_attention_mask=decoder_attention_mask,
             output_hidden_states=True,
+            output_attentions=True,
             return_dict=True
         )
 
@@ -109,30 +110,10 @@ class TSSAViT5Model(nn.Module):
                 sim_ts = torch.bmm(tgt_norm, src_norm.transpose(1, 2)) / 0.5 # [B, T, S]
                 align_matrix_ts = F.softmax(sim_ts, dim=-1).detach() # [B, T, S]
 
-        # 3. Direct Exact Cross-Attention Computation for Top T5 Decoder Blocks
-        if self.training and outputs.decoder_hidden_states is not None and outputs.encoder_last_hidden_state is not None:
-            B, T, D = outputs.decoder_hidden_states[-1].shape
-            S = outputs.encoder_last_hidden_state.size(1)
-            H = self.n_heads
-            d_k = self.d_kv
-            enc_state = outputs.encoder_last_hidden_state # [B, S, D]
-
-            num_layers = min(self.n_decoder_layers, len(outputs.decoder_hidden_states) - 1)
-            top_3_start = max(0, num_layers - 3)
-            cross_attn_list = []
-            for l in range(top_3_start, num_layers):
-                dec_state = outputs.decoder_hidden_states[l] # [B, T, D]
-                
-                # In T5: block[l].layer[1] is EncDecAttention
-                t5_block = self.model.decoder.block[l]
-                enc_dec_attn = t5_block.layer[1].EncDecAttention
-
-                q = enc_dec_attn.q(dec_state).view(B, T, H, d_k).transpose(1, 2) # [B, H, T, d_k]
-                k = enc_dec_attn.k(enc_state).view(B, S, H, d_k).transpose(1, 2) # [B, H, S, d_k]
-                scores = torch.matmul(q, k.transpose(-2, -1)) / (d_k ** 0.5) # [B, H, T, S]
-                attn_map = F.softmax(scores, dim=-1) # [B, H, T, S]
-                cross_attn_list.append(attn_map)
-            cross_attentions_tuple = tuple(cross_attn_list)
+        # 3. Direct Native Cross-Attention Extraction for Top T5 Decoder Blocks
+        if outputs.cross_attentions is not None and len(outputs.cross_attentions) > 0:
+            # Slices the top-3 decoder cross-attention layers natively computed by T5 (with Mesh-TF scaling and RMSNorm)
+            cross_attentions_tuple = outputs.cross_attentions[-3:]
 
         # 4. Dynamic Head-Wise Router Gate Activations
         if self.use_route and self.router is not None and outputs.decoder_hidden_states is not None:

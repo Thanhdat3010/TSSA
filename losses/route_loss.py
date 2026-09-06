@@ -9,9 +9,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class RouteLoss(nn.Module):
-    def __init__(self, target_budget: float = 0.25, eps: float = 1e-7):
+    def __init__(self, target_budget: float = 0.25, target_usage: float = None, entropy_weight: float = 0.1, eps: float = 1e-7, **kwargs):
         super().__init__()
-        self.target_budget = target_budget
+        self.target_budget = target_usage if target_usage is not None else target_budget
+        self.entropy_weight = entropy_weight
         self.eps = eps
 
     def forward(self, router_gates: torch.Tensor, teacher_target: torch.Tensor = None, tgt_mask: torch.Tensor = None) -> torch.Tensor:
@@ -38,7 +39,7 @@ class RouteLoss(nn.Module):
         entropy = - (gates_clamped * torch.log(gates_clamped) + (1.0 - gates_clamped) * torch.log(1.0 - gates_clamped))
         entropy_loss = entropy.mean(dim=2) # [B, L, T]
 
-        loss_per_token = budget_loss + 0.1 * entropy_loss # [B, L, T]
+        loss_per_token = budget_loss + self.entropy_weight * entropy_loss # [B, L, T]
 
         if tgt_mask is not None:
             B = tgt_mask.size(0)

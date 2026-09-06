@@ -49,11 +49,16 @@ class TSSAUnifiedCriterion(nn.Module):
         src_mask = batch.get("attention_mask")
         tgt_mask = batch.get("decoder_attention_mask")
 
-        # 1. Target-Guided Cross-Attention Anchoring Loss (L_xattn)
+        # 1. Target-Guided Cross-Attention Anchoring Loss (L_xattn) - Modulated by Router Gates
         cross_attns = student_outputs.get("cross_attentions")
         align_mat_ts = student_outputs.get("align_matrix_ts")
+        router_gates = student_outputs.get("router_gates")
         if self.use_struct and l1 > 0 and cross_attns is not None and align_mat_ts is not None:
-            l_xattn = self.xattn_loss_fn(cross_attns, align_mat_ts, tgt_mask=tgt_mask, src_mask=src_mask)
+            l_xattn = self.xattn_loss_fn(
+                cross_attns, align_mat_ts,
+                tgt_mask=tgt_mask, src_mask=src_mask,
+                router_gates=router_gates
+            )
             loss_total = loss_total + l1 * l_xattn
             log_dict["loss_struct"] = l_xattn.item()
         else:
@@ -69,11 +74,9 @@ class TSSAUnifiedCriterion(nn.Module):
         else:
             log_dict["loss_prime"] = 0.0
 
-        # 3. Dynamic Head-Wise Router Supervision Loss (L_route)
-        router_gates = student_outputs.get("router_gates")
+        # 3. Dynamic Head-Wise Router Capacity Budget & Sparsity Loss (L_route)
         if self.use_route and l3 > 0 and router_gates is not None:
-            teacher_target = torch.ones_like(router_gates) * 0.8
-            l_route = self.route_loss_fn(router_gates, teacher_target, tgt_mask)
+            l_route = self.route_loss_fn(router_gates, tgt_mask=tgt_mask)
             loss_total = loss_total + l3 * l_route
             log_dict["loss_route"] = l_route.item()
         else:

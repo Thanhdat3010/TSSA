@@ -29,6 +29,7 @@ from losses.unified_criterion import TSSAUnifiedCriterion
 from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
 from training.trainer import TSSASeq2SeqTrainer
+from training.log_tracker import LogTracker
 from evaluation.evaluator import TranslationEvaluator
 
 def parse_args():
@@ -60,9 +61,9 @@ def parse_args():
     parser.add_argument("--use_route", action="store_true", default=True, help="Bật L_route (Decoder Head Router)")
     parser.add_argument("--no_route", dest="use_route", action="store_false")
 
-    parser.add_argument("--lambda_struct", type=float, default=0.5)
-    parser.add_argument("--lambda_prime", type=float, default=0.2)
-    parser.add_argument("--lambda_route", type=float, default=0.1)
+    parser.add_argument("--lambda_struct", type=float, default=0.2, help="Trọng số L_struct (mặc định tối ưu 0.2)")
+    parser.add_argument("--lambda_prime", type=float, default=0.1, help="Trọng số L_prime (mặc định tối ưu 0.1)")
+    parser.add_argument("--lambda_route", type=float, default=0.05, help="Trọng số L_route (mặc định tối ưu 0.05)")
 
     # 4. Tham số Huấn luyện
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size trên mỗi GPU")
@@ -219,6 +220,7 @@ def main():
         return {"sacrebleu": round(bleu_res.score, 2)}
 
     # 8. Khởi tạo Trainer
+    log_tracker = LogTracker(exp_name=exp_name, log_dir=os.path.join(args.output_dir, "ablation_logs")) if args.model_type == "tssa" else None
     trainer = TSSASeq2SeqTrainer(
         model=model,
         args=training_args,
@@ -229,6 +231,7 @@ def main():
         loss_scheduler=loss_scheduler,
         model_type=args.model_type,
         baseline_loss_factory=baseline_loss_factory,
+        log_tracker=log_tracker,
         compute_metrics=compute_metrics,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
     )
@@ -236,6 +239,8 @@ def main():
     # 9. Bắt đầu Huấn Luyện
     print("\n🚀 Bắt đầu quá trình huấn luyện ...")
     trainer.train()
+    if log_tracker is not None:
+        log_tracker.save()
 
     # 10. Lưu mô hình tốt nhất và dọn dẹp checkpoint trung gian để tiết kiệm 90% dung lượng
     print("\n[*] Đang lưu mô hình tốt nhất (Best Model) và Tokenizer...")

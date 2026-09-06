@@ -15,12 +15,13 @@ from losses.baselines.factory import UnifiedAlignmentLossFactory
 
 class TSSASeq2SeqTrainer(Seq2SeqTrainer):
     def __init__(self, *args, criterion=None, loss_scheduler=None, model_type="tssa",
-                 baseline_loss_factory=None, **kwargs):
+                 baseline_loss_factory=None, log_tracker=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.criterion = criterion
         self.loss_scheduler = loss_scheduler
         self.model_type = model_type.lower().strip()
         self.baseline_loss_factory = baseline_loss_factory
+        self.log_tracker = log_tracker
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None, **kwargs):
         """
@@ -42,9 +43,18 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
         # 2. Compute TSSA Loss if active
         if self.model_type == "tssa" and self.criterion is not None:
             current_step = self.state.global_step
-            lambdas = self.loss_scheduler.get_lambdas(current_step) if self.loss_scheduler else (0.5, 0.2, 0.1)
+            lambdas = self.loss_scheduler.get_lambdas(current_step) if self.loss_scheduler else (0.2, 0.1, 0.05)
             crit_res = self.criterion(loss_mt, outputs, inputs, lambdas=lambdas)
             total_loss = crit_res["loss"]
+
+            # Log step-level dynamics ("Log Lại Hết")
+            if self.log_tracker is not None and current_step % 20 == 0:
+                current_lr = self.optimizer.param_groups[0]["lr"] if hasattr(self, "optimizer") and self.optimizer else None
+                epoch_val = self.state.epoch if self.state.epoch is not None else 0.0
+                self.log_tracker.log_step(current_step, epoch_val, crit_res["log_dict"], lr=current_lr)
+                router_gates = outputs.get("router_gates")
+                if router_gates is not None and current_step % 100 == 0:
+                    self.log_tracker.log_gate_activations(int(epoch_val), router_gates)
 
         # 3. Compute Unified Baseline Alignment losses if configured
         elif self.baseline_loss_factory is not None:

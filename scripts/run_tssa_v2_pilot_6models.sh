@@ -138,20 +138,12 @@ echo ">>> [BƯỚC 3/3] ĐANG TIẾN HÀNH TỔNG HỢP KẾT QUẢ & KIỂM Đ�
 echo "========================================================================"
 
 echo ""
-echo "--- [1/4] Tổng hợp kết quả BARTpho ---"
+echo "--- [1/2] Tổng hợp số liệu đánh giá BARTpho (BLEU, chrF++, METEOR, COMET) ---"
 python summary_results.py --comet || true
 
 echo ""
-echo "--- [2/4] Kiểm định thống kê Paired Bootstrap BARTpho ---"
-python eval_significance.py || true
-
-echo ""
-echo "--- [3/4] Tổng hợp kết quả ViT5 ---"
+echo "--- [2/2] Tổng hợp số liệu đánh giá ViT5 (BLEU, chrF++, METEOR, COMET) ---"
 python summary_vit5_results.py --comet || true
-
-echo ""
-echo "--- [4/4] Kiểm định thống kê Paired Bootstrap ViT5 ---"
-python eval_significance_vit5.py || true
 
 echo ""
 echo "--- [ĐẶC BIỆT] Bảng so sánh trực diện TSSA 2.1 vs TSSA v1 Cũ vs Vanilla ---"

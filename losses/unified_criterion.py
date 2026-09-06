@@ -83,4 +83,11 @@ class TSSAUnifiedCriterion(nn.Module):
             log_dict["loss_route"] = 0.0
 
         log_dict["loss_total"] = loss_total.item()
-        return {"loss": loss_total, "log_dict": log_dict}
+        return {
+            "loss": loss_total,
+            "loss_mt": loss_mt,
+            "loss_struct": log_dict["loss_struct"],
+            "loss_prime": log_dict["loss_prime"],
+            "loss_route": log_dict["loss_route"],
+            "log_dict": log_dict
+        }

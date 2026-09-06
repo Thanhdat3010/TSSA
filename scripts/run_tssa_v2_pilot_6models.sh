@@ -45,31 +45,8 @@ trap 'echo -e "\n[!] Đã nhận tín hiệu hủy (Ctrl+C). Đang dừng an to�
 # BƯỚC 0: SAO LƯU CHỌN LỌC CÁC CHECKPOINT TSSA CŨ (GIỮ NGUYÊN TOÀN BỘ BASELINES)
 # ------------------------------------------------------------------------------
 echo ""
-echo ">>> [BƯỚC 0/4] ĐANG TIẾN HÀNH SAO LƯU CHỌN LỌC CHECKPOINTS TSSA v1 CŨ..."
-mkdir -p "${BACKUP_DIR}"
-
-LEGACY_MODELS=(
-    "tssa_rhade"
-    "tssa_tay"
-    "tssa_bahnaric"
-    "vit5_tssa_rhade"
-    "vit5_tssa_tay"
-    "vit5_tssa_bahnaric"
-)
-
-for CKPT in "${LEGACY_MODELS[@]}"; do
-    SRC_PATH="${OUTPUT_DIR}/${CKPT}"
-    DEST_PATH="${BACKUP_DIR}/${CKPT}"
-    if [ -d "$SRC_PATH" ]; then
-        echo "  [+] Đang sao lưu: ${SRC_PATH} -> ${DEST_PATH} ..."
-        rm -rf "${DEST_PATH}"
-        cp -r "${SRC_PATH}" "${DEST_PATH}"
-        rm -rf "${SRC_PATH}"
-        echo "      -> Đã lưu trữ an toàn và dọn dẹp ${SRC_PATH} để chuẩn bị huấn luyện mới."
-    else
-        echo "  [-] Không tìm thấy thư mục ${SRC_PATH} (bỏ qua)."
-    fi
-done
+echo ">>> [BƯỚC 0/3] ĐANG TIẾN HÀNH SAO LƯU CHỌN LỌC & ĐỐI SOÁT CHECKPOINTS TSSA v1 CŨ..."
+bash scripts/backup_legacy_tssa.sh
 echo "[✓] BƯỚC 0 HOÀN TẤT: Toàn bộ baseline và vanilla checkpoints được giữ nguyên 100%!"
 
 # ------------------------------------------------------------------------------

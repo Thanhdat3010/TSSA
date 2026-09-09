@@ -8,7 +8,10 @@ import os
 import re
 import unicodedata
 import pandas as pd
-from datasets import load_dataset
+try:
+    from datasets import load_dataset
+except ImportError:
+    load_dataset = None
 
 DATASETS_CONFIG = {
     "bahnaric": {

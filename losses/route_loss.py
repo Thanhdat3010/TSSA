@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class RouteLoss(nn.Module):
-    def __init__(self, target_budget: float = 0.25, target_usage: float = None, entropy_weight: float = 0.1, eps: float = 1e-7, **kwargs):
+    def __init__(self, target_budget: float = 0.333, target_usage: float = None, entropy_weight: float = 0.1, eps: float = 1e-7, **kwargs):
         super().__init__()
         self.target_budget = target_usage if target_usage is not None else target_budget
         self.entropy_weight = entropy_weight
@@ -28,10 +28,10 @@ class RouteLoss(nn.Module):
         if router_gates.dim() == 5 and router_gates.size(-1) == 1:
             router_gates = router_gates.squeeze(-1)
 
-        # 1. Capacity Budget Penalty: Mean activation across heads should align with target_budget (e.g. 0.25 = 25% heads)
+        # 1. Capacity Budget Penalty: Mean activation across heads should align with target_budget (e.g. 0.333 = 33.3% heads)
         # Mean across head dimension (dim=2): [B, L, T]
         mean_head_act = router_gates.mean(dim=2)
-        target_val = self.target_budget if teacher_target is None else (teacher_target.mean().item() if isinstance(teacher_target, torch.Tensor) else 0.25)
+        target_val = self.target_budget if teacher_target is None else (teacher_target.mean().item() if isinstance(teacher_target, torch.Tensor) else self.target_budget)
         budget_loss = F.mse_loss(mean_head_act, torch.full_like(mean_head_act, target_val), reduction="none")
 
         # 2. Decisive Binarization Entropy: Encourages gates to be sharp (bimodal near 0 or 1) rather than uniform

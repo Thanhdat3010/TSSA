@@ -14,20 +14,21 @@ from .route_loss import RouteLoss
 
 class TSSAUnifiedCriterion(nn.Module):
     def __init__(self, use_struct: bool = True, use_prime: bool = True, use_route: bool = True,
-                 top_k_layers: int = 3, conf_threshold: float = 0.1, temperature: float = 0.07):
+                 top_k_layers: int = 3, conf_threshold: float = 0.1, temperature: float = 0.05,
+                 target_budget: float = 0.333):
         super().__init__()
         self.use_struct = use_struct
         self.use_prime = use_prime
         self.use_route = use_route
 
-        # 1. Target-Guided Cross-Attention Anchoring Loss (TSSA 2.0)
+        # 1. Target-Guided Cross-Attention Anchoring Loss (TSSA 2.0 / 3.0)
         self.xattn_loss_fn = CrossAttentionAnchorLoss(top_k_layers=top_k_layers, conf_threshold=conf_threshold) if use_struct else None
         
         # 2. Residual Projector Sentence Priming InfoNCE Loss
         self.prime_loss_fn = PrimeLoss(temperature=temperature) if use_prime else None
         
         # 3. Dynamic Head-Wise Router Supervision Loss
-        self.route_loss_fn = RouteLoss() if use_route else None
+        self.route_loss_fn = RouteLoss(target_budget=target_budget) if use_route else None
 
     def forward(self, loss_mt: torch.Tensor, student_outputs: dict, batch: dict = None,
                 lambdas: tuple = (0.10, 0.05, 0.10)) -> dict:

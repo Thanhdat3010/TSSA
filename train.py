@@ -64,6 +64,10 @@ def parse_args():
     parser.add_argument("--lambda_struct", type=float, default=0.2, help="Trọng số L_struct (mặc định tối ưu 0.2)")
     parser.add_argument("--lambda_prime", type=float, default=0.1, help="Trọng số L_prime (mặc định tối ưu 0.1)")
     parser.add_argument("--lambda_route", type=float, default=0.05, help="Trọng số L_route (mặc định tối ưu 0.05)")
+    parser.add_argument("--target_budget", type=float, default=0.333,
+                        help="Ngân sách chuyên biệt hóa Anchor Head rho (mặc định Pareto: 0.333 = 1/3 heads)")
+    parser.add_argument("--prime_tau", type=float, default=0.05,
+                        help="Nhiệt độ InfoNCE cho L_prime (mặc định: 0.05)")
 
     # 4. Tham số Huấn luyện
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size trên mỗi GPU")
@@ -130,7 +134,9 @@ def main():
         criterion = TSSAUnifiedCriterion(
             use_struct=args.use_struct,
             use_prime=args.use_prime,
-            use_route=args.use_route
+            use_route=args.use_route,
+            temperature=args.prime_tau,
+            target_budget=args.target_budget
         ).to(device)
         loss_scheduler = TSSALossScheduler(
             total_steps=total_steps,

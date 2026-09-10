@@ -66,8 +66,8 @@ def parse_args():
     parser.add_argument("--lambda_route", type=float, default=0.05, help="Trọng số L_route (mặc định tối ưu 0.05)")
     parser.add_argument("--target_budget", type=float, default=0.333,
                         help="Ngân sách chuyên biệt hóa Anchor Head rho (mặc định Pareto: 0.333 = 1/3 heads)")
-    parser.add_argument("--prime_tau", type=float, default=0.05,
-                        help="Nhiệt độ InfoNCE cho L_prime (mặc định: 0.05)")
+    parser.add_argument("--prime_tau", type=float, default=0.07,
+                        help="Nhiệt độ InfoNCE cho L_prime (mặc định tối ưu: 0.07)")
 
     # 4. Tham số Huấn luyện
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size trên mỗi GPU")

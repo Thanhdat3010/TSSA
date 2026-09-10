@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PrimeLoss(nn.Module):
-    def __init__(self, temperature: float = 0.05):
+    def __init__(self, temperature: float = 0.07):
         super().__init__()
         self.temperature = temperature
         self.cross_entropy = nn.CrossEntropyLoss()

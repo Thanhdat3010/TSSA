@@ -105,6 +105,10 @@ for LANG in "${LANGUAGES[@]}"; do
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
     echo ">>> [✅ THÀNH CÔNG] [BARTpho - ${LANG^^}] Hoàn tất ${EXP_NAME} trong ${DURATION}s!"
+    
+    echo ""
+    echo "--- 📊 BẢNG ĐỐI SOÁT CẬP NHẬT TỨC THÌ SAU KHI XONG ${EXP_NAME} ---"
+    python compare_tssa_v4_full.py || true
 done
 
 # ------------------------------------------------------------------------------
@@ -154,18 +158,23 @@ for LANG in "${LANGUAGES[@]}"; do
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
     echo ">>> [✅ THÀNH CÔNG] [ViT5 - ${LANG^^}] Hoàn tất ${EXP_NAME} trong ${DURATION}s!"
+
+    echo ""
+    echo "--- 📊 BẢNG ĐỐI SOÁT CẬP NHẬT TỨC THÌ SAU KHI XONG ${EXP_NAME} ---"
+    python compare_tssa_v4_full.py || true
 done
 
 # ------------------------------------------------------------------------------
-# BƯỚC 3: BÁO CÁO NGHIỆM THU ĐỐI SOÁT 5 CHIỀU TOÀN DIỆN
+# BƯỚC 3: BÁO CÁO NGHIỆM THU ĐỐI SOÁT 5 CHIỀU TOÀN DIỆN & LƯU TỆP
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
 echo ">>> ĐANG TIẾN HÀNH TỔNG HỢP & IN BÁO CÁO ĐỐI SOÁT 5 CHIỀU (UniTSSA 4.0)..."
 echo "========================================================================"
-python compare_tssa_v4_full.py || true
+python compare_tssa_v4_full.py | tee "${OUTPUT_DIR}/COMPARISON_REPORT.txt" || true
 
 echo ""
 echo "========================================================================"
 echo "    🎉 HOÀN TẤT TOÀN BỘ 6 MÔ HÌNH UniTSSA 4.0 UNIVERSAL BENCHMARK!"
+echo "    [*] Báo cáo đã được lưu vào: ${OUTPUT_DIR}/COMPARISON_REPORT.txt"
 echo "========================================================================"

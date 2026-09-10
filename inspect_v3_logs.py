@@ -1,12 +1,15 @@
 """
 Inspection Script: Detailed Learning Dynamics of TSSA 3.0 & Past Runs
-Extracts epoch-by-epoch BLEU scores, training loss, and validation loss
-from trainer_state.json across all checkpoints in checkpoints/tssa_v3/
+Extracts step-level losses, epoch gates, and training dynamics from:
+1. checkpoints/tssa_v3/ablation_logs/*_training_dynamics.json
+2. train_bahnar.log & other *.log files
 """
 
 import sys
 import os
 import json
+import glob
+import re
 
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -14,70 +17,82 @@ if hasattr(sys.stdout, "reconfigure"):
     except Exception:
         pass
 
-def inspect_runs(target_dir="checkpoints/tssa_v3"):
-    if not os.path.exists(target_dir):
-        print(f"[-] Thư mục {target_dir} không tồn tại.")
+def inspect_ablation_logs(log_dir="checkpoints/tssa_v3/ablation_logs"):
+    print("=" * 95)
+    print(f"       📊 CHI TIẾT LOG ĐỘNG HỌC TRAINING DYNAMICS ({log_dir})")
+    print("=" * 95)
+
+    if not os.path.exists(log_dir):
+        print(f"[-] Không tìm thấy thư mục: {log_dir}")
         return
 
-    print("=" * 95)
-    print(f"       📈 BÁO CÁO TIẾN TRÌNH HỌC TẬP QUA TỪNG EPOCH ({target_dir})")
-    print("=" * 95)
-    print(f"{'MÔ HÌNH':<22} | {'EP 1':<7} | {'EP 2':<7} | {'EP 3':<7} | {'EP 4':<7} | {'EP 5':<7} | {'BEST BLEU':<10} | {'BEST EP'}")
-    print("-" * 95)
+    files = glob.glob(os.path.join(log_dir, "*_training_dynamics.json"))
+    if not files:
+        print(f"[-] Không có file *_training_dynamics.json trong {log_dir}")
+        print(f"    Các file hiện có: {os.listdir(log_dir)}")
+        return
 
-    experiments = sorted([d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d)) and not d.startswith(".")])
-
-    for exp in experiments:
-        exp_path = os.path.join(target_dir, exp)
-        state_file = os.path.join(exp_path, "trainer_state.json")
-
-        if not os.path.exists(state_file):
-            print(f"{exp:<22} | {'-- Không tìm thấy trainer_state.json --':<65}")
-            continue
-
+    for f_path in sorted(files):
+        exp_name = os.path.basename(f_path).replace("_training_dynamics.json", "")
         try:
-            with open(state_file, "r", encoding="utf-8") as f:
+            with open(f_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            
+            steps = data.get("step_history_sample", [])
+            gates = data.get("epoch_gates", [])
+            
+            first_step = steps[0] if steps else {}
+            last_step = steps[-1] if steps else {}
+            
+            print(f"\n[+] Thí nghiệm: {exp_name}")
+            print(f"    - Tổng số sample steps: {len(steps)}")
+            if first_step and last_step:
+                print(f"    - Step 0 Loss: {first_step.get('losses', {})}")
+                print(f"    - Final Loss : {last_step.get('losses', {})}")
+            
+            if gates:
+                print("    - Tỷ lệ Router Gate qua các Epoch:")
+                for g in gates:
+                    ep = g.get("epoch", "?")
+                    act = g.get("mean_activation", 0.0)
+                    heads = g.get("active_heads", 0)
+                    tot = g.get("total_heads", 0)
+                    print(f"      * Epoch {ep}: Mean Gate = {act:.4f}, Active Heads = {heads}/{tot} ({(heads/tot)*100:.1f}%)")
         except Exception as e:
-            print(f"{exp:<22} | Lỗi đọc file: {e}")
+            print(f"[!] Lỗi đọc {f_path}: {e}")
+
+    print("\n" + "=" * 95)
+
+def inspect_text_logs():
+    print("\n" + "=" * 95)
+    print("       📜 PHÂN TÍCH FILE TEXT LOGS (*.log)")
+    print("=" * 95)
+    
+    log_files = glob.glob("*.log")
+    for lf in log_files:
+        size_kb = os.path.getsize(lf) / 1024.0
+        print(f"[+] File: {lf} ({size_kb:.1f} KB)")
+        
+        # Extract sacrebleu and eval lines
+        eval_lines = []
+        try:
+            with open(lf, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if any(kw in line.lower() for kw in ["sacrebleu", "eval_loss", "epoch", "hoàn tất", "kết quả"]):
+                        if len(line.strip()) > 0:
+                            eval_lines.append(line.strip())
+        except Exception as e:
+            print(f"    Lỗi đọc file: {e}")
             continue
 
-        log_history = data.get("log_history", [])
-        epoch_bleus = {}
-        epoch_losses = {}
-
-        for entry in log_history:
-            if "epoch" in entry:
-                ep = int(round(entry["epoch"]))
-                if "eval_sacrebleu" in entry:
-                    epoch_bleus[ep] = entry["eval_sacrebleu"]
-                if "eval_loss" in entry:
-                    epoch_losses[ep] = entry["eval_loss"]
-
-        ep_strs = []
-        for i in range(1, 6):
-            if i in epoch_bleus:
-                ep_strs.append(f"{epoch_bleus[i]:.2f}")
-            else:
-                ep_strs.append("--")
-
-        best_metric = data.get("best_metric")
-        if best_metric is None and epoch_bleus:
-            best_metric = max(epoch_bleus.values())
-        best_str = f"{best_metric:.2f}" if best_metric is not None else "--"
-
-        # Tìm best epoch
-        best_ep = "--"
-        if best_metric is not None:
-            for ep, b in epoch_bleus.items():
-                if abs(b - best_metric) < 1e-4:
-                    best_ep = f"Epoch {ep}"
-                    break
-
-        print(f"{exp:<22} | {ep_strs[0]:<7} | {ep_strs[1]:<7} | {ep_strs[2]:<7} | {ep_strs[3]:<7} | {ep_strs[4]:<7} | {best_str:<10} | {best_ep}")
-
+        if eval_lines:
+            print(f"    -> Tìm thấy {len(eval_lines)} dòng liên quan đến đánh giá:")
+            for l in eval_lines[-15:]:  # in 15 dòng cuối
+                print(f"       {l}")
+        else:
+            print("    -> Không tìm thấy dòng eval rõ ràng.")
     print("=" * 95)
 
 if __name__ == "__main__":
-    target = sys.argv[1] if len(sys.argv) > 1 else "checkpoints/tssa_v3"
-    inspect_runs(target)
+    inspect_ablation_logs()
+    inspect_text_logs()

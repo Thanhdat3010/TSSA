@@ -68,6 +68,17 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
 
         return (total_loss, outputs) if return_outputs else total_loss
 
+    def evaluate(self, eval_dataset=None, ignore_keys=None, metric_key_prefix: str = "eval"):
+        """
+        Overrides evaluate to log evaluation trajectory (BLEU, eval_loss, etc.) to log_tracker.
+        """
+        metrics = super().evaluate(eval_dataset=eval_dataset, ignore_keys=ignore_keys, metric_key_prefix=metric_key_prefix)
+        if self.log_tracker is not None:
+            epoch_val = self.state.epoch if self.state.epoch is not None else 0.0
+            self.log_tracker.log_eval_metrics(int(round(epoch_val)), metrics)
+            self.log_tracker.save()
+        return metrics
+
     def _save(self, output_dir: str, state_dict=None):
         """
         Safely saves checkpoint by delegating to PreTrainedModel.save_pretrained,

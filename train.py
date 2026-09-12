@@ -245,13 +245,15 @@ def main():
     # 9. Bắt đầu Huấn Luyện
     print("\n🚀 Bắt đầu quá trình huấn luyện ...")
     trainer.train()
+    trainer.save_state()
     if log_tracker is not None:
         log_tracker.save()
 
     # 10. Lưu mô hình tốt nhất và dọn dẹp checkpoint trung gian để tiết kiệm 90% dung lượng
-    print("\n[*] Đang lưu mô hình tốt nhất (Best Model) và Tokenizer...")
+    print("\n[*] Đang lưu mô hình tốt nhất (Best Model), Tokenizer và Trainer State...")
     trainer.save_model(save_dir)
     tokenizer.save_pretrained(save_dir)
+    trainer.save_state()
 
     for item in os.listdir(save_dir):
         item_path = os.path.join(save_dir, item)

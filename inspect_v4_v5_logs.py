@@ -36,27 +36,48 @@ def inspect_trainer_states(version_dir, version_name):
 
     for sd in subdirs:
         state_file = os.path.join(version_dir, sd, "trainer_state.json")
-        if not os.path.exists(state_file):
-            print(f"{sd:<22} | -- Không tìm thấy trainer_state.json --")
+        epoch_bleus = {}
+        best_bleu = 0.0
+        best_ep = 0
+
+        # 1. Đọc trainer_state.json trực tiếp (đã được fix trong UniTSSA 6.0)
+        if os.path.exists(state_file):
+            try:
+                with open(state_file, "r", encoding="utf-8") as f:
+                    state = json.load(f)
+                for entry in state.get("log_history", []):
+                    if "eval_sacrebleu" in entry:
+                        ep = int(round(entry.get("epoch", 0)))
+                        b = entry.get("eval_sacrebleu", 0.0)
+                        epoch_bleus[ep] = b
+                        if b > best_bleu:
+                            best_bleu = b
+                            best_ep = ep
+            except Exception:
+                pass
+
+        # 2. Fallback sang ablation_logs/*_training_dynamics.json nếu cần
+        if not epoch_bleus:
+            dyn_file = os.path.join(version_dir, "ablation_logs", f"{sd}_training_dynamics.json")
+            if os.path.exists(dyn_file):
+                try:
+                    with open(dyn_file, "r", encoding="utf-8") as f:
+                        dyn_data = json.load(f)
+                    for entry in dyn_data.get("eval_trajectory", []):
+                        ep = int(round(entry.get("epoch", 0)))
+                        metrics = entry.get("metrics", {})
+                        b = metrics.get("eval_sacrebleu", metrics.get("sacrebleu", 0.0))
+                        if b:
+                            epoch_bleus[ep] = float(b)
+                            if float(b) > best_bleu:
+                                best_bleu = float(b)
+                                best_ep = ep
+                except Exception:
+                    pass
+
+        if not epoch_bleus:
+            print(f"{sd:<22} | -- Chưa có log trajectory (sẽ có trong v6.0) --")
             continue
-
-        try:
-            with open(state_file, "r", encoding="utf-8") as f:
-                state = json.load(f)
-
-            log_hist = state.get("log_history", [])
-            epoch_bleus = {}
-            best_bleu = 0.0
-            best_ep = 0
-
-            for entry in log_hist:
-                if "eval_sacrebleu" in entry:
-                    ep = int(round(entry.get("epoch", 0)))
-                    b = entry.get("eval_sacrebleu", 0.0)
-                    epoch_bleus[ep] = b
-                    if b > best_bleu:
-                        best_bleu = b
-                        best_ep = ep
 
             ep1_s = f"{epoch_bleus.get(1, '--'):<8}" if isinstance(epoch_bleus.get(1, '--'), str) else f"{epoch_bleus.get(1, 0.0):<8.2f}"
             ep2_s = f"{epoch_bleus.get(2, '--'):<8}" if isinstance(epoch_bleus.get(2, '--'), str) else f"{epoch_bleus.get(2, 0.0):<8.2f}"

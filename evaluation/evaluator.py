@@ -119,7 +119,8 @@ class TranslationEvaluator:
 
         # Lưu bản dịch ra file csv để kiểm tra định tính
         if output_save_path is not None:
-            os.makedirs(os.path.dirname(output_save_path), exist_ok=True)
+            save_dir = os.path.dirname(output_save_path)
+            os.makedirs(save_dir, exist_ok=True)
             df_out = pd.DataFrame({
                 "source": sources if len(sources) == len(predictions) else [""] * len(predictions),
                 "reference": references,
@@ -127,5 +128,19 @@ class TranslationEvaluator:
             })
             df_out.to_csv(output_save_path, index=False, encoding="utf-8")
             print(f"[+] Đã lưu bản dịch kiểm thử vào: {output_save_path}")
+
+            # Lưu kèm file eval_metrics.json để báo cáo đối soát tức thời
+            try:
+                metrics_path = os.path.join(save_dir, "eval_metrics.json")
+                with open(metrics_path, "w", encoding="utf-8") as f:
+                    json.dump({
+                        "bleu": results["sacrebleu"],
+                        "chrf": results["chrf++"],
+                        "meteor": results["meteor"],
+                        "comet": results["comet"]
+                    }, f, indent=2, ensure_ascii=False)
+                print(f"[+] Đã lưu chỉ số đánh giá vào: {metrics_path}")
+            except Exception:
+                pass
 
         return results

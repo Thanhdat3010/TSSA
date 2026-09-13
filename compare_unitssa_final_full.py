@@ -112,21 +112,49 @@ OFFICIAL_LEGACY_REFS = {
 }
 
 def extract_metrics(ckpt_dir: str):
-    """Extracts evaluation metrics (BLEU, chrF++) from saved test_predictions.csv."""
+    """Extracts evaluation metrics (BLEU, chrF++) from saved eval_metrics.json or test_predictions.csv."""
+    if not os.path.exists(ckpt_dir):
+        return None
+
+    # 1. Ưu tiên đọc trực tiếp từ eval_metrics.json nếu có
+    metrics_file = os.path.join(ckpt_dir, "eval_metrics.json")
+    if os.path.exists(metrics_file):
+        try:
+            with open(metrics_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                b = data.get("bleu") if data.get("bleu") is not None else data.get("sacrebleu")
+                c = data.get("chrf") if data.get("chrf") is not None else data.get("chrf++")
+                if b is not None and c is not None:
+                    return {
+                        "bleu": round(float(b), 2),
+                        "chrf": round(float(c), 2)
+                    }
+        except Exception:
+            pass
+
+    # 2. Đọc và tính toán từ test_predictions.csv
     pred_path = os.path.join(ckpt_dir, "test_predictions.csv")
     if not os.path.exists(pred_path) or pd is None or sacrebleu is None:
         return None
 
     try:
         df = pd.read_csv(pred_path)
-        if "prediction" not in df.columns or "target" not in df.columns:
+        ref_col, pred_col = None, None
+        for c in df.columns:
+            cl = str(c).lower().strip()
+            if "ref" in cl or "target" in cl:
+                ref_col = c
+            elif "pred" in cl or "hyp" in cl or "translation" in cl:
+                pred_col = c
+
+        if not ref_col or not pred_col:
             return None
 
-        preds = [str(p) if pd.notna(p) else "" for p in df["prediction"].tolist()]
-        refs = [[str(r) if pd.notna(r) else "" for r in df["target"].tolist()]]
+        preds = [str(p) if pd.notna(p) else "" for p in df[pred_col].tolist()]
+        refs = [str(r) if pd.notna(r) else "" for r in df[ref_col].tolist()]
 
-        bleu = sacrebleu.corpus_bleu(preds, refs, smooth_method="exp").score
-        chrf = sacrebleu.corpus_chrf(preds, refs).score
+        bleu = sacrebleu.corpus_bleu(preds, [refs], smooth_method="exp").score
+        chrf = sacrebleu.corpus_chrf(preds, [refs], word_order=2).score
 
         return {
             "bleu": round(float(bleu), 2),

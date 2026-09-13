@@ -28,7 +28,7 @@ SEED=42
 OUTPUT_DIR="checkpoints/tssa_final"
 REPORT_FILE="${OUTPUT_DIR}/COMPARISON_REPORT.txt"
 PRIME_TAU=0.07
-CONF_THRESHOLD=0.25
+CONF_THRESHOLD=0.20
 
 # Fair Comparison: 100% Identical to baselines
 LR_BARTPHO=2e-5

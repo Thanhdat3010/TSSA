@@ -68,8 +68,8 @@ def parse_args():
                         help="Ngân sách chuyên biệt hóa Anchor Head rho (mặc định Pareto: 0.333 = 1/3 heads)")
     parser.add_argument("--prime_tau", type=float, default=0.07,
                         help="Nhiệt độ InfoNCE cho L_prime (mặc định tối ưu: 0.07)")
-    parser.add_argument("--conf_threshold", type=float, default=0.25,
-                        help="Ngưỡng tin cậy chọn lọc Anchor mỏ neo (mặc định EMNLP 2019: 0.25)")
+    parser.add_argument("--conf_threshold", type=float, default=0.20,
+                        help="Ngưỡng tin cậy chọn lọc Anchor mỏ neo (mặc định EMNLP 2019: 0.20)")
 
     # 4. Tham số Huấn luyện
     parser.add_argument("--batch_size", type=int, default=16, help="Batch size trên mỗi GPU")

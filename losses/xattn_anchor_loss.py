@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CrossAttentionAnchorLoss(nn.Module):
-    def __init__(self, top_k_layers: int = 3, conf_threshold: float = 0.25, beta: float = 0.05, eps: float = 1e-8, **kwargs):
+    def __init__(self, top_k_layers: int = 3, conf_threshold: float = 0.20, beta: float = 0.05, eps: float = 1e-8, **kwargs):
         super().__init__()
         self.top_k_layers = top_k_layers
         self.conf_threshold = conf_threshold

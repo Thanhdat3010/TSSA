@@ -122,30 +122,33 @@ def run_smoke_test():
     print("  [✓] STAGE 2 PASSED: Continuous Typological Scaling verified.")
 
     # =========================================================================
-    # STAGE 3: Alignment Sharpening (tau = 0.10) & Selective Anchor Gating (c_th = 0.25)
+    # STAGE 3: Alignment Sharpening (tau = 0.10) & Selective Anchor Gating (c_th = 0.20)
     # =========================================================================
     print("\n>>> [STAGE 3/5] Testing Alignment Sharpening & Selective Anchor Gating...")
     from losses.xattn_anchor_loss import CrossAttentionAnchorLoss
 
-    anchor_loss_fn = CrossAttentionAnchorLoss(conf_threshold=0.25).to(device)
+    anchor_loss_fn = CrossAttentionAnchorLoss(conf_threshold=0.20).to(device)
 
-    # Verify that sharp alignment (tau=0.1) creates clean selectivity
-    # Token 0: strong match with source token 2 (cos=0.6)
-    # Token 1: uniform low-similarity noise across all source tokens (cos=0.15)
+    # Verify that sharp alignment (tau=0.1) creates clean selectivity:
+    # Token 0: strong true semantic match with source token 2 (cos ~ 0.8)
+    # Tokens 1..3: unaligned subword fragments (cos ~ 0.0 - 0.2)
     B, T, S = 2, 4, 8
-    tgt_norm = F.normalize(torch.randn(B, T, 768, device=device), dim=-1)
     src_norm = F.normalize(torch.randn(B, S, 768, device=device), dim=-1)
+    tgt_norm = F.normalize(torch.randn(B, T, 768, device=device), dim=-1)
+    # Inject true alignment on token 0
+    tgt_norm[:, 0] = F.normalize(src_norm[:, 2] + 0.2 * torch.randn_like(src_norm[:, 2]), dim=-1)
     
     # Sharp alignment with tau=0.1
     sim_sharp = torch.bmm(tgt_norm, src_norm.transpose(1, 2)) / 0.10
     align_sharp = F.softmax(sim_sharp, dim=-1)
 
     c_t, _ = torch.max(align_sharp, dim=-1)
-    confident_anchors = (c_t >= 0.25).float()
+    confident_anchors = (c_t >= 0.20).float()
 
-    print(f"  [+] Mean Anchor Confidence: {c_t.mean().item():.4f}")
-    print(f"  [+] Confident Anchors Active: {confident_anchors.sum().item()} / {confident_anchors.numel()} tokens")
-    assert confident_anchors.sum() > 0, "At least some content tokens must be confident anchors"
+    print(f"  [+] Aligned Token 0 Confidence: {c_t[:, 0].mean().item():.4f} (>= 0.20: Confident Anchor)")
+    print(f"  [+] Unaligned Tokens Confidence: {c_t[:, 1:].mean().item():.4f} (< 0.20: Filtered Noise)")
+    print(f"  [+] Confident Anchors Active: {int(confident_anchors.sum().item())} / {confident_anchors.numel()} tokens")
+    assert confident_anchors[:, 0].min().item() == 1.0, "Aligned content tokens must be confident anchors"
 
     print("  [✓] STAGE 3 PASSED: Alignment Sharpening & Selective Gating verified.")
 
@@ -159,7 +162,7 @@ def run_smoke_test():
         use_struct=True,
         use_prime=True,
         use_route=True,
-        conf_threshold=0.25,
+        conf_threshold=0.20,
         temperature=0.07,
         target_budget=0.333
     ).to(device)

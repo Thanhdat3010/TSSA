@@ -14,7 +14,7 @@ from .route_loss import RouteLoss
 
 class TSSAUnifiedCriterion(nn.Module):
     def __init__(self, use_struct: bool = True, use_prime: bool = True, use_route: bool = True,
-                 top_k_layers: int = 3, conf_threshold: float = 0.25, temperature: float = 0.07,
+                 top_k_layers: int = 3, conf_threshold: float = 0.20, temperature: float = 0.07,
                  target_budget: float = 0.333):
         super().__init__()
         self.use_struct = use_struct

@@ -107,7 +107,7 @@ class TSSAViT5Model(nn.Module):
                 # Target-to-Source Subword Semantic Alignment Posterior Matrix A [B, T, S]
                 tgt_norm = F.normalize(teacher_enc_states, p=2, dim=-1) # [B, T, D]
                 src_norm = F.normalize(outputs.encoder_last_hidden_state.detach(), p=2, dim=-1) # [B, S, D]
-                sim_ts = torch.bmm(tgt_norm, src_norm.transpose(1, 2)) / 0.5 # [B, T, S]
+                sim_ts = torch.bmm(tgt_norm, src_norm.transpose(1, 2)) / 0.1 # [B, T, S]
                 align_matrix_ts = F.softmax(sim_ts, dim=-1).detach() # [B, T, S]
 
         # 3. Direct Native Cross-Attention Extraction for Top T5 Decoder Blocks

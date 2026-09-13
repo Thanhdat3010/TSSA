@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# UniTSSA FINAL UNIVERSAL BENCHMARK (NAACL GOLD STANDARD): 6-MODEL RUNNER
+# UniTSSA UNIVERSAL BENCHMARK (NAACL GOLD STANDARD): 6-MODEL RUNNER
 # ==============================================================================
 # Mathematical Formulation:
+#   - Scale-Invariant Anchor Normalization: True convex combination over confidence-gated tokens
 #   - Closed Capacity Budgeting          : rho*(H) = min(0.333, max(0.20, (H - 9)/H))
 #       * BARTpho (H=16) -> rho* = 0.333 (11 Free Generation Heads)
 #       * ViT5    (H=12) -> rho* = 0.250 (9 Free Generation Heads)
-#   - Confidence-Sharpened Structural Anchoring (Anchor Novelty 100% Preserved):
+#   - Universal Continuous Typological Formulation:
 #       * Alignment Softmax Sharpening   : tau_align = 0.10 (EACL 2021 AWESOME-align Standard)
-#       * Selective Anchor Gating        : conf_threshold = 0.25 (EMNLP 2019 Standard)
-#       * Continuous Anchor Weighting    : lambda_struct(kappa) = 0.12 + 0.20 * exp(-(kappa-1)^2 / 2.0)
-#   - Continuous Hyperbolic Priming Compass:
-#       * lambda_prime(kappa)            : 0.08 + 0.06 * tanh(kappa - 1)
+#       * Selective Anchor Gating        : conf_threshold = 0.20 (EMNLP 2019 Standard)
+#       * Continuous Anchor Weighting    : lambda_struct(kappa) = 0.20 + 0.10 * exp(-(kappa-1)^2 / 4.0)
+#       * Continuous Hyperbolic Compass  : lambda_prime(kappa)  = 0.08 + 0.04 * tanh(kappa - 1)
+#       * Dynamic Router Budget          : lambda_route = 0.05
 #   - Controlled Fair Learning Rates     : LR_BARTpho=2e-5, LR_ViT5=1e-4 (100% Frozen & Fair)
 #
 # Non-Destructive Preservation:
@@ -39,8 +40,9 @@ LANGUAGES=("rhade" "tay" "bahnaric")
 mkdir -p "${OUTPUT_DIR}"
 
 echo "========================================================================"
-echo "    🚀 UniTSSA FINAL BENCHMARK (NAACL GOLD STANDARD): 6/6 MÔ HÌNH"
+echo "    🚀 UniTSSA UNIVERSAL BENCHMARK (NAACL GOLD STANDARD): 6/6 MÔ HÌNH"
 echo "========================================================================"
+echo "[*] Chuẩn hóa Mẫu số Mỏ neo      : Scale-Invariant True Convex Combination"
 echo "[*] Nhiệt độ căn chỉnh Attention : tau_align = 0.10 (Làm sắc nhọn đỉnh mỏ neo)"
 echo "[*] Ngưỡng lọc mỏ neo chọn lọc   : conf_threshold = ${CONF_THRESHOLD} (Gating mỏ neo sạch)"
 echo "[*] Nhiệt độ InfoNCE toàn cục    : tau = ${PRIME_TAU} (Smooth & Stable)"
@@ -61,22 +63,22 @@ get_typological_lambdas_final() {
     local LANG=$1
     if [ "${LANG}" == "bahnaric" ]; then
         # Ba Na (Phân mảnh cao kappa ~ 3.5):
-        # struct = 0.12 + 0.20 * exp(-3.125) = 0.13 (ANCHOR HOẠT ĐỘNG CHỌN LỌC!)
-        # prime  = 0.08 + 0.06 * tanh(2.5)   = 0.14 (LA BÀN CÂU VỮNG CHẮC!)
+        # struct = 0.20 + 0.10 * exp(-6.25 / 4.0) = 0.22 (MỎ NEO VỮNG CHẮC!)
+        # prime  = 0.08 + 0.04 * tanh(2.5)        = 0.12 (LA BÀN NGỮ NGHĨA!)
         # route  = 0.05
-        echo "0.13 0.14 0.05"
+        echo "0.22 0.12 0.05"
     elif [ "${LANG}" == "rhade" ]; then
         # Ê Đê (Đẳng cấu kappa ~ 1.4):
-        # struct = 0.12 + 0.20 * exp(-0.08)  = 0.30 (Đỉnh cao cấu trúc)
-        # prime  = 0.08 + 0.06 * tanh(0.4)   = 0.10
+        # struct = 0.20 + 0.10 * exp(-0.16 / 4.0) = 0.30 (Đỉnh cao cấu trúc)
+        # prime  = 0.08 + 0.04 * tanh(0.4)        = 0.10
         # route  = 0.05
         echo "0.30 0.10 0.05"
     else
         # Tày (Đẳng cấu kappa ~ 1.2):
-        # struct = 0.12 + 0.20 * exp(-0.02)  = 0.32 (Đỉnh cao cấu trúc)
-        # prime  = 0.08 + 0.06 * tanh(0.2)   = 0.09
+        # struct = 0.20 + 0.10 * exp(-0.04 / 4.0) = 0.30 (Đỉnh cao cấu trúc)
+        # prime  = 0.08 + 0.04 * tanh(0.2)        = 0.10
         # route  = 0.05
-        echo "0.32 0.09 0.05"
+        echo "0.30 0.10 0.05"
     fi
 }
 

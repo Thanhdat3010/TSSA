@@ -41,28 +41,28 @@ def compute_capacity_budget(num_heads: int, h_free: int = 9) -> float:
     raw_ratio = (num_heads - h_free) / float(num_heads)
     return round(min(0.333, max(0.20, raw_ratio)), 3)
 
-def compute_final_typological_lambdas(kappa: float, sigma: float = 1.0):
+def compute_final_typological_lambdas(kappa: float):
     """
-    Continuous Typological Scaling (UniTSSA Final):
+    Universal Continuous Typological Scaling (UniTSSA Universal):
     Preserves 100% of Anchor Novelty across all languages while adapting to subword fertility.
-    - lambda_struct(kappa) = 0.12 + 0.20 * exp(- (kappa - 1)^2 / (2 * sigma^2))
-    - lambda_prime(kappa)  = 0.08 + 0.06 * tanh(kappa - 1)
+    - lambda_struct(kappa) = 0.20 + 0.10 * exp(- (kappa - 1)^2 / 4.0)
+    - lambda_prime(kappa)  = 0.08 + 0.04 * tanh(kappa - 1)
     - lambda_route         = 0.05
     """
     k_diff = max(1.0, kappa) - 1.0
     
-    # Structural Anchor Scaling: Never drops to 0! Minimum floor is 0.12
-    l_struct = round(0.12 + 0.20 * math.exp(- (k_diff ** 2) / (2.0 * (sigma ** 2))), 2)
+    # Structural Anchor Scaling: Invariant floor is 0.20!
+    l_struct = round(0.20 + 0.10 * math.exp(- (k_diff ** 2) / 4.0), 2)
     
     # Sentence Priming Compass: Amplifies as subword fragmentation increases
-    l_prime = round(0.08 + 0.06 * math.tanh(k_diff), 2)
+    l_prime = round(0.08 + 0.04 * math.tanh(k_diff), 2)
     
     l_route = 0.05
     return l_struct, l_prime, l_route
 
 def run_smoke_test():
     print("=" * 80)
-    print("      🧪 RUNNING UniTSSA FINAL VERIFICATION SUITE (ANCHOR PRESERVED)")
+    print("      🧪 RUNNING UniTSSA UNIVERSAL VERIFICATION SUITE (SCALE-INVARIANT)")
     print("=" * 80)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -98,26 +98,26 @@ def run_smoke_test():
     print("  [✓] STAGE 1 PASSED: Closed Capacity Budgeting verified.")
 
     # =========================================================================
-    # STAGE 2: Continuous Typological Scaling (Anchor Novelty Preserved)
+    # STAGE 2: Continuous Typological Scaling (Universal Anchor Floor)
     # =========================================================================
-    print("\n>>> [STAGE 2/5] Testing Continuous Typological Scaling (Anchor Novelty Preserved)...")
+    print("\n>>> [STAGE 2/5] Testing Universal Continuous Typological Scaling...")
     s_tay, p_tay, r_tay = compute_final_typological_lambdas(1.2)
     s_rhade, p_rhade, r_rhade = compute_final_typological_lambdas(1.4)
     s_bana, p_bana, r_bana = compute_final_typological_lambdas(3.5)
 
     print(f"  [+] Tay   (kappa=1.2) -> struct={s_tay:.2f}, prime={p_tay:.2f}, route={r_tay:.2f} (Full Structural Focus)")
     print(f"  [+] Rhade (kappa=1.4) -> struct={s_rhade:.2f}, prime={p_rhade:.2f}, route={r_rhade:.2f} (Full Structural Focus)")
-    print(f"  [+] Ba Na (kappa=3.5) -> struct={s_bana:.2f}, prime={p_bana:.2f}, route={r_bana:.2f} (ANCHOR PRESERVED + COMPASS ACTIVE!)")
+    print(f"  [+] Ba Na (kappa=3.5) -> struct={s_bana:.2f}, prime={p_bana:.2f}, route={r_bana:.2f} (SOLID ANCHOR FLOOR + COMPASS!)")
 
     # Assert Tay & Rhade retain strong structural anchoring
-    assert s_tay >= 0.30, f"Tay struct must be >= 0.30, got {s_tay}"
+    assert s_tay >= 0.29, f"Tay struct must be ~0.30, got {s_tay}"
     assert p_tay >= 0.08, f"Tay prime must be >= 0.08, got {p_tay}"
-    assert s_rhade >= 0.28, f"Rhade struct must be >= 0.28, got {s_rhade}"
+    assert s_rhade >= 0.29, f"Rhade struct must be ~0.30, got {s_rhade}"
     assert p_rhade >= 0.09, f"Rhade prime must be >= 0.09, got {p_rhade}"
 
-    # Assert Ba Na Anchor is NEVER zero, perfectly preserved at ~0.13, and prime is strong (~0.14)
-    assert s_bana >= 0.12 and s_bana <= 0.15, f"Ba Na struct must be ~0.13 (Novelty Preserved), got {s_bana}"
-    assert p_bana >= 0.13 and p_bana <= 0.16, f"Ba Na prime must be ~0.14 (Strong Compass), got {p_bana}"
+    # Assert Ba Na Anchor is SOLID at ~0.22 (well above floor 0.20) and prime is ~0.12
+    assert s_bana >= 0.20 and s_bana <= 0.25, f"Ba Na struct must be ~0.22 (Solid Anchor Floor), got {s_bana}"
+    assert p_bana >= 0.11 and p_bana <= 0.14, f"Ba Na prime must be ~0.12 (Semantic Compass), got {p_bana}"
 
     print("  [✓] STAGE 2 PASSED: Continuous Typological Scaling verified.")
 

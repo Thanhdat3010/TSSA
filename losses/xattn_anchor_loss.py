@@ -100,9 +100,11 @@ class CrossAttentionAnchorLoss(nn.Module):
 
             # SmoothL1 distance between Cross-Attention and Alignment Prior
             diff = F.smooth_l1_loss(attn_cut, target_cut, reduction="none") # [B, H, T, S]
-            weighted_diff = diff * conf_cut * mask_cut * gate_cut
+            eff_weights = conf_cut * mask_cut * gate_cut
+            weighted_diff = diff * eff_weights
 
-            norm_factor = (mask_cut * gate_cut).sum().clamp(min=1.0)
+            # Scale-Invariant Normalization: True convex combination over confidence-weighted active tokens
+            norm_factor = eff_weights.sum().clamp(min=1.0)
             layer_losses.append(weighted_diff.sum() / norm_factor)
 
         if len(layer_losses) == 0:

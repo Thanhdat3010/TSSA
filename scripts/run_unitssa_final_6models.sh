@@ -7,17 +7,17 @@
 #   - Closed Capacity Budgeting          : rho*(H) = min(0.333, max(0.20, (H - 9)/H))
 #       * BARTpho (H=16) -> rho* = 0.333 (11 Free Generation Heads)
 #       * ViT5    (H=12) -> rho* = 0.250 (9 Free Generation Heads)
-#   - Universal Continuous Typological Formulation:
+##   - Universal Continuous Typological Formulation:
 #       * Alignment Softmax Sharpening   : tau_align = 0.10 (EACL 2021 AWESOME-align Standard)
 #       * Selective Anchor Gating        : conf_threshold = 0.20 (EMNLP 2019 Standard)
-#       * Continuous Anchor Weighting    : lambda_struct(kappa) = 0.20 + 0.10 * exp(-(kappa-1)^2 / 4.0)
-#       * Continuous Hyperbolic Compass  : lambda_prime(kappa)  = 0.08 + 0.04 * tanh(kappa - 1)
+#       * Continuous Anchor Weighting    : lambda_struct(kappa) = 0.12 + 0.10 * tanh(kappa - 1)
+#       * Noise-Attenuated Sentence Compass: lambda_prime(kappa)  = 0.10 / (1.0 + 0.4 * (kappa - 1))
 #       * Dynamic Router Budget          : lambda_route = 0.05
 #   - Controlled Fair Learning Rates     : LR_BARTpho=2e-5, LR_ViT5=1e-4 (100% Frozen & Fair)
 #
 # Non-Destructive Preservation:
 #   - Toàn bộ checkpoints v1, v2.1, v3.0, v4.0, v5.0, v6.0 được bảo toàn nguyên vẹn 100%.
-#   - Checkpoints UniTSSA Final được lưu biệt lập tại checkpoints/tssa_final/
+#   - Checkpoints UniTSSA Final được ghi đè và làm mới trực tiếp tại checkpoints/tssa_final/
 # ==============================================================================
 
 set -e
@@ -49,7 +49,7 @@ echo "[*] Nhiệt độ InfoNCE toàn cục    : tau = ${PRIME_TAU} (Smooth & St
 echo "[*] Ngân sách BARTpho (H=16)     : rho* = 0.333 (11 Free Generation Heads)"
 echo "[*] Ngân sách ViT5    (H=12)     : rho* = 0.250 (9 Free Generation Heads)"
 echo "[*] Tốc độ học (Fair Standard)   : BARTpho=${LR_BARTPHO}, ViT5=${LR_VIT5}"
-echo "[*] Thư mục lưu trữ độc lập      : ${OUTPUT_DIR}"
+echo "[*] Thư mục lưu trữ (Ghi đè Final): ${OUTPUT_DIR}"
 echo "[*] Báo cáo nghiệm thu tự động   : ${REPORT_FILE}"
 echo "[*] Danh sách ngôn ngữ           : ${LANGUAGES[*]}"
 echo "========================================================================"
@@ -57,28 +57,28 @@ echo "========================================================================"
 trap 'echo -e "\n[!] Đã nhận tín hiệu hủy (Ctrl+C). Đang dừng an toàn..."; exit 1;' INT
 
 # ------------------------------------------------------------------------------
-# HÀM TRỢ GIÚP: SUY LUẬN LAMBDAS THEO ĐỊNH LUẬT LIÊN TỤC TOÀN NĂNG
+# HÀM TRỢ GIÚP: SUY LUẬN LAMBDAS THEO ĐỊNH LUẬT LIÊN TỤC HIỆU CHUẨN KÉP
 # ------------------------------------------------------------------------------
 get_typological_lambdas_final() {
     local LANG=$1
     if [ "${LANG}" == "bahnaric" ]; then
         # Ba Na (Phân mảnh cao kappa ~ 3.5):
-        # struct = 0.20 + 0.10 * exp(-6.25 / 4.0) = 0.22 (MỎ NEO VỮNG CHẮC!)
-        # prime  = 0.08 + 0.04 * tanh(2.5)        = 0.12 (LA BÀN NGỮ NGHĨA!)
+        # struct = 0.12 + 0.10 * tanh(2.5)          = 0.22 (MỎ NEO VỮNG CHẮC!)
+        # prime  = 0.10 / (1.0 + 0.4 * 2.5)         = 0.04 (KHÁNG NHIỄU GRADIENT!)
         # route  = 0.05
-        echo "0.22 0.12 0.05"
+        echo "0.22 0.04 0.05"
     elif [ "${LANG}" == "rhade" ]; then
         # Ê Đê (Đẳng cấu kappa ~ 1.4):
-        # struct = 0.20 + 0.10 * exp(-0.16 / 4.0) = 0.30 (Đỉnh cao cấu trúc)
-        # prime  = 0.08 + 0.04 * tanh(0.4)        = 0.10
+        # struct = 0.12 + 0.10 * tanh(0.4)          = 0.16 (ĐIỂM NGỌT CẤU TRÚC)
+        # prime  = 0.10 / (1.0 + 0.4 * 0.4)         = 0.09
         # route  = 0.05
-        echo "0.30 0.10 0.05"
+        echo "0.16 0.09 0.05"
     else
         # Tày (Đẳng cấu kappa ~ 1.2):
-        # struct = 0.20 + 0.10 * exp(-0.04 / 4.0) = 0.30 (Đỉnh cao cấu trúc)
-        # prime  = 0.08 + 0.04 * tanh(0.2)        = 0.10
+        # struct = 0.12 + 0.10 * tanh(0.2)          = 0.15 (GIẢI PHÓNG OVER-REGULARIZATION!)
+        # prime  = 0.10 / (1.0 + 0.4 * 0.2)         = 0.08
         # route  = 0.05
-        echo "0.30 0.10 0.05"
+        echo "0.15 0.08 0.05"
     fi
 }
 

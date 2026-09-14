@@ -43,19 +43,18 @@ def compute_capacity_budget(num_heads: int, h_free: int = 9) -> float:
 
 def compute_final_typological_lambdas(kappa: float):
     """
-    Universal Continuous Typological Scaling (UniTSSA Universal):
-    Preserves 100% of Anchor Novelty across all languages while adapting to subword fertility.
-    - lambda_struct(kappa) = 0.20 + 0.10 * exp(- (kappa - 1)^2 / 4.0)
-    - lambda_prime(kappa)  = 0.08 + 0.04 * tanh(kappa - 1)
+    Universal Continuous Typological Scaling (UniTSSA Universal Dual-Calibrated):
+    - lambda_struct(kappa) = 0.12 + 0.10 * math.tanh(kappa - 1)
+    - lambda_prime(kappa)  = 0.10 / (1.0 + 0.4 * (kappa - 1))
     - lambda_route         = 0.05
     """
     k_diff = max(1.0, kappa) - 1.0
     
-    # Structural Anchor Scaling: Invariant floor is 0.20!
-    l_struct = round(0.20 + 0.10 * math.exp(- (k_diff ** 2) / 4.0), 2)
+    # Structural Anchor Scaling: Continuous hyperbolic tangent
+    l_struct = round(0.12 + 0.10 * math.tanh(k_diff), 2)
     
-    # Sentence Priming Compass: Amplifies as subword fragmentation increases
-    l_prime = round(0.08 + 0.04 * math.tanh(k_diff), 2)
+    # Sentence Priming Compass: Noise-attenuated scaling inversely proportional to subword fragmentation
+    l_prime = round(0.10 / (1.0 + 0.4 * k_diff), 2)
     
     l_route = 0.05
     return l_struct, l_prime, l_route
@@ -105,19 +104,19 @@ def run_smoke_test():
     s_rhade, p_rhade, r_rhade = compute_final_typological_lambdas(1.4)
     s_bana, p_bana, r_bana = compute_final_typological_lambdas(3.5)
 
-    print(f"  [+] Tay   (kappa=1.2) -> struct={s_tay:.2f}, prime={p_tay:.2f}, route={r_tay:.2f} (Full Structural Focus)")
-    print(f"  [+] Rhade (kappa=1.4) -> struct={s_rhade:.2f}, prime={p_rhade:.2f}, route={r_rhade:.2f} (Full Structural Focus)")
-    print(f"  [+] Ba Na (kappa=3.5) -> struct={s_bana:.2f}, prime={p_bana:.2f}, route={r_bana:.2f} (SOLID ANCHOR FLOOR + COMPASS!)")
+    print(f"  [+] Tay   (kappa=1.2) -> struct={s_tay:.2f}, prime={p_tay:.2f}, route={r_tay:.2f} (Relieved Over-Regularization)")
+    print(f"  [+] Rhade (kappa=1.4) -> struct={s_rhade:.2f}, prime={p_rhade:.2f}, route={r_rhade:.2f} (Structural Sweet Spot)")
+    print(f"  [+] Ba Na (kappa=3.5) -> struct={s_bana:.2f}, prime={p_bana:.2f}, route={r_bana:.2f} (Firm Anchor + Noise-Attenuated Compass)")
 
-    # Assert Tay & Rhade retain strong structural anchoring
-    assert s_tay >= 0.29, f"Tay struct must be ~0.30, got {s_tay}"
-    assert p_tay >= 0.08, f"Tay prime must be >= 0.08, got {p_tay}"
-    assert s_rhade >= 0.29, f"Rhade struct must be ~0.30, got {s_rhade}"
-    assert p_rhade >= 0.09, f"Rhade prime must be >= 0.09, got {p_rhade}"
+    # Assert Tay & Rhade retain calibrated structural anchoring and prime
+    assert 0.13 <= s_tay <= 0.16, f"Tay struct expected ~0.14-0.15, got {s_tay}"
+    assert 0.07 <= p_tay <= 0.10, f"Tay prime expected ~0.08-0.09, got {p_tay}"
+    assert 0.15 <= s_rhade <= 0.18, f"Rhade struct expected ~0.16, got {s_rhade}"
+    assert 0.07 <= p_rhade <= 0.10, f"Rhade prime expected ~0.08-0.09, got {p_rhade}"
 
-    # Assert Ba Na Anchor is SOLID at ~0.22 (well above floor 0.20) and prime is ~0.12
-    assert s_bana >= 0.20 and s_bana <= 0.25, f"Ba Na struct must be ~0.22 (Solid Anchor Floor), got {s_bana}"
-    assert p_bana >= 0.11 and p_bana <= 0.14, f"Ba Na prime must be ~0.12 (Semantic Compass), got {p_bana}"
+    # Assert Ba Na Anchor is firm at ~0.22 and prime is attenuated at ~0.04-0.05
+    assert 0.20 <= s_bana <= 0.24, f"Ba Na struct expected ~0.22, got {s_bana}"
+    assert 0.03 <= p_bana <= 0.06, f"Ba Na prime expected ~0.04-0.05, got {p_bana}"
 
     print("  [✓] STAGE 2 PASSED: Continuous Typological Scaling verified.")
 

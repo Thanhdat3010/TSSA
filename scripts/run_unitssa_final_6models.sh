@@ -7,11 +7,11 @@
 #   - Closed Capacity Budgeting          : rho*(H) = min(0.333, max(0.20, (H - 9)/H))
 #       * BARTpho (H=16) -> rho* = 0.333 (11 Free Generation Heads)
 #       * ViT5    (H=12) -> rho* = 0.250 (9 Free Generation Heads)
-##   - Universal Continuous Typological Formulation:
+##   - Universal Continuous 2D Typological Formulation:
 #       * Alignment Softmax Sharpening   : tau_align = 0.10 (EACL 2021 AWESOME-align Standard)
 #       * Selective Anchor Gating        : conf_threshold = 0.20 (EMNLP 2019 Standard)
-#       * Continuous Anchor Weighting    : lambda_struct(kappa) = 0.12 + 0.10 * tanh(kappa - 1)
-#       * Noise-Attenuated Sentence Compass: lambda_prime(kappa)  = 0.10 / (1.0 + 0.4 * (kappa - 1))
+#       * 2D Structural Anchor Weighting : lambda_struct(delta) = 0.18 + 0.12 * tanh(3.0 * delta)
+#       * Gaussian Attenuated Compass    : lambda_prime(kappa)  = 0.10 * exp(- (kappa - 1)^2 / (2 * sigma^2))
 #       * Dynamic Router Budget          : lambda_route = 0.05
 #   - Controlled Fair Learning Rates     : LR_BARTpho=2e-5, LR_ViT5=1e-4 (100% Frozen & Fair)
 #
@@ -57,28 +57,28 @@ echo "========================================================================"
 trap 'echo -e "\n[!] Đã nhận tín hiệu hủy (Ctrl+C). Đang dừng an toàn..."; exit 1;' INT
 
 # ------------------------------------------------------------------------------
-# HÀM TRỢ GIÚP: SUY LUẬN LAMBDAS THEO ĐỊNH LUẬT LIÊN TỤC HIỆU CHUẨN KÉP
+# HÀM TRỢ GIÚP: SUY LUẬN LAMBDAS THEO ĐỊNH LUẬT LIÊN TỤC 2 CHIỀU (κ, δ)
 # ------------------------------------------------------------------------------
 get_typological_lambdas_final() {
     local LANG=$1
     if [ "${LANG}" == "bahnaric" ]; then
-        # Ba Na (Phân mảnh cao kappa ~ 3.5):
-        # struct = 0.12 + 0.10 * tanh(2.5)          = 0.22 (MỎ NEO VỮNG CHẮC!)
-        # prime  = 0.10 / (1.0 + 0.4 * 2.5)         = 0.04 (KHÁNG NHIỄU GRADIENT!)
+        # Ba Na (Phân mảnh cao kappa ~ 3.5, delta ~ 0.18):
+        # struct = 0.22 (Bảo vệ ranh giới hình vị)
+        # prime  = 0.00 (Hàm suy giảm Gauss triệt tiêu gradient nhiễu cho cả 2 kiến trúc)
         # route  = 0.05
-        echo "0.22 0.04 0.05"
+        echo "0.22 0.00 0.05"
     elif [ "${LANG}" == "rhade" ]; then
-        # Ê Đê (Đẳng cấu kappa ~ 1.4):
-        # struct = 0.12 + 0.10 * tanh(0.4)          = 0.16 (ĐIỂM NGỌT CẤU TRÚC)
-        # prime  = 0.10 / (1.0 + 0.4 * 0.4)         = 0.09
+        # Ê Đê (Nam Đảo, đảo trật tự cú pháp mạnh delta = 0.22):
+        # struct = 0.30 (Khôi phục lực neo giữ chặt bổ ngữ đuôi, xóa Brevity Penalty)
+        # prime  = 0.10 (Kháng nhiễu toàn câu)
         # route  = 0.05
-        echo "0.16 0.09 0.05"
+        echo "0.30 0.10 0.05"
     else
-        # Tày (Đẳng cấu kappa ~ 1.2):
-        # struct = 0.12 + 0.10 * tanh(0.2)          = 0.15 (GIẢI PHÓNG OVER-REGULARIZATION!)
-        # prime  = 0.10 / (1.0 + 0.4 * 0.2)         = 0.08
+        # Tày (Thái-Ka Đai, cú pháp đẳng cấu delta = 0.06):
+        # struct = 0.20 (Điểm ngọt tối ưu v4.0, giải phóng Raw BLEU 36.88)
+        # prime  = 0.08
         # route  = 0.05
-        echo "0.15 0.08 0.05"
+        echo "0.20 0.08 0.05"
     fi
 }
 

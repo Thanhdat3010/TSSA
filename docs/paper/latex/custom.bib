@@ -1,0 +1,1139 @@
+@article{10.1145/3567592,
+author = {Ranathunga, Surangika and Lee, En-Shiun Annie and Prifti Skenduli, Marjana and Shekhar, Ravi and Alam, Mehreen and Kaur, Rishemjit},
+title = {{Neural Machine Translation for Low-resource Languages: A Survey}},
+year = {2023},
+issue_date = {November 2023},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {55},
+number = {11},
+issn = {0360-0300},
+url = {https://doi.org/10.1145/3567592},
+doi = {10.1145/3567592},
+abstract = {Neural Machine Translation (NMT) has seen tremendous growth in the last ten years since the early 2000s and has already entered a mature phase. While considered the most widely used solution for Machine Translation, its performance on low-resource language pairs remains sub-optimal compared to the high-resource counterparts due to the unavailability of large parallel corpora. Therefore, the implementation of NMT techniques for low-resource language pairs has been receiving the spotlight recently, thus leading to substantial research on this topic. This article presents a detailed survey of research advancements in low-resource language NMT (LRL-NMT) and quantitative analysis to identify the most popular techniques. We provide guidelines to select the possible NMT technique for a given LRL data setting based on our findings. We also present a holistic view of the LRL-NMT research landscape and provide recommendations to enhance the research efforts further.},
+journal = {ACM Comput. Surv.},
+month = feb,
+articleno = {229},
+numpages = {37},
+keywords = {pivoting, zero-shot translation, data augmentation, transfer learning, multilingual NMT, semi-supervised NMT, unsupervised NMT, low-resource languages, Neural machine translation}
+}
+
+@inproceedings{her-kruschwitz-2024-investigating,
+    title = "{Investigating Neural Machine Translation for Low-Resource Languages: Using {B}avarian as a Case Study}",
+    author = "Her, Wan-hua  and
+      Kruschwitz, Udo",
+    editor = "Melero, Maite  and
+      Sakti, Sakriani  and
+      Soria, Claudia",
+    booktitle = "Proceedings of the 3rd Annual Meeting of the Special Interest Group on Under-resourced Languages @ LREC-COLING 2024",
+    month = may,
+    year = "2024",
+    address = "Torino, Italia",
+    publisher = "ELRA and ICCL",
+    url = "https://aclanthology.org/2024.sigul-1.20/",
+    pages = "155--167",
+    abstract = "Machine Translation has made impressive progress in recent years offering close to human-level performance on many languages, but studies have primarily focused on high-resource languages with broad online presence and resources. With the help of growing Large Language Models, more and more low-resource languages achieve better results through the presence of other languages. However, studies have shown that not all low-resource languages can benefit from multilingual systems, especially those with insufficient training and evaluation data. In this paper, we revisit state-of-the-art Neural Machine Translation techniques to develop automatic translation systems between German and Bavarian. We investigate conditions of low-resource languages such as data scarcity and parameter sensitivity and focus on refined solutions that combat low-resource difficulties and creative solutions such as harnessing language similarity. Our experiment entails applying Back-translation and Transfer Learning to automatically generate more training data and achieve higher translation performance. We demonstrate noisiness in the data and present our approach to carry out text preprocessing extensively. Evaluation was conducted using combined metrics: BLEU, chrF and TER. Statistical significance results with Bonferroni correction show surprisingly high baseline systems, and that Back-translation leads to significant improvement. Furthermore, we present a qualitative analysis of translation errors and system limitations."
+}
+
+
+@inproceedings{raja-vats-2025-parallel,
+    title = "{Parallel Corpora for Machine Translation in Low-Resource {I}ndic Languages: A Comprehensive Review}",
+    author = "Raja, Rahul  and
+      Vats, Arpita",
+    editor = "Ojha, Atul Kr.  and
+      Liu, Chao-hong  and
+      Vylomova, Ekaterina  and
+      Pirinen, Flammie  and
+      Washington, Jonathan  and
+      Oco, Nathaniel  and
+      Zhao, Xiaobing",
+    booktitle = "Proceedings of the Eighth Workshop on Technologies for Machine Translation of Low-Resource Languages (LoResMT 2025)",
+    month = may,
+    year = "2025",
+    address = "Albuquerque, New Mexico, U.S.A.",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.loresmt-1.12/",
+    doi = "10.18653/v1/2025.loresmt-1.12",
+    pages = "129--143",
+    ISBN = "979-8-89176-230-5",
+    abstract = "Parallel corpora play an important role in training machine translation (MT) models, particularly for low-resource languages where high-quality bilingual data is scarce. This review provides a comprehensive overview of available parallel corpora for Indic languages, which span diverse linguistic families, scripts, and regional variations. We categorize these corpora into text-to-text, code-switched, and various categories of multimodal datasets, highlighting their significance in the development of robust multilingual MT systems. Beyond resource enumeration, we critically examine the challenges faced in corpus creation, including linguistic diversity, script variation, data scarcity, and the prevalence of informal textual content. We also discuss and evaluate these corpora in various terms such as alignment quality and domain representativeness. Furthermore, we address open challenges such as data imbalance across Indic languages, the trade-off between quality and quantity, and the impact of noisy, informal, and dialectal data on MT performance. Finally, we outline future directions, including leveraging cross-lingual transfer learning, expanding multilingual datasets, and integrating multimodal resources to enhance translation quality. To the best of our knowledge, this paper presents the first comprehensive review of parallel corpora specifically tailored for low-resource Indic languages in the context of machine translation."
+}
+
+
+@inproceedings{nguyen-etal-2025-serving,
+    title = "{Serving the Underserved: Leveraging {BARTB}ahnar Language Model for Bahnaric-{V}ietnamese Translation}",
+    author = "Nguyen, Long  and
+      Le, Tran  and
+      Nguyen, Huong  and
+      Vo, Quynh  and
+      Nguyen, Phong  and
+      Quan, Tho",
+    editor = "Truong, Sang  and
+      Putri, Rifki Afina  and
+      Nguyen, Duc  and
+      Wang, Angelina  and
+      Ho, Daniel  and
+      Oh, Alice  and
+      Koyejo, Sanmi",
+    booktitle = "Proceedings of the 1st Workshop on Language Models for Underserved Communities (LM4UC 2025)",
+    month = may,
+    year = "2025",
+    address = "Albuquerque, New Mexico",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.lm4uc-1.5/",
+    doi = "10.18653/v1/2025.lm4uc-1.5",
+    pages = "32--41",
+    ISBN = "979-8-89176-242-8",
+    abstract = "The Bahnar people, one of Vietnam{'}s ethnic minorities, represent an underserved community with limited access to modern technologies. Developing an effective Bahnaric-Vietnamese translation system is essential for fostering linguistic exchange, preserving cultural heritage, and empowering local communities by bridging communication barriers. With advancements in Artificial Intelligence (AI), Neural Machine Translation (NMT) has achieved remarkable success across various language pairs. However, the low-resource nature of Bahnaric, characterized by data scarcity, vocabulary constraints, and the lack of parallel corpora, poses significant challenges to building an accurate and efficient translation system. To address these challenges, we propose a novel hybrid architecture for Bahnaric-Vietnamese translation, with BARTBahnar as its core language model. BARTBahnar is developed by continually training a pre-trained Vietnamese model, BARTPho, on augmented monolingual Bahnaric data, followed by fine-tuning on bilingual datasets. This transfer learning approach reduces training costs while effectively capturing linguistic similarities between the two languages. Additionally, we implement advanced data augmentation techniques to enrich and diversify training data, further enhancing BARTBahnar{'}s robustness and translation accuracy. Beyond leveraging the language model, our hybrid system integrates rule-based and statistical methods to improve translation quality. Experimental results show substantial improvements on bilingual Bahnaric-Vietnamese datasets, validating the effectiveness of our approach for low-resource translation. To support further research, we open-source our code and related materials at https://github.com/ura-hcmut/BARTBahnar."
+}
+
+
+
+
+@article{doi:10.1177/2513850220940044,
+author = {David Holm},
+title ={{The Tày and Zhuang vernacular scripts: Preliminary comparisons}},
+journal = {Journal of Chinese Writing Systems},
+volume = {4},
+number = {3},
+pages = {197-213},
+year = {2020},
+doi = {10.1177/2513850220940044},
+URL = { 
+        https://doi.org/10.1177/2513850220940044
+},
+eprint = { 
+    
+        https://doi.org/10.1177/2513850220940044
+    
+    
+
+}
+,
+    abstract = { The author has conducted a survey of the vernacular character scripts of the Tai-speaking ethnic groups of southern China, including the Zhuang, Bouyei, Nong and Sha. The survey analysed traditional texts from 45 different locations, including four texts from northern Vietnam. The results of that survey were published in Mapping the Old Zhuang Character Script (Holm 2013). In recent years the author has extended the coverage of this survey further into northern Vietnam, looking specifically at traditional texts in the vernacular character scripts of the Tày and Nùng peoples, who speak Tai-Kadai languages closely related to Zhuang. The present article will compare the vernacular scripts of the Zhuang and Tày, and point out how they may be related. The survey data allow us to quantify degrees of commonality and difference, and generate hypotheses on the relative dates of the Zhuang and Tày scripts. Our preliminary finding is that the Tày script is a script of mixed origins, with a layer of older readings dating back to the Middle Chinese period (Sui-Tang), as well as a more recent layer dating from around the 17th century. }
+}
+
+
+@misc { MorphologyinAustroasiaticLanguages,
+      author = "Mark J. Alves",
+      title = "{Morphology in Austroasiatic Languages}",
+      year = "2019",
+      month = "11",
+      publisher = "Oxford University Press",
+      doi = "10.1093/acrefore/9780199384655.013.532",
+      url = "https://oxfordre.com/linguistics/view/10.1093/acrefore/9780199384655.001.0001/acrefore-9780199384655-e-532"
+}
+
+@article{10.1145/3524300,
+author = {Shi, Shumin and Wu, Xing and Su, Rihai and Huang, Heyan},
+title = {{Low-resource Neural Machine Translation: Methods and Trends}},
+year = {2022},
+issue_date = {September 2022},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {21},
+number = {5},
+issn = {2375-4699},
+url = {https://doi.org/10.1145/3524300},
+doi = {10.1145/3524300},
+abstract = {Neural Machine Translation (NMT) brings promising improvements in translation quality, but until recently, these models rely on large-scale parallel corpora. As such corpora only exist on a handful of language pairs, the translation performance is far from the desired effect in the majority of low-resource languages. Thus, developing low-resource language translation techniques is crucial and it has become a popular research field in neural machine translation. In this article, we make an overall review of existing deep learning techniques in low-resource NMT. We first show the research status as well as some widely used low-resource datasets. Then, we categorize the existing methods and show some representative works detailedly. Finally, we summarize the common characters among them and outline the future directions in this field.},
+journal = {ACM Trans. Asian Low-Resour. Lang. Inf. Process.},
+month = nov,
+articleno = {103},
+numpages = {22},
+keywords = {Low-resource, neural machine translation, semi-supervised, unsupervised, transfer learning, pivot-based methods, data augmentation}
+}
+
+@article{KHOBOKO2025100649,
+title = {{Optimizing translation for low-resource languages: Efficient fine-tuning with custom prompt engineering in large language models}},
+journal = {Machine Learning with Applications},
+volume = {20},
+pages = {100649},
+year = {2025},
+issn = {2666-8270},
+doi = {https://doi.org/10.1016/j.mlwa.2025.100649},
+url = {https://www.sciencedirect.com/science/article/pii/S2666827025000325},
+author = {Pitso Walter Khoboko and Vukosi Marivate and Joseph Sefara},
+keywords = {Large language model (LLM), PEFT, Mistral 7B, Prompt Engineering, In-Context-Learning (ICL), En-Zul (English-to-Zulu), En-Xh (English-to-Xhosa), BLUE-score, F1score, G-Eva (mean cosine-similarity score)},
+abstract = {Training large language models (LLMs) can be prohibitively expensive. However, the emergence of new Parameter-Efficient Fine-Tuning (PEFT) strategies provides a cost-effective approach to unlocking the potential of LLMs across a variety of natural language processing (NLP) tasks. In this study, we selected the Mistral 7B language model as our primary LLM due to its superior performance, which surpasses that of LLAMA 2 13B across multiple benchmarks. By leveraging PEFT methods, we aimed to significantly reduce the cost of fine-tuning while maintaining high levels of performance. Despite their advancements, LLMs often struggle with translation tasks for low-resource languages, particularly morphologically rich African languages. To address this, we employed customized prompt engineering techniques to enhance LLM translation capabilities for these languages. Our experimentation focused on fine-tuning the Mistral 7B model to identify the best-performing ensemble using a custom prompt strategy. The results obtained from the fine-tuned Mistral 7B model were compared against several models: Serengeti, Gemma, Google Translate, and No Language Left Behind (NLLB). Specifically, Serengeti and Gemma were fine-tuned using the same custom prompt strategy as the Mistral model, while Google Translate and NLLB Gemma, which are pre-trained to handle English-to-Zulu and English-to-Xhosa translations, were evaluated directly on the test data set. This comparative analysis allowed us to assess the efficacy of the fine-tuned Mistral 7B model against both custom-tuned and pre-trained translation models. LLMs have traditionally struggled to produce high-quality translations, especially for low-resource languages. Our experiments revealed that the key to improving translation performance lies in using the correct prompt during fine-tuning. We used the Mistral 7B model to develop a custom prompt that significantly enhanced translation quality for English-to-Zulu and English-to-Xhosa language pairs. After fine-tuning the Mistral 7B model for 30 GPU days, we compared its performance to the No Language Left Behind (NLLB) model and Google Translator API on the same test dataset. While NLLB achieved the highest scores across BLEU, G-Eval (cosine similarity), and Chrf++ (F1-score), our results demonstrated that Mistral 7B, with the custom prompt, still performed competitively. Additionally, we showed that our prompt template can improve the translation accuracy of other models, such as Gemma and Serengeti, when applied to high-quality bilingual datasets. This demonstrates that our custom prompt strategy is adaptable across different model architectures, bilingual settings, and is highly effective in accelerating learning for low-resource language translation.}
+}
+
+
+
+@article{LI202271,
+title = {{Data augmentation approaches in natural language processing: A survey}},
+journal = {AI Open},
+volume = {3},
+pages = {71-90},
+year = {2022},
+issn = {2666-6510},
+doi = {https://doi.org/10.1016/j.aiopen.2022.03.001},
+url = {https://www.sciencedirect.com/science/article/pii/S2666651022000080},
+author = {Bohan Li and Yutai Hou and Wanxiang Che},
+keywords = {Machine learning, Data augmentation, Natural language processing},
+abstract = {As an effective strategy, data augmentation (DA) alleviates data scarcity scenarios where deep learning techniques may fail. It is widely applied in computer vision then introduced to natural language processing and achieves improvements in many tasks. One of the main focuses of the DA methods is to improve the diversity of training data, thereby helping the model to better generalize to unseen testing data. In this survey, we frame DA methods into three categories based on the diversity of augmented data, including paraphrasing, noising, and sampling. Our paper sets out to analyze DA methods in detail according to the above categories. Further, we also introduce their applications in NLP tasks as well as the challenges. Some useful resources are provided in Appendix A.}
+}
+
+@inproceedings{fadaee-etal-2017-data,
+    title = "{Data Augmentation for Low-Resource Neural Machine Translation}",
+    author = "Fadaee, Marzieh  and
+      Bisazza, Arianna  and
+      Monz, Christof",
+    editor = "Barzilay, Regina  and
+      Kan, Min-Yen",
+    booktitle = "Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers)",
+    month = jul,
+    year = "2017",
+    address = "Vancouver, Canada",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/P17-2090/",
+    doi = "10.18653/v1/P17-2090",
+    pages = "567--573",
+    abstract = "The quality of a Neural Machine Translation system depends substantially on the availability of sizable parallel corpora. For low-resource language pairs this is not the case, resulting in poor translation quality. Inspired by work in computer vision, we propose a novel data augmentation approach that targets low-frequency words by generating new sentence pairs containing rare words in new, synthetically created contexts. Experimental results on simulated low-resource settings show that our method improves translation quality by up to 2.9 BLEU points over the baseline and up to 3.2 BLEU over back-translation."
+}
+
+
+@inproceedings{xia-etal-2019-generalized,
+    title = "{Generalized Data Augmentation for Low-Resource Translation}",
+    author = "Xia, Mengzhou  and
+      Kong, Xiang  and
+      Anastasopoulos, Antonios  and
+      Neubig, Graham",
+    editor = "Korhonen, Anna  and
+      Traum, David  and
+      M{\`a}rquez, Llu{\'i}s",
+    booktitle = "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+    month = jul,
+    year = "2019",
+    address = "Florence, Italy",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/P19-1579/",
+    doi = "10.18653/v1/P19-1579",
+    pages = "5786--5796",
+    abstract = "Low-resource language pairs with a paucity of parallel data pose challenges for machine translation in terms of both adequacy and fluency. Data augmentation utilizing a large amount of monolingual data is regarded as an effective way to alleviate the problem. In this paper, we propose a general framework of data augmentation for low-resource machine translation not only using target-side monolingual data, but also by pivoting through a related high-resource language. Specifically, we experiment with a two-step pivoting method to convert high-resource data to the low-resource language, making best use of available resources to better approximate the true distribution of the low-resource language. First, we inject low-resource words into high-resource sentences through an induced bilingual dictionary. Second, we further edit the high-resource data injected with low-resource words using a modified unsupervised machine translation framework. Extensive experiments on four low-resource datasets show that under extreme low-resource settings, our data augmentation techniques improve translation quality by up to 1.5 to 8 BLEU points compared to supervised back-translation baselines."
+}
+
+@inproceedings{li-etal-2019-understanding,
+    title = "{Understanding Data Augmentation in Neural Machine Translation: Two Perspectives towards Generalization}",
+    author = "Li, Guanlin  and
+      Liu, Lemao  and
+      Huang, Guoping  and
+      Zhu, Conghui  and
+      Zhao, Tiejun",
+    editor = "Inui, Kentaro  and
+      Jiang, Jing  and
+      Ng, Vincent  and
+      Wan, Xiaojun",
+    booktitle = "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+    month = nov,
+    year = "2019",
+    address = "Hong Kong, China",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/D19-1570/",
+    doi = "10.18653/v1/D19-1570",
+    pages = "5689--5695",
+    abstract = "Many Data Augmentation (DA) methods have been proposed for neural machine translation. Existing works measure the superiority of DA methods in terms of their performance on a specific test set, but we find that some DA methods do not exhibit consistent improvements across translation tasks. Based on the observation, this paper makes an initial attempt to answer a fundamental question: what benefits, which are consistent across different methods and tasks, does DA in general obtain? Inspired by recent theoretic advances in deep learning, the paper understands DA from two perspectives towards the generalization ability of a model: input sensitivity and prediction margin, which are defined independent of specific test set thereby may lead to findings with relatively low variance. Extensive experiments show that relatively consistent benefits across five DA methods and four translation tasks are achieved regarding both perspectives."
+}
+
+@inproceedings{ijcai2021p0629,
+  title     = {{A Survey on Low-Resource Neural Machine Translation}},
+  author    = {Wang, Rui and Tan, Xu and Luo, Renqian and Qin, Tao and Liu, Tie-Yan},
+  booktitle = {Proceedings of the Thirtieth International Joint Conference on
+               Artificial Intelligence, {IJCAI-21}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  editor    = {Zhi-Hua Zhou},
+  pages     = {4636--4643},
+  year      = {2021},
+  month     = {8},
+  note      = {Survey Track},
+  doi       = {10.24963/ijcai.2021/629},
+  url       = {https://doi.org/10.24963/ijcai.2021/629},
+}
+
+
+@inproceedings{sennrich-etal-2016-improving,
+    title = "{Improving Neural Machine Translation Models with Monolingual Data}",
+    author = "Sennrich, Rico  and
+      Haddow, Barry  and
+      Birch, Alexandra",
+    editor = "Erk, Katrin  and
+      Smith, Noah A.",
+    booktitle = "Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = aug,
+    year = "2016",
+    address = "Berlin, Germany",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/P16-1009/",
+    doi = "10.18653/v1/P16-1009",
+    pages = "86--96"
+}
+
+
+@inproceedings{10.5555/3157096.3157188,
+author = {He, Di and Xia, Yingce and Qin, Tao and Wang, Liwei and Yu, Nenghai and Liu, Tie-Yan and Ma, Wei-Ying},
+title = {{Dual learning for machine translation}},
+year = {2016},
+isbn = {9781510838819},
+publisher = {Curran Associates Inc.},
+address = {Red Hook, NY, USA},
+abstract = {While neural machine translation (NMT) is making good progress in the past two years, tens of millions of bilingual sentence pairs are needed for its training. However, human labeling is very costly. To tackle this training data bottleneck, we develop a dual-learning mechanism, which can enable an NMT system to automatically learn from unlabeled data through a dual-learning game. This mechanism is inspired by the following observation: any machine translation task has a dual task, e.g., English-to-French translation (primal) versus French-to-English translation (dual); the primal and dual tasks can form a closed loop, and generate informative feedback signals to train the translation models, even if without the involvement of a human labeler. In the dual-learning mechanism, we use one agent to represent the model for the primal task and the other agent to represent the model for the dual task, then ask them to teach each other through a reinforcement learning process. Based on the feedback signals generated during this process (e.g., the language-model likelihood of the output of a model, and the reconstruction error of the original sentence after the primal and dual translations), we can iteratively update the two models until convergence (e.g., using the policy gradient methods). We call the corresponding approach to neural machine translation dual-NMT. Experiments show that dual-NMT works very well on English ↔ French translation; especially, by learning from monolingual data (with 10\% bilingual data for warm start), it achieves a comparable accuracy to NMT trained from the full bilingual data for the French-to-English translation task.},
+booktitle = {Proceedings of the 30th International Conference on Neural Information Processing Systems},
+pages = {820–828},
+numpages = {9},
+location = {Barcelona, Spain},
+series = {NIPS'16}
+}
+
+
+
+@inproceedings{
+lample2018unsupervised,
+title={{Unsupervised Machine Translation Using Monolingual Corpora Only}},
+author={Guillaume Lample and Alexis Conneau and Ludovic Denoyer and Marc'Aurelio Ranzato},
+booktitle={International Conference on Learning Representations},
+year={2018},
+url={https://openreview.net/forum?id=rkYTTf-AZ},
+}
+
+
+
+
+@article{johnson-etal-2017-googles,
+    title = "{{G}oogle`s Multilingual Neural Machine Translation System: Enabling Zero-Shot Translation}",
+    author = "Johnson, Melvin  and
+      Schuster, Mike  and
+      Le, Quoc V.  and
+      Krikun, Maxim  and
+      Wu, Yonghui  and
+      Chen, Zhifeng  and
+      Thorat, Nikhil  and
+      Vi{\'e}gas, Fernanda  and
+      Wattenberg, Martin  and
+      Corrado, Greg  and
+      Hughes, Macduff  and
+      Dean, Jeffrey",
+    editor = "Lee, Lillian  and
+      Johnson, Mark  and
+      Toutanova, Kristina",
+    journal = "Transactions of the Association for Computational Linguistics",
+    volume = "5",
+    year = "2017",
+    address = "Cambridge, MA",
+    publisher = "MIT Press",
+    url = "https://aclanthology.org/Q17-1024/",
+    doi = "10.1162/tacl_a_00065",
+    pages = "339--351",
+    abstract = "We propose a simple solution to use a single Neural Machine Translation (NMT) model to translate between multiple languages. Our solution requires no changes to the model architecture from a standard NMT system but instead introduces an artificial token at the beginning of the input sentence to specify the required target language. Using a shared wordpiece vocabulary, our approach enables Multilingual NMT systems using a single model. On the WMT`14 benchmarks, a single multilingual model achieves comparable performance for English{\textrightarrow}French and surpasses state-of-theart results for English{\textrightarrow}German. Similarly, a single multilingual model surpasses state-of-the-art results for French{\textrightarrow}English and German{\textrightarrow}English on WMT`14 and WMT`15 benchmarks, respectively. On production corpora, multilingual models of up to twelve language pairs allow for better translation of many individual pairs. Our models can also learn to perform implicit bridging between language pairs never seen explicitly during training, showing that transfer learning and zero-shot translation is possible for neural translation. Finally, we show analyses that hints at a universal interlingua representation in our models and also show some interesting examples when mixing languages."
+}
+
+
+
+@article{HUJON20231,
+title = {{Transfer Learning Based Neural Machine Translation of English-Khasi on Low-Resource Settings}},
+journal = {Procedia Computer Science},
+volume = {218},
+pages = {1-8},
+year = {2023},
+note = {International Conference on Machine Learning and Data Engineering},
+issn = {1877-0509},
+doi = {https://doi.org/10.1016/j.procs.2022.12.396},
+url = {https://www.sciencedirect.com/science/article/pii/S1877050922024899},
+author = {Aiusha V Hujon and Thoudam Doren Singh and Khwairakpam Amitab},
+keywords = {Transfer learning, Neural machine translation, Khasi, Byte pair encoding, Low resource language},
+abstract = {Machine translation for low-resource language can be improved using various techniques. One such technique is the application of knowledge learned by training a model with high-resource language pair to another model with a low-resource language pair. The paper discusses the experiments and improvement of the results of neural machine translation using transfer learning for the English-Khasi language pair. Long short-term memory is used as the backbone architecture for the transfer learning model. The essential technique is the shared vocabulary, constructed utilizing the subword unit of byte pair encoding of the two pairs of languages and the subword unit of byte pair encoded datasets. Analysis and evaluation of the experimental output using human subjective evaluation, statistical evaluation, and automatic evaluation show positive results for the transfer learning system. A thorough analysis of word order agreement and comparisons of the outputs between the baseline and the transfer learning system is made. The analysis and evaluation methods portray that neural machine translation using transfer learning improves the translation accuracy for Khasi, a low-resource language.}
+}
+
+@inproceedings{ahmed-buys-2024-neural,
+    title = "{Neural Machine Translation between Low-Resource Languages with Synthetic Pivoting}",
+    author = "Elmadani, Khalid N.  and
+      Buys, Jan",
+    editor = "Calzolari, Nicoletta  and
+      Kan, Min-Yen  and
+      Hoste, Veronique  and
+      Lenci, Alessandro  and
+      Sakti, Sakriani  and
+      Xue, Nianwen",
+    booktitle = "Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024)",
+    month = may,
+    year = "2024",
+    address = "Torino, Italia",
+    publisher = "ELRA and ICCL",
+    url = "https://aclanthology.org/2024.lrec-main.1063/",
+    pages = "12144--12158",
+    abstract = "Training neural models for translating between low-resource languages is challenging due to the scarcity of direct parallel data between such languages. Pivot-based neural machine translation (NMT) systems overcome data scarcity by including a high-resource pivot language in the process of translating between low-resource languages. We propose synthetic pivoting, a novel approach to pivot-based translation in which the pivot sentences are generated synthetically from both the source and target languages. Synthetic pivot sentences are generated through sequence-level knowledge distillation, with the aim of changing the structure of pivot sentences to be closer to that of the source or target languages, thereby reducing pivot translation complexity. We incorporate synthetic pivoting into two paradigms for pivoting: cascading and direct translation using synthetic source and target sentences. We find that the performance of pivot-based systems highly depends on the quality of the NMT model used for sentence regeneration. Furthermore, training back-translation models on these sentences can make the models more robust to input-side noise. The results show that synthetic data generation improves pivot-based systems translating between low-resource Southern African languages by up to 5.6 BLEU points after fine-tuning."
+}
+
+@inproceedings{ijcai2019p685,
+  title     = {{From Words to Sentences: A Progressive Learning Approach for Zero-resource Machine Translation with Visual Pivots}},
+  author    = {Chen, Shizhe and Jin, Qin and Fu, Jianlong},
+  booktitle = {Proceedings of the Twenty-Eighth International Joint Conference on
+               Artificial Intelligence, {IJCAI-19}},
+  publisher = {International Joint Conferences on Artificial Intelligence Organization},
+  pages     = {4932--4938},
+  year      = {2019},
+  month     = {7},
+  doi       = {10.24963/ijcai.2019/685},
+  url       = {https://doi.org/10.24963/ijcai.2019/685},
+}
+
+
+@article{Zhang_Tan_Ren_Qin_Zhang_Liu_2021, title={{UWSpeech: Speech to Speech Translation for Unwritten Languages}}, volume={35}, url={https://ojs.aaai.org/index.php/AAAI/article/view/17684}, DOI={10.1609/aaai.v35i16.17684}, abstractNote={Existing speech to speech translation systems heavily rely on the text of target language: they usually translate source language either to target text and then synthesize target speech from text, or directly to target speech with target text for auxiliary training. However, those methods cannot be applied to unwritten target languages, which have no written text or phoneme available. In this paper, we develop a translation system for unwritten languages, named as UWSpeech, which converts target unwritten speech into discrete tokens with a converter, and then translates source-language speech into target discrete tokens with a translator, and finally synthesizes target speech from target discrete tokens with an inverter. We propose a method called XL-VAE, which enhances vector quantized variational autoencoder (VQ-VAE) with cross-lingual (XL) speech recognition, to train the converter and inverter of UWSpeech jointly. Experiments on Fisher Spanish-English conversation translation dataset show that UWSpeech outperforms direct translation and VQ-VAE baseline by about 16 and 10 BLEU points respectively, which demonstrate the advantages and potentials of UWSpeech.}, number={16}, journal={Proceedings of the AAAI Conference on Artificial Intelligence}, author={Zhang, Chen and Tan, Xu and Ren, Yi and Qin, Tao and Zhang, Kejun and Liu, Tie-Yan}, year={2021}, month={May}, pages={14319-14327} }
+
+
+
+@inproceedings{miller1995wordnet,
+    title = "{{W}ord{N}et: A Lexical Database for {E}nglish}",
+    author = "Miller, George A.",
+    booktitle = "{H}uman {L}anguage {T}echnology: Proceedings of a Workshop held at {P}lainsboro, {N}ew {J}ersey, {M}arch 8-11, 1994",
+    year = "1994",
+    url = "https://aclanthology.org/H94-1111/"
+}
+
+@inproceedings{wei-zou-2019-eda,
+    title = "{{EDA}: Easy Data Augmentation Techniques for Boosting Performance on Text Classification Tasks}",
+    author = "Wei, Jason  and
+      Zou, Kai",
+    editor = "Inui, Kentaro  and
+      Jiang, Jing  and
+      Ng, Vincent  and
+      Wan, Xiaojun",
+    booktitle = "Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP)",
+    month = nov,
+    year = "2019",
+    address = "Hong Kong, China",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/D19-1670/",
+    doi = "10.18653/v1/D19-1670",
+    pages = "6382--6388",
+    abstract = "We present EDA: easy data augmentation techniques for boosting performance on text classification tasks. EDA consists of four simple but powerful operations: synonym replacement, random insertion, random swap, and random deletion. On five text classification tasks, we show that EDA improves performance for both convolutional and recurrent neural networks. EDA demonstrates particularly strong results for smaller datasets; on average, across five datasets, training with EDA while using only 50{\%} of the available training set achieved the same accuracy as normal training with all available data. We also performed extensive ablation studies and suggest parameters for practical use."
+}
+
+@InProceedings{10.1007/978-3-030-36204-1_19,
+author="Yan, Ge
+and Li, Yu
+and Zhang, Shu
+and Chen, Zhenyu",
+editor="Cui, Zhen
+and Pan, Jinshan
+and Zhang, Shanshan
+and Xiao, Liang
+and Yang, Jian",
+title="{Data Augmentation for Deep Learning of Judgment Documents}",
+booktitle="Intelligence Science and Big Data Engineering. Big Data and Machine Learning",
+year="2019",
+publisher="Springer International Publishing",
+address="Cham",
+pages="232--242",
+abstract="With the increasing number of machine learning parameters, the requirements on data quantity are getting higher and higher to train a good model. The choice of methods and the optimization of parameters can improve the model while the quality and quantity of the data determine the upper limit of the model. However, in realistic scenarios, it is quite challenging to get a lot of tag data. Therefore, it is natural to realize data augmentation by transforming the original data. We use three methods for data augmentation on different scales of original data in solving the crime prediction problem based on the description of the cases, and find that the effects of data augmentation are different for different models and different fundamental data quantities.",
+isbn="978-3-030-36204-1"
+}
+
+
+@inproceedings{wang-yang-2015-thats,
+    title = "{That`s So Annoying!!!: A Lexical and Frame-Semantic Embedding Based Data Augmentation Approach to Automatic Categorization of Annoying Behaviors using {\#}petpeeve Tweets}",
+    author = "Wang, William Yang  and
+      Yang, Diyi",
+    editor = "M{\`a}rquez, Llu{\'i}s  and
+      Callison-Burch, Chris  and
+      Su, Jian",
+    booktitle = "Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing",
+    month = sep,
+    year = "2015",
+    address = "Lisbon, Portugal",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/D15-1306/",
+    doi = "10.18653/v1/D15-1306",
+    pages = "2557--2563"
+}
+
+
+@inproceedings{min-etal-2020-syntactic,
+    title = "{Syntactic Data Augmentation Increases Robustness to Inference Heuristics}",
+    author = "Min, Junghyun  and
+      McCoy, R. Thomas  and
+      Das, Dipanjan  and
+      Pitler, Emily  and
+      Linzen, Tal",
+    editor = "Jurafsky, Dan  and
+      Chai, Joyce  and
+      Schluter, Natalie  and
+      Tetreault, Joel",
+    booktitle = "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+    month = jul,
+    year = "2020",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2020.acl-main.212/",
+    doi = "10.18653/v1/2020.acl-main.212",
+    pages = "2339--2352",
+    abstract = "Pretrained neural models such as BERT, when fine-tuned to perform natural language inference (NLI), often show high accuracy on standard datasets, but display a surprising lack of sensitivity to word order on controlled challenge sets. We hypothesize that this issue is not primarily caused by the pretrained model`s limitations, but rather by the paucity of crowdsourced NLI examples that might convey the importance of syntactic structure at the fine-tuning stage. We explore several methods to augment standard training sets with syntactically informative examples, generated by applying syntactic transformations to sentences from the MNLI corpus. The best-performing augmentation method, subject/object inversion, improved BERT`s accuracy on controlled examples that diagnose sensitivity to word order from 0.28 to 0.73, without affecting performance on the MNLI test set. This improvement generalized beyond the particular construction used for data augmentation, suggesting that augmentation causes BERT to recruit abstract syntactic representations."
+}
+
+@inproceedings{fabbri-etal-2021-improving,
+    title = "{Improving Zero and Few-Shot Abstractive Summarization with Intermediate Fine-tuning and Data Augmentation}",
+    author = "Fabbri, Alexander  and
+      Han, Simeng  and
+      Li, Haoyuan  and
+      Li, Haoran  and
+      Ghazvininejad, Marjan  and
+      Joty, Shafiq  and
+      Radev, Dragomir  and
+      Mehdad, Yashar",
+    editor = "Toutanova, Kristina  and
+      Rumshisky, Anna  and
+      Zettlemoyer, Luke  and
+      Hakkani-Tur, Dilek  and
+      Beltagy, Iz  and
+      Bethard, Steven  and
+      Cotterell, Ryan  and
+      Chakraborty, Tanmoy  and
+      Zhou, Yichao",
+    booktitle = "Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+    month = jun,
+    year = "2021",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2021.naacl-main.57/",
+    doi = "10.18653/v1/2021.naacl-main.57",
+    pages = "704--717",
+    abstract = "Models pretrained with self-supervised objectives on large text corpora achieve state-of-the-art performance on English text summarization tasks. However, these models are typically fine-tuned on hundreds of thousands of data points, an infeasible requirement when applying summarization to new, niche domains. In this work, we introduce a novel and generalizable method, called WikiTransfer, for fine-tuning pretrained models for summarization in an unsupervised, dataset-specific manner. WikiTransfer fine-tunes pretrained models on pseudo-summaries, produced from generic Wikipedia data, which contain characteristics of the target dataset, such as the length and level of abstraction of the desired summaries. WikiTransfer models achieve state-of-the-art, zero-shot abstractive summarization performance on the CNN-DailyMail dataset and demonstrate the effectiveness of our approach on three additional diverse datasets. These models are more robust to noisy data and also achieve better or comparable few-shot performance using 10 and 100 training examples when compared to few-shot transfer from other summarization datasets. To further boost performance, we employ data augmentation via round-trip translation as well as introduce a regularization term for improved few-shot transfer. To understand the role of dataset aspects in transfer performance and the quality of the resulting output summaries, we further study the effect of the components of our unsupervised fine-tuning data and analyze few-shot performance using both automatic and human evaluation."
+}
+
+@INPROCEEDINGS{10471880,
+  author={Mai, Hieu-Hien and Luong, Ngoc Hoang},
+  booktitle={2023 RIVF International Conference on Computing and Communication Technologies (RIVF)}, 
+  title={{Data Augmentation with GPT-3.5 for Vietnamese Natural Language Inference}}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={435-440},
+  keywords={Training;Temperature distribution;Limiting;Filtering;Pipelines;Computer architecture;Data augmentation;data augmentation;large language model;natural language inference;NLP},
+  doi={10.1109/RIVF60135.2023.10471880}}
+
+
+@inproceedings{zhang-etal-2020-parallel,
+    title = "{Parallel Data Augmentation for Formality Style Transfer}",
+    author = "Zhang, Yi  and
+      Ge, Tao  and
+      Sun, Xu",
+    editor = "Jurafsky, Dan  and
+      Chai, Joyce  and
+      Schluter, Natalie  and
+      Tetreault, Joel",
+    booktitle = "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+    month = jul,
+    year = "2020",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2020.acl-main.294/",
+    doi = "10.18653/v1/2020.acl-main.294",
+    pages = "3221--3228",
+    abstract = "The main barrier to progress in the task of Formality Style Transfer is the inadequacy of training data. In this paper, we study how to augment parallel data and propose novel and simple data augmentation methods for this task to obtain useful sentence pairs with easily accessible models and systems. Experiments demonstrate that our augmented parallel data largely helps improve formality style transfer when it is used to pre-train the model, leading to the state-of-the-art results in the GYAFC benchmark dataset."
+}
+
+@inproceedings{lewis-etal-2020-bart,
+    title = "{{BART}: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension}",
+    author = "Lewis, Mike  and
+      Liu, Yinhan  and
+      Goyal, Naman  and
+      Ghazvininejad, Marjan  and
+      Mohamed, Abdelrahman  and
+      Levy, Omer  and
+      Stoyanov, Veselin  and
+      Zettlemoyer, Luke",
+    editor = "Jurafsky, Dan  and
+      Chai, Joyce  and
+      Schluter, Natalie  and
+      Tetreault, Joel",
+    booktitle = "Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics",
+    month = jul,
+    year = "2020",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2020.acl-main.703/",
+    doi = "10.18653/v1/2020.acl-main.703",
+    pages = "7871--7880",
+    abstract = "We present BART, a denoising autoencoder for pretraining sequence-to-sequence models. BART is trained by (1) corrupting text with an arbitrary noising function, and (2) learning a model to reconstruct the original text. It uses a standard Tranformer-based neural machine translation architecture which, despite its simplicity, can be seen as generalizing BERT (due to the bidirectional encoder), GPT (with the left-to-right decoder), and other recent pretraining schemes. We evaluate a number of noising approaches, finding the best performance by both randomly shuffling the order of sentences and using a novel in-filling scheme, where spans of text are replaced with a single mask token. BART is particularly effective when fine tuned for text generation but also works well for comprehension tasks. It matches the performance of RoBERTa on GLUE and SQuAD, and achieves new state-of-the-art results on a range of abstractive dialogue, question answering, and summarization tasks, with gains of up to 3.5 ROUGE. BART also provides a 1.1 BLEU increase over a back-translation system for machine translation, with only target language pretraining. We also replicate other pretraining schemes within the BART framework, to understand their effect on end-task performance."
+}
+
+
+@inproceedings{bartpho,
+    title     = {{BARTpho: Pre-trained Sequence-to-Sequence Models for Vietnamese}},
+    author    = {Nguyen Luong Tran and Duong Minh Le and Dat Quoc Nguyen},
+    booktitle = {Proceedings of the 23rd Annual Conference of the International Speech Communication Association},
+    year      = {2022}
+}
+
+@inproceedings{papineni-etal-2002-bleu,
+    title = "{{B}leu: a Method for Automatic Evaluation of Machine Translation}",
+    author = "Papineni, Kishore  and
+      Roukos, Salim  and
+      Ward, Todd  and
+      Zhu, Wei-Jing",
+    editor = "Isabelle, Pierre  and
+      Charniak, Eugene  and
+      Lin, Dekang",
+    booktitle = "Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics",
+    month = jul,
+    year = "2002",
+    address = "Philadelphia, Pennsylvania, USA",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/P02-1040/",
+    doi = "10.3115/1073083.1073135",
+    pages = "311--318"
+}
+
+@inproceedings{banerjee-lavie-2005-meteor,
+    title = "{{METEOR}: An Automatic Metric for {MT} Evaluation with Improved Correlation with Human Judgments}",
+    author = "Banerjee, Satanjeev  and
+      Lavie, Alon",
+    editor = "Goldstein, Jade  and
+      Lavie, Alon  and
+      Lin, Chin-Yew  and
+      Voss, Clare",
+    booktitle = "Proceedings of the {ACL} Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization",
+    month = jun,
+    year = "2005",
+    address = "Ann Arbor, Michigan",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/W05-0909/",
+    pages = "65--72"
+}
+
+@inproceedings{
+loshchilov2018decoupled,
+title={{Decoupled Weight Decay Regularization}},
+author={Ilya Loshchilov and Frank Hutter},
+booktitle={International Conference on Learning Representations},
+year={2019},
+url={https://openreview.net/forum?id=Bkg6RiCqY7},
+}
+
+@article{bfe04c77-3771-3777-add2-56888b3df1c3,
+ ISSN = {00783188},
+ URL = {http://www.jstor.org/stable/20006684},
+ author = {Fang Kuei Li},
+ journal = {Oceanic Linguistics Special Publications},
+ pages = {i--389},
+ publisher = {University of Hawai'i Press},
+ title = {{A Handbook of Comparative Tai}},
+ urldate = {2025-11-17},
+ year = {1977}
+}
+
+
+
+
+@article{liao2017maternalgrandmother,
+   author = "Hanbo Liao",
+   title = "{Proto‑Tai reconstruction of ‘maternal grandmother’ revisited}", 
+   journal= "Language and Linguistics",
+   year = "2017",
+   volume = "18",
+   number = "1",
+   pages = "116-140",
+   doi = "https://doi.org/10.1075/lali.18.1.04lia",
+   url = "https://www.jbe-platform.com/content/journals/10.1075/lali.18.1.04lia",
+   publisher = "John Benjamins",
+   issn = "1606-822X",
+   type = "Journal Article",
+   keywords = "taboo avoidance",
+   keywords = "Proto‑Tai",
+   keywords = "phonological contamination",
+   keywords = "analogy",
+   keywords = "reconstruction",
+  }
+
+
+@article{10.1162/ling_a_00462,
+    author = {Kalin, Laura and Rolle, Nicholas},
+    title = {Deconstructing Subcategorization: Conditions on Insertion vs. Conditions on Position},
+    journal = {Linguistic Inquiry},
+    volume = {55},
+    number = {1},
+    pages = {197-218},
+    year = {2023},
+    month = {12},
+    abstract = {The mechanism of subcategorization has been used for decades to account for many sorts of idiosyncratic behaviors of lexical items. We home in on the use of subcategorization for regulating the behaviors of individual exponents (morphs, vocabulary items), in particular, for infixation and suppletive allomorphy. We compare two distinct approaches, (a) enriched subcategorization, which takes there to be one mechanism governing both infixation and suppletive allomorphy, with their differences coming from enrichments to the (single) condition on an exponent’s realization, and (b) split subcategorization, which teases apart a mechanism governing infixation (a condition on an exponent’s position) from one governing suppletive allomorphy (a condition on the choice/insertion of an exponent). On the basis of a number of empirical and theoretical considerations, we argue for the latter approach: subcategorization at the exponent level must be deconstructed into (at least) two distinct conditions/mechanisms.},
+    issn = {0024-3892},
+    doi = {10.1162/ling_a_00462},
+    url = {https://doi.org/10.1162/ling_a_00462},
+    eprint = {https://direct.mit.edu/ling/article-pdf/55/1/197/2202186/ling_a_00462.pdf},
+}
+
+
+
+
+@inproceedings{
+nguyen2025not,
+title={{Not All Data Augmentation Works: A Typology-Aware Study for Low-Resource Neural Machine Translation in Vietnamese Ethnic Minority Languages}},
+author={Long Nguyen and Dat T. Truong and Nhan D. Tran and Quynh Vo and Quy Tran Nguyen and Tho Quan},
+booktitle={Second Workshop on Language Models for Underserved Communities (LM4UC)},
+year={2025},
+url={https://openreview.net/forum?id=XziOk4BTfv}
+}
+
+
+@inproceedings{wang-etal-2018-switchout,
+    title = "{{S}witch{O}ut: an Efficient Data Augmentation Algorithm for Neural Machine Translation}",
+    author = "Wang, Xinyi  and
+      Pham, Hieu  and
+      Dai, Zihang  and
+      Neubig, Graham",
+    editor = "Riloff, Ellen  and
+      Chiang, David  and
+      Hockenmaier, Julia  and
+      Tsujii, Jun{'}ichi",
+    booktitle = "Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing",
+    month = oct # "-" # nov,
+    year = "2018",
+    address = "Brussels, Belgium",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/D18-1100/",
+    doi = "10.18653/v1/D18-1100",
+    pages = "856--861",
+    abstract = "In this work, we examine methods for data augmentation for text-based tasks such as neural machine translation (NMT). We formulate the design of a data augmentation policy with desirable properties as an optimization problem, and derive a generic analytic solution. This solution not only subsumes some existing augmentation schemes, but also leads to an extremely simple data augmentation strategy for NMT: randomly replacing words in both the source sentence and the target sentence with other random words from their corresponding vocabularies. We name this method SwitchOut. Experiments on three translation datasets of different scales show that SwitchOut yields consistent improvements of about 0.5 BLEU, achieving better or comparable performances to strong alternatives such as word dropout (Sennrich et al., 2016a). Code to implement this method is included in the appendix."
+}
+
+
+@article{mahamud2023distributional,
+  title={{Distributional data augmentation methods for low resource language}},
+  author={Mahamud, Mosleh and Lee, Zed and Samsten, Isak},
+  journal={arXiv preprint arXiv:2309.04862},
+  year={2023}
+}
+
+
+@inproceedings{lamar-kaya-2023-measuring,
+    title = "{Measuring the Impact of Data Augmentation Methods for Extremely Low-Resource {NMT}}",
+    author = "Lamar, Annie  and
+      Kaya, Zeyneb",
+    editor = "Ojha, Atul Kr.  and
+      Liu, Chao-hong  and
+      Vylomova, Ekaterina  and
+      Pirinen, Flammie  and
+      Abbott, Jade  and
+      Washington, Jonathan  and
+      Oco, Nathaniel  and
+      Malykh, Valentin  and
+      Logacheva, Varvara  and
+      Zhao, Xiaobing",
+    booktitle = "Proceedings of the Sixth Workshop on Technologies for Machine Translation of Low-Resource Languages (LoResMT 2023)",
+    month = may,
+    year = "2023",
+    address = "Dubrovnik, Croatia",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2023.loresmt-1.8/",
+    doi = "10.18653/v1/2023.loresmt-1.8",
+    pages = "101--109",
+    abstract = "Data augmentation (DA) is a popular strategy to boost performance on neural machine translation tasks. The impact of data augmentation in low-resource environments, particularly for diverse and scarce languages, is understudied. In this paper, we introduce a simple yet novel metric to measure the impact of several different data augmentation strategies. This metric, which we call Data Augmentation Advantage (DAA), quantifies how many true data pairs a synthetic data pair is worth in a particular experimental context. We demonstrate the utility of this metric by training models for several linguistically-varied datasets using the data augmentation methods of back-translation, SwitchOut, and sentence concatenation. In lower-resource tasks, DAA is an especially valuable metric for comparing DA performance as it provides a more effective way to quantify gains when BLEU scores are especially small and results across diverse languages are more divergent and difficult to assess."
+}
+
+
+@inproceedings{bulte-tezcan-2019-neural,
+    title = "{Neural Fuzzy Repair: Integrating Fuzzy Matches into Neural Machine Translation}",
+    author = "Bulte, Bram  and
+      Tezcan, Arda",
+    editor = "Korhonen, Anna  and
+      Traum, David  and
+      M{\`a}rquez, Llu{\'i}s",
+    booktitle = "Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics",
+    month = jul,
+    year = "2019",
+    address = "Florence, Italy",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/P19-1175/",
+    doi = "10.18653/v1/P19-1175",
+    pages = "1800--1809",
+    abstract = "We present a simple yet powerful data augmentation method for boosting Neural Machine Translation (NMT) performance by leveraging information retrieved from a Translation Memory (TM). We propose and test two methods for augmenting NMT training data with fuzzy TM matches. Tests on the DGT-TM data set for two language pairs show consistent and substantial improvements over a range of baseline systems. The results suggest that this method is promising for any translation environment in which a sizeable TM is available and a certain amount of repetition across translations is to be expected, especially considering its ease of implementation."
+}
+
+
+@inproceedings{
+belinkov2018synthetic,
+title={{Synthetic and Natural Noise Both Break Neural Machine Translation}},
+author={Yonatan Belinkov and Yonatan Bisk},
+booktitle={International Conference on Learning Representations},
+year={2018},
+url={https://openreview.net/forum?id=BJ8vJebC-},
+}
+
+@inproceedings{li-specia-2019-improving,
+    title = "{Improving Neural Machine Translation Robustness via Data Augmentation: Beyond Back-Translation}",
+    author = "Li, Zhenhao  and
+      Specia, Lucia",
+    editor = "Xu, Wei  and
+      Ritter, Alan  and
+      Baldwin, Tim  and
+      Rahimi, Afshin",
+    booktitle = "Proceedings of the 5th Workshop on Noisy User-generated Text (W-NUT 2019)",
+    month = nov,
+    year = "2019",
+    address = "Hong Kong, China",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/D19-5543/",
+    doi = "10.18653/v1/D19-5543",
+    pages = "328--336",
+    abstract = "Neural Machine Translation (NMT) models have been proved strong when translating clean texts, but they are very sensitive to noise in the input. Improving NMT models robustness can be seen as a form of ``domain'' adaption to noise. The recently created Machine Translation on Noisy Text task corpus provides noisy-clean parallel data for a few language pairs, but this data is very limited in size and diversity. The state-of-the-art approaches are heavily dependent on large volumes of back-translated data. This paper has two main contributions: Firstly, we propose new data augmentation methods to extend limited noisy data and further improve NMT robustness to noise while keeping the models small. Secondly, we explore the effect of utilizing noise from external data in the form of speech transcripts and show that it could help robustness."
+}
+
+
+
+@inproceedings{popovic-2015-chrf,
+    title = "{chr{F}: character n-gram {F}-score for automatic {MT} evaluation}",
+    author = "Popovi{\'c}, Maja",
+    editor = "Bojar, Ond{\v{r}}ej  and
+      Chatterjee, Rajan  and
+      Federmann, Christian  and
+      Haddow, Barry  and
+      Hokamp, Chris  and
+      Huck, Matthias  and
+      Logacheva, Varvara  and
+      Pecina, Pavel",
+    booktitle = "Proceedings of the Tenth Workshop on Statistical Machine Translation",
+    month = sep,
+    year = "2015",
+    address = "Lisbon, Portugal",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/W15-3049/",
+    doi = "10.18653/v1/W15-3049",
+    pages = "392--395"
+}
+
+@inproceedings{popovic-2017-chrf,
+    title = "{chr{F}++: words helping character n-grams}",
+    author = "Popovi{\'c}, Maja",
+    editor = "Bojar, Ond{\v{r}}ej  and
+      Buck, Christian  and
+      Chatterjee, Rajen  and
+      Federmann, Christian  and
+      Graham, Yvette  and
+      Haddow, Barry  and
+      Huck, Matthias  and
+      Yepes, Antonio Jimeno  and
+      Koehn, Philipp  and
+      Kreutzer, Julia",
+    booktitle = "Proceedings of the Second Conference on Machine Translation",
+    month = sep,
+    year = "2017",
+    address = "Copenhagen, Denmark",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/W17-4770/",
+    doi = "10.18653/v1/W17-4770",
+    pages = "612--618"
+}
+
+
+@inproceedings{zhang-etal-2024-teaching,
+    title = "{Teaching Large Language Models an Unseen Language on the Fly}",
+    author = "Zhang, Chen  and
+      Liu, Xiao  and
+      Lin, Jiuheng  and
+      Feng, Yansong",
+    editor = "Ku, Lun-Wei  and
+      Martins, Andre  and
+      Srikumar, Vivek",
+    booktitle = "Findings of the Association for Computational Linguistics: ACL 2024",
+    month = aug,
+    year = "2024",
+    address = "Bangkok, Thailand",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2024.findings-acl.519/",
+    doi = "10.18653/v1/2024.findings-acl.519",
+    pages = "8783--8800",
+    abstract = "Existing large language models struggle to support numerous low-resource languages, particularly the extremely low-resource ones, for which there is minimal training data available for effective parameter updating. We thus investigate whether LLMs can learn a new language on the fly solely through prompting. To study this question, we collect a research suite for Zhuang, a language supported by no LLMs currently. We introduce DiPMT++, a framework for adapting LLMs to unseen languages by in-context learning. Using a dictionary and 5K parallel sentences only, DiPMT++ significantly enhances the performance of GPT-4 from 0 to 16 BLEU for Chinese-to-Zhuang translation and achieves 32 BLEU for Zhuang-to-Chinese translation. We also validate the effectiveness of our framework on Kalamang, another unseen language. Furthermore, we demonstrate the practical utility of DiPMT++ in aiding humans in translating completely unseen languages, which could contribute to the preservation of linguistic diversity."
+}
+
+
+@inproceedings{NIPS2017_3f5ee243,
+ author = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N and Kaiser, \L ukasz and Polosukhin, Illia},
+ booktitle = {Advances in Neural Information Processing Systems},
+ editor = {I. Guyon and U. Von Luxburg and S. Bengio and H. Wallach and R. Fergus and S. Vishwanathan and R. Garnett},
+ pages = {},
+ publisher = {Curran Associates, Inc.},
+ title = {{Attention is All you Need}},
+ url = {https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf},
+ volume = {30},
+ year = {2017}
+}
+
+
+@inproceedings{tiedemann-thottingal-2020-opus,
+    title = "{{OPUS}-{MT} {--} Building open translation services for the World}",
+    author = {Tiedemann, J{\"o}rg  and
+      Thottingal, Santhosh},
+    editor = "Martins, Andr{\'e}  and
+      Moniz, Helena  and
+      Fumega, Sara  and
+      Martins, Bruno  and
+      Batista, Fernando  and
+      Coheur, Luisa  and
+      Parra, Carla  and
+      Trancoso, Isabel  and
+      Turchi, Marco  and
+      Bisazza, Arianna  and
+      Moorkens, Joss  and
+      Guerberof, Ana  and
+      Nurminen, Mary  and
+      Marg, Lena  and
+      Forcada, Mikel L.",
+    booktitle = "Proceedings of the 22nd Annual Conference of the European Association for Machine Translation",
+    month = nov,
+    year = "2020",
+    address = "Lisboa, Portugal",
+    publisher = "European Association for Machine Translation",
+    url = "https://aclanthology.org/2020.eamt-1.61/",
+    pages = "479--480",
+    abstract = "This paper presents OPUS-MT a project that focuses on the development of free resources and tools for machine translation. The current status is a repository of over 1,000 pre-trained neural machine translation models that are ready to be launched in on-line translation services. For this we also provide open source implementations of web applications that can run efficiently on average desktop hardware with a straightforward setup and installation."
+}
+
+@Article{Tiedemann2024,
+author={Tiedemann, J{\"o}rg
+and Aulamo, Mikko
+and Bakshandaeva, Daria
+and Boggia, Michele
+and Gr{\"o}nroos, Stig-Arne
+and Nieminen, Tommi
+and Raganato, Alessandro
+and Scherrer, Yves
+and V{\'a}zquez, Ra{\'u}l
+and Virpioja, Sami},
+title={{Democratizing neural machine translation with OPUS-MT}},
+journal={Language Resources and Evaluation},
+year={2024},
+month={Jun},
+day={01},
+volume={58},
+number={2},
+pages={713-755},
+abstract={This paper presents the OPUS ecosystem with a focus on the development of open machine translation models and tools, and their integration into end-user applications, development platforms and professional workflows. We discuss our ongoing mission of increasing language coverage and translation quality, and also describe work on the development of modular translation models and speed-optimized compact solutions for real-time translation on regular desktops and small devices.},
+issn={1574-0218},
+doi={10.1007/s10579-023-09704-w},
+url={https://doi.org/10.1007/s10579-023-09704-w}
+}
+
+@InProceedings{mariannmt,
+    title     = {{Marian: Fast Neural Machine Translation in {C++}}},
+    author    = {Junczys-Dowmunt, Marcin and Grundkiewicz, Roman and
+                 Dwojak, Tomasz and Hoang, Hieu and Heafield, Kenneth and
+                 Neckermann, Tom and Seide, Frank and Germann, Ulrich and
+                 Fikri Aji, Alham and Bogoychev, Nikolay and
+                 Martins, Andr\'{e} F. T. and Birch, Alexandra},
+    booktitle = {Proceedings of ACL 2018, System Demonstrations},
+    pages     = {116--121},
+    publisher = {Association for Computational Linguistics},
+    year      = {2018},
+    month     = {July},
+    address   = {Melbourne, Australia},
+    url       = {http://www.aclweb.org/anthology/P18-4020}
+}
+
+
+@inproceedings{
+Zhu2020Incorporating,
+title={{Incorporating BERT into Neural Machine Translation}},
+author={Jinhua Zhu and Yingce Xia and Lijun Wu and Di He and Tao Qin and Wengang Zhou and Houqiang Li and Tieyan Liu},
+booktitle={International Conference on Learning Representations},
+year={2020},
+url={https://openreview.net/forum?id=Hyl7ygStwB}
+}
+
+@inproceedings{phan-etal-2022-vit5,
+    title = "{{V}i{T}5: Pretrained Text-to-Text Transformer for {V}ietnamese Language Generation}",
+    author = "Phan, Long  and
+      Tran, Hieu  and
+      Nguyen, Hieu  and
+      Trinh, Trieu H.",
+    editor = "Ippolito, Daphne  and
+      Li, Liunian Harold  and
+      Pacheco, Maria Leonor  and
+      Chen, Danqi  and
+      Xue, Nianwen",
+    booktitle = "Proceedings of the 2022 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies: Student Research Workshop",
+    month = jul,
+    year = "2022",
+    address = "Hybrid: Seattle, Washington + Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.naacl-srw.18/",
+    doi = "10.18653/v1/2022.naacl-srw.18",
+    pages = "136--142",
+    abstract = "We present ViT5, a pretrained Transformer-based encoder-decoder model for the Vietnamese language. With T5-style self-supervised pretraining, ViT5 is trained on a large corpus of high-quality and diverse Vietnamese texts. We benchmark ViT5 on two downstream text generation tasks, Abstractive Text Summarization and Named Entity Recognition. Although Abstractive Text Summarization has been widely studied for the English language thanks to its rich and large source of data, there has been minimal research into the same task in Vietnamese, a much lower resource language. In this work, we perform exhaustive experiments on both Vietnamese Abstractive Summarization and Named Entity Recognition, validating the performance of ViT5 against many other pretrained Transformer-based encoder-decoder models. Our experiments show that ViT5 significantly outperforms existing models and achieves state-of-the-art results on Vietnamese Text Summarization. On the task of Named Entity Recognition, ViT5 is competitive against previous best results from pretrained encoder-based Transformer models. Further analysis shows the importance of context length during the self-supervised pretraining on downstream performance across different settings."
+}
+
+
+@article{liu-etal-2020-multilingual-denoising,
+    title = "{Multilingual Denoising Pre-training for Neural Machine Translation}",
+    author = "Liu, Yinhan  and
+      Gu, Jiatao  and
+      Goyal, Naman  and
+      Li, Xian  and
+      Edunov, Sergey  and
+      Ghazvininejad, Marjan  and
+      Lewis, Mike  and
+      Zettlemoyer, Luke",
+    editor = "Johnson, Mark  and
+      Roark, Brian  and
+      Nenkova, Ani",
+    journal = "Transactions of the Association for Computational Linguistics",
+    volume = "8",
+    year = "2020",
+    address = "Cambridge, MA",
+    publisher = "MIT Press",
+    url = "https://aclanthology.org/2020.tacl-1.47/",
+    doi = "10.1162/tacl_a_00343",
+    pages = "726--742",
+    abstract = "This paper demonstrates that multilingual denoising pre-training produces significant performance gains across a wide variety of machine translation (MT) tasks. We present mBART{---}a sequence-to-sequence denoising auto-encoder pre-trained on large-scale monolingual corpora in many languages using the BART objective (Lewis et al., 2019). mBART is the first method for pre-training a complete sequence-to-sequence model by denoising full texts in multiple languages, whereas previous approaches have focused only on the encoder, decoder, or reconstructing parts of the text. Pre-training a complete model allows it to be directly fine-tuned for supervised (both sentence-level and document-level) and unsupervised machine translation, with no task- specific modifications. We demonstrate that adding mBART initialization produces performance gains in all but the highest-resource settings, including up to 12 BLEU points for low resource MT and over 5 BLEU points for many document-level and unsupervised models. We also show that it enables transfer to language pairs with no bi-text or that were not in the pre-training corpus, and present extensive analysis of which factors contribute the most to effective pre-training.1"
+}
+
+@inproceedings{tran2021bartpho,
+  title={{BARTpho}: Pre-trained Sequence-to-Sequence Models for {V}ietnamese},
+  author={Tran, Nguyen Luong and Le, Duong Minh and Nguyen, Dat Quoc},
+  booktitle={Proceedings of the 23rd Annual Conference of the International Speech Communication Association (INTERSPEECH)},
+  pages={2300--2304},
+  year={2022}
+}
+
+@inproceedings{jin2024align,
+  title={Align-to-Distill: Trainable Attention Alignment for Knowledge Distillation in Neural Machine Translation},
+  author={Jin, Heegon and Son, Seonil and Park, Jemin and Kim, Youngseok and Noh, Hyungjong and Lee, Yeonsoo},
+  booktitle={Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING)},
+  pages={722--732},
+  year={2024}
+}
+
+@inproceedings{dou2021word,
+  title={Word Alignment by Fine-tuning Embeddings on Parallel Corpora},
+  author={Dou, Zi-Yi and Neubig, Graham},
+  booktitle={Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics (EACL)},
+  pages={2112--2128},
+  year={2021}
+}
+
+@inproceedings{chen2020accurate,
+  title={Accurate Word Alignment Induction from Neural Machine Translation},
+  author={Chen, Yun and Liu, Yang and Chen, Guanhua and Jiang, Xin and Liu, Qun},
+  booktitle={Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages={566--576},
+  year={2020}
+}
+
+@inproceedings{li2022structural,
+  title={Structural Supervision for Word Alignment and Machine Translation},
+  author={Li, Lei and Fan, Kai and Li, Hongjia and Yuan, Chun},
+  booktitle={Findings of the Association for Computational Linguistics: ACL 2022},
+  pages={4084--4094},
+  year={2022}
+}
+
+@inproceedings{ai2024zero,
+  title={Zero-shot Cross-Lingual Alignment for Embedding Initialization},
+  author={Ai, Xi and Huang, Zhiyong},
+  booktitle={Findings of the Association for Computational Linguistics: ACL 2024},
+  pages={5997--6007},
+  year={2024}
+}
+
+@inproceedings{hu2024dm,
+  title={{DM-BLI}: Dynamic Multiple Subspaces Alignment for Unsupervised Bilingual Lexicon Induction},
+  author={Hu, Ling and Xu, Yuemei},
+  booktitle={Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (ACL)},
+  pages={2041--2052},
+  year={2024}
+}
+
+@inproceedings{chi2021infoxlm,
+  title={{InfoXLM}: An Information-Theoretic Framework for Cross-Lingual Language Model Pre-Training},
+  author={Chi, Zewen and Dong, Li and Wei, Furu and Yang, Nan and Singhal, Saksham and Wang, Wenhui and Song, Xia and Mao, Xian-Ling and Huang, Heyan and Zhou, Ming},
+  booktitle={Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL)},
+  pages={3576--3588},
+  year={2021}
+}
+
+@inproceedings{wu2024direct,
+  title={Word Alignment as Preference for Machine Translation},
+  author={Wu, Qiyu and Nagata, Masaaki and Miao, Zhongtao and Tsuruoka, Yoshimasa},
+  booktitle={Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages={3223--3239},
+  year={2024}
+}
+
+@inproceedings{post2018call,
+  title={A Call for Clarity in Reporting {BLEU} Scores},
+  author={Post, Matt},
+  booktitle={Proceedings of the Third Conference on Machine Translation (WMT)},
+  pages={186--191},
+  year={2018}
+}
+
+@inproceedings{popovic2015chrf,
+  title={{chrF}: character n-gram {F}-score for automatic {MT} evaluation},
+  author={Popovi{\'c}, Maja},
+  booktitle={Proceedings of the 10th Workshop on Statistical Machine Translation (WMT)},
+  pages={392--395},
+  year={2015}
+}
+
+@inproceedings{banerjee2005meteor,
+  title={{METEOR}: An Automatic Metric for {MT} Evaluation with Improved Correlation with Human Judgments},
+  author={Banerjee, Satanjeev and Lavie, Alon},
+  booktitle={Proceedings of the ACL Workshop on Intrinsic and Extrinsic Evaluation Measures for Machine Translation and/or Summarization},
+  pages={65--72},
+  year={2005}
+}
+
+@inproceedings{rei2020comet,
+  title={{COMET}: A Neural Framework for {MT} Evaluation},
+  author={Rei, Ricardo and Stewart, Craig and Farinha, Ana C. and Lavie, Alon},
+  booktitle={Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages={2685--2702},
+  year={2020}
+}
+
+@inproceedings{koehn2004statistical,
+  title={Statistical Significance Tests for Machine Translation Evaluation},
+  author={Koehn, Philipp},
+  booktitle={Proceedings of the 2004 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages={388--395},
+  year={2004}
+}
+
+@inproceedings{vaswani2017attention,
+  title={Attention Is All You Need},
+  author={Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and Kaiser, {\L}ukasz and Polosukhin, Illia},
+  booktitle={Advances in Neural Information Processing Systems (NeurIPS)},
+  pages={5998--6008},
+  year={2017}
+}
+
+@inproceedings{bahdanau2015neural,
+  title={Neural Machine Translation by Jointly Learning to Align and Translate},
+  author={Bahdanau, Dzmitry and Cho, Kyunghyun and Bengio, Yoshua},
+  booktitle={International Conference on Learning Representations (ICLR)},
+  year={2015}
+}
+
+@inproceedings{voita2019analyzing,
+  title={Analyzing Multi-Head Self-Attention: Specialized Heads Do the Heavy Lifting, the Rest Can Be Pruned},
+  author={Voita, Elena and Talbot, David and Moiseev, Fedor and Sennrich, Rico and Titov, Ivan},
+  booktitle={Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics (ACL)},
+  pages={5797--5808},
+  year={2019}
+}
+
+@article{raffel2020exploring,
+  title={Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer},
+  author={Raffel, Colin and Shazeer, Noam and Roberts, Adam and Lee, Katherine and Narang, Sharan and Matena, Michael and Zhou, Yanqi and Li, Wei and Liu, Peter J.},
+  journal={Journal of Machine Learning Research (JMLR)},
+  volume={21},
+  number={140},
+  pages={1--67},
+  year={2020}
+}
+
+@inproceedings{phan2022vit5,
+  title={{ViT5}: Pretrained Text-to-Text Transformer for {V}ietnamese Language Processing},
+  author={Phan, Long and Tran, Hieu and Nguyen, Hieu and Trinh, Trieu H.},
+  booktitle={Proceedings of the 2022 Conference on Empirical Methods in Natural Language Processing (EMNLP)},
+  pages={3180--3190},
+  year={2022}
+}

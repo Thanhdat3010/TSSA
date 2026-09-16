@@ -219,7 +219,7 @@ Nhằm chứng minh về mặt khoa học rằng **TSSA không phụ thuộc và
 | | Shift-AET | `checkpoints/vit5_shift_aet_rhade` | 29.82 | 46.06 | 40.50 | -0.0926 | ✅ Hoàn tất |
 | | AWESOME-align | `checkpoints/vit5_awesome_align_rhade` | 29.96 | 46.12 | 40.94 | -0.1064 | ✅ Hoàn tất |
 | | CL-LSA (InfoNCE) | `checkpoints/vit5_cl_lsa_rhade` | 27.48 | 43.26 | 38.12 | -0.1943 | ✅ Hoàn tất |
-| | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_rhade` | **30.64** | **46.88** | [Đang tính] | [Đang tính] | 🚀 **TOP-1 TUYỆT ĐỐI (Vượt Vanilla & All Baselines)** |
+| | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_rhade` | **30.64** | **46.88** | **41.38** | **-0.0841** | 🚀 **TOP-1 TUYỆT ĐỐI (+0.36 BLEU, +0.41 chrF++, +0.29 METEOR)** |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Tày (`tay` → `vi`)** | Vanilla ViT5 Base | `checkpoints/vit5_vanilla_tay` | 34.99 | 44.72 | 35.93 | -0.2031 | ✅ Hoàn tất |
 | | Align-to-Distill (A2D) | `checkpoints/vit5_align_to_distill_tay` | 33.20 | 43.49 | 34.95 | -0.2126 | ✅ Hoàn tất |

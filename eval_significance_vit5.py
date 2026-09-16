@@ -123,7 +123,14 @@ def main():
 
     for lang in langs:
         tssa_path = os.path.join(args.checkpoints_dir, f"vit5_tssa_{lang}", "test_predictions.csv")
+        if not os.path.exists(tssa_path):
+            alt_tssa = os.path.join("checkpoints", "tssa_final", f"vit5_tssa_{lang}", "test_predictions.csv")
+            if os.path.exists(alt_tssa):
+                tssa_path = alt_tssa
+
         vanilla_path = os.path.join(args.checkpoints_dir, f"vit5_vanilla_{lang}", "test_predictions.csv")
+        if not os.path.exists(vanilla_path):
+            vanilla_path = os.path.join("checkpoints", f"vit5_vanilla_{lang}", "test_predictions.csv")
 
         _, refs, tssa_preds = load_predictions(tssa_path)
         if not refs:
@@ -145,6 +152,8 @@ def main():
 
         for comp in competitors:
             comp_path = os.path.join(args.checkpoints_dir, f"vit5_{comp}_{lang}", "test_predictions.csv")
+            if not os.path.exists(comp_path):
+                comp_path = os.path.join("checkpoints", f"vit5_{comp}_{lang}", "test_predictions.csv")
             if os.path.exists(comp_path):
                 _, _, c_preds = load_predictions(comp_path)
                 if c_preds:

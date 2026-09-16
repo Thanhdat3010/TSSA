@@ -238,7 +238,12 @@ def find_model_path(ckpt_dir, fallback_pretrained="vinai/bartpho-syllable"):
 
 def generate_heatmap_for_lang(lang, args, tokenizer):
     v_target = args.vanilla_ckpt or f"checkpoints/bartpho_vanilla_{lang}"
-    t_target = args.tssa_ckpt or f"checkpoints/tssa_{lang}"
+    t_target = args.tssa_ckpt
+    if not t_target:
+        if os.path.exists(f"checkpoints/tssa_final/tssa_{lang}"):
+            t_target = f"checkpoints/tssa_final/tssa_{lang}"
+        else:
+            t_target = f"checkpoints/tssa_{lang}"
 
     v_ckpt = find_model_path(v_target, fallback_pretrained="vinai/bartpho-syllable")
     t_ckpt = find_model_path(t_target, fallback_pretrained="vinai/bartpho-syllable")

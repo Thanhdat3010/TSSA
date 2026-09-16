@@ -60,15 +60,29 @@ def check_repetition(text):
             return True
     return False
 
-def find_best_cases(lang, checkpoints_dir="checkpoints", top_k=3):
-    v_path = os.path.join(checkpoints_dir, f"bartpho_vanilla_{lang}", "test_predictions.csv")
-    t_path = os.path.join(checkpoints_dir, f"tssa_{lang}", "test_predictions.csv")
+def find_best_cases(lang, checkpoints_dir="checkpoints", backbone="bartpho", top_k=3):
+    if backbone == "vit5":
+        vanilla_name = f"vit5_vanilla_{lang}"
+        tssa_name = f"vit5_tssa_{lang}"
+    else:
+        vanilla_name = f"bartpho_vanilla_{lang}"
+        tssa_name = f"tssa_{lang}"
+
+    v_path = os.path.join(checkpoints_dir, vanilla_name, "test_predictions.csv")
+    if not os.path.exists(v_path):
+        v_path = os.path.join("checkpoints", vanilla_name, "test_predictions.csv")
+
+    t_path = os.path.join(checkpoints_dir, tssa_name, "test_predictions.csv")
+    if not os.path.exists(t_path):
+        alt_t = os.path.join("checkpoints", "tssa_final", tssa_name, "test_predictions.csv")
+        if os.path.exists(alt_t):
+            t_path = alt_t
     
     v_rows = load_csv_predictions(v_path)
     t_rows = load_csv_predictions(t_path)
     
     if not v_rows or not t_rows:
-        print(f"[!] Không tìm thấy predictions cho {lang.upper()} (V: {bool(v_rows)}, T: {bool(t_rows)})")
+        print(f"[!] Không tìm thấy predictions cho {lang.upper()} ({backbone}) (V: {bool(v_rows)}, T: {bool(t_rows)})")
         return []
 
     src_k_v, ref_k_v, pred_k_v = get_columns(v_rows[0])
@@ -119,6 +133,7 @@ def find_best_cases(lang, checkpoints_dir="checkpoints", top_k=3):
 def main():
     parser = argparse.ArgumentParser(description="Extract Qualitative Cases for ACL Paper")
     parser.add_argument("--checkpoints_dir", type=str, default="checkpoints")
+    parser.add_argument("--backbone", type=str, default="bartpho", choices=["bartpho", "vit5"], help="Kiến trúc mô hình: bartpho hoặc vit5")
     parser.add_argument("--top_k", type=int, default=3)
     args = parser.parse_args()
 
@@ -126,11 +141,11 @@ def main():
     selected_cases = {}
     
     print("=" * 90)
-    print("      🔍 TRÍCH XUẤT CÁC MẪU CÂU ĐỊNH TÍNH TƯƠNG PHẢN CAO NHẤT (TABLE 6)")
+    print(f"      🔍 TRÍCH XUẤT CÁC MẪU CÂU ĐỊNH TÍNH TƯƠNG PHẢN CAO NHẤT (BACKBONE: {args.backbone.upper()})")
     print("=" * 90)
     
     for lang in langs:
-        cases = find_best_cases(lang, args.checkpoints_dir, args.top_k)
+        cases = find_best_cases(lang, args.checkpoints_dir, args.backbone, args.top_k)
         selected_cases[lang] = cases
         print(f"\n[{lang.upper()}] Tìm thấy {len(cases)} mẫu tiêu biểu:")
         for idx, c in enumerate(cases, 1):
@@ -141,9 +156,10 @@ def main():
             print(f"  [TSSA (Ours)]:    {c['t_pred']}  (chrF: {c['t_chrf']:.1f})")
             
     # Tạo sẵn mẫu LaTeX
+    backbone_title = "ViT5-base" if args.backbone == "vit5" else "BARTpho"
     latex_output = "\\begin{table*}[t]\n\\centering\\small\n"
-    latex_output += "\\caption{\\textbf{Qualitative Translation Case Studies on Hard Instances.} Comparing translations from Vanilla BARTpho and TSSA against the reference. Vanilla exhibits severe word repetition, clause truncation, or catastrophic token omission; TSSA restores fluent syntax and accurately translates domain terminology.}\n"
-    latex_output += "\\label{tab:qualitative_examples}\n\\vspace{4pt}\n"
+    latex_output += f"\\caption{{\\textbf{{Qualitative Translation Case Studies on Hard Instances ({backbone_title}).}} Comparing translations from Vanilla {backbone_title} and UniTSSA against the reference. Vanilla exhibits severe word repetition, clause truncation, or catastrophic token omission; UniTSSA restores fluent syntax and accurately translates domain terminology.}}\n"
+    latex_output += f"\\label{{tab:qualitative_examples_{args.backbone}}}\n\\vspace{{4pt}}\n"
     latex_output += "\\begin{tabular}{p{0.12\\textwidth}p{0.84\\textwidth}}\n\\toprule\n"
     
     for lang in langs:
@@ -155,12 +171,12 @@ def main():
         latex_output += "\\textbf{Source (" + lang.title() + ")} & " + c['src'] + " \\\\\n"
         latex_output += "\\textbf{Reference} & " + c['ref'] + " \\\\\n"
         latex_output += "\\textbf{Vanilla} & \\textcolor{red!80!black}{" + c['v_pred'] + "} \\\\\n"
-        latex_output += "\\textbf{TSSA (Ours)} & \\textcolor{topgreen}{" + c['t_pred'] + "} \\\\\n"
+        latex_output += "\\textbf{UniTSSA (Ours)} & \\textcolor{topgreen}{" + c['t_pred'] + "} \\\\\n"
         latex_output += "\\midrule\n"
         
     latex_output = latex_output.rstrip("\\midrule\n") + "\n\\bottomrule\n\\end{tabular}\n\\end{table*}\n"
     
-    out_tex_path = "docs/qualitative_table_snippet.tex"
+    out_tex_path = f"docs/qualitative_table_{args.backbone}.tex"
     with open(out_tex_path, "w", encoding="utf-8") as f:
         f.write(latex_output)
     print(f"\n[+] Đã lưu snippet bảng LaTeX vào: {out_tex_path}")

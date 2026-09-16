@@ -76,15 +76,29 @@ def load_predictions(pred_path):
     df["clean_src"] = df[src_col].astype(str).str.strip() if src_col else ""
     return df
 
-def analyze_language_length(lang, checkpoints_dir="checkpoints", run_comet=False, short_thresh=12, long_thresh=25):
-    vanilla_path = os.path.join(checkpoints_dir, f"bartpho_vanilla_{lang}", "test_predictions.csv")
-    tssa_path = os.path.join(checkpoints_dir, f"tssa_{lang}", "test_predictions.csv")
+def analyze_language_length(lang, checkpoints_dir="checkpoints", backbone="bartpho", run_comet=False, short_thresh=12, long_thresh=25):
+    if backbone == "vit5":
+        vanilla_name = f"vit5_vanilla_{lang}"
+        tssa_name = f"vit5_tssa_{lang}"
+    else:
+        vanilla_name = f"bartpho_vanilla_{lang}"
+        tssa_name = f"tssa_{lang}"
+
+    vanilla_path = os.path.join(checkpoints_dir, vanilla_name, "test_predictions.csv")
+    if not os.path.exists(vanilla_path):
+        vanilla_path = os.path.join("checkpoints", vanilla_name, "test_predictions.csv")
+
+    tssa_path = os.path.join(checkpoints_dir, tssa_name, "test_predictions.csv")
+    if not os.path.exists(tssa_path):
+        alt_tssa = os.path.join("checkpoints", "tssa_final", tssa_name, "test_predictions.csv")
+        if os.path.exists(alt_tssa):
+            tssa_path = alt_tssa
     
     df_v = load_predictions(vanilla_path)
     df_t = load_predictions(tssa_path)
     
     if df_v is None or df_t is None:
-        print(f"[!] Bỏ qua {lang.upper()}: Không tìm thấy đủ file dự đoán (Vanilla: {os.path.exists(vanilla_path)}, TSSA: {os.path.exists(tssa_path)})")
+        print(f"[!] Bỏ qua {lang.upper()} ({backbone}): Không tìm thấy đủ file dự đoán (Vanilla: {os.path.exists(vanilla_path)}, TSSA: {os.path.exists(tssa_path)})")
         return None, None
         
     refs = df_v["clean_ref"].tolist()
@@ -204,25 +218,30 @@ def analyze_language_length(lang, checkpoints_dir="checkpoints", run_comet=False
 def main():
     parser = argparse.ArgumentParser(description="TSSA Length & Hard Instance Performance Slicing")
     parser.add_argument("--checkpoints_dir", type=str, default="checkpoints", help="Thư mục chứa checkpoints")
+    parser.add_argument("--backbone", type=str, default="bartpho", choices=["bartpho", "vit5"], help="Kiến trúc mô hình: bartpho hoặc vit5")
     parser.add_argument("--lang", type=str, default="all", choices=["all", "rhade", "tay", "bahnaric"])
     parser.add_argument("--comet", action="store_true", help="Bật tính thêm COMET trên GPU (nhanh)")
     parser.add_argument("--short_thresh", type=int, default=12, help="Ngưỡng câu ngắn (<= N từ)")
     parser.add_argument("--long_thresh", type=int, default=25, help="Ngưỡng câu dài (> N từ)")
-    parser.add_argument("--output_md", type=str, default="docs/LENGTH_AND_HARD_ANALYSIS.md", help="Đường dẫn lưu báo cáo")
+    parser.add_argument("--output_md", type=str, default=None, help="Đường dẫn lưu báo cáo")
     args = parser.parse_args()
+
+    if args.output_md is None:
+        args.output_md = f"docs/LENGTH_AND_HARD_ANALYSIS_{args.backbone.upper()}.md"
 
     langs = ["rhade", "tay", "bahnaric"] if args.lang == "all" else [args.lang]
     all_length_data = []
     all_hard_data = []
     
     print("=" * 110)
-    print("      📊 BÁO CÁO BÓC TÁCH HIỆU NĂNG THEO ĐỘ DÀI CÂU & CÂU KHÓ (LENGTH & HARD-INSTANCE SLICING)")
+    print(f"      📊 BÁO CÁO BÓC TÁCH HIỆU NĂNG THEO ĐỘ DÀI CÂU & CÂU KHÓ (BACKBONE: {args.backbone.upper()})")
     print("=" * 110)
 
     for lang in langs:
         l_rows, h_rows = analyze_language_length(
             lang,
             checkpoints_dir=args.checkpoints_dir,
+            backbone=args.backbone,
             run_comet=args.comet,
             short_thresh=args.short_thresh,
             long_thresh=args.long_thresh

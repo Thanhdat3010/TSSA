@@ -138,9 +138,21 @@ def main():
 
     for lang in langs:
         tssa_path = os.path.join(args.checkpoints_dir, f"tssa_{lang}", "test_predictions.csv")
+        if not os.path.exists(tssa_path):
+            alt_tssa = os.path.join("checkpoints", "tssa_final", f"tssa_{lang}", "test_predictions.csv")
+            if os.path.exists(alt_tssa):
+                tssa_path = alt_tssa
+
         vanilla_path = os.path.join(args.checkpoints_dir, f"bartpho_vanilla_{lang}", "test_predictions.csv")
+        if not os.path.exists(vanilla_path):
+            vanilla_path = os.path.join("checkpoints", f"bartpho_vanilla_{lang}", "test_predictions.csv")
+
         strong_model = strongest_baselines.get(lang)
-        strong_path = os.path.join(args.checkpoints_dir, strong_model, "test_predictions.csv") if strong_model else None
+        strong_path = None
+        if strong_model:
+            strong_path = os.path.join(args.checkpoints_dir, strong_model, "test_predictions.csv")
+            if not os.path.exists(strong_path):
+                strong_path = os.path.join("checkpoints", strong_model, "test_predictions.csv")
 
         _, refs, tssa_preds = load_predictions(tssa_path)
         if not refs:

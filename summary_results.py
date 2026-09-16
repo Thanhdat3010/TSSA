@@ -239,6 +239,7 @@ def generate_ablation_summary(compute_comet=False):
 
 def main():
     parser = argparse.ArgumentParser(description="Summarize evaluation results across all models.")
+    parser.add_argument("--checkpoints_dir", type=str, default=None, help="Thư mục cụ thể cần quét (ví dụ: checkpoints/tssa_final)")
     parser.add_argument("--comet", action="store_true", default=False, help="Tính thêm điểm COMET (Unbabel/wmt20-comet-da)")
     parser.add_argument("--ablation", action="store_true", default=False, help="Chỉ xuất bảng tổng kết Ablation Study")
     args = parser.parse_args()
@@ -258,10 +259,19 @@ def main():
     print("=" * 130)
 
     all_results = []
-    if os.path.exists("checkpoints"):
-        all_results.extend(summarize_checkpoints_in_dir("checkpoints", compute_comet=args.comet))
-    if os.path.exists("checkpoints_10epochs"):
-        all_results.extend(summarize_checkpoints_in_dir("checkpoints_10epochs", compute_comet=args.comet))
+    if args.checkpoints_dir:
+        if os.path.exists(args.checkpoints_dir):
+            all_results.extend(summarize_checkpoints_in_dir(args.checkpoints_dir, compute_comet=args.comet))
+        else:
+            print(f"[!] Thư mục {args.checkpoints_dir} không tồn tại!")
+            return
+    else:
+        if os.path.exists("checkpoints/tssa_final"):
+            all_results.extend(summarize_checkpoints_in_dir("checkpoints/tssa_final", compute_comet=args.comet))
+        if os.path.exists("checkpoints"):
+            all_results.extend(summarize_checkpoints_in_dir("checkpoints", compute_comet=args.comet))
+        if os.path.exists("checkpoints_10epochs"):
+            all_results.extend(summarize_checkpoints_in_dir("checkpoints_10epochs", compute_comet=args.comet))
 
     if not all_results:
         print("[!] Chưa tìm thấy checkpoint nào.")

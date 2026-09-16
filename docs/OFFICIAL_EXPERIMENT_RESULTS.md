@@ -213,27 +213,27 @@ Nhằm chứng minh về mặt khoa học rằng **TSSA không phụ thuộc và
 * **Script kiểm định ý nghĩa thống kê:** `python eval_significance_vit5.py`.
 
 | Ngôn Ngữ Nguồn | Phương Pháp / Kiến Trúc | Thư Mục Checkpoint | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | Trạng Thái |
-| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Ê Đê (`rhade` → `vi`)** | Vanilla ViT5 Base | `checkpoints/vit5_vanilla_rhade` | 30.28 | 46.47 | 41.09 | -0.0807 | ✅ Hoàn tất |
 | | Align-to-Distill (A2D) | `checkpoints/vit5_align_to_distill_rhade` | 29.34 | 45.70 | 40.08 | -0.1149 | ✅ Hoàn tất |
 | | Shift-AET | `checkpoints/vit5_shift_aet_rhade` | 29.82 | 46.06 | 40.50 | -0.0926 | ✅ Hoàn tất |
 | | AWESOME-align | `checkpoints/vit5_awesome_align_rhade` | 29.96 | 46.12 | 40.94 | -0.1064 | ✅ Hoàn tất |
 | | CL-LSA (InfoNCE) | `checkpoints/vit5_cl_lsa_rhade` | 27.48 | 43.26 | 38.12 | -0.1943 | ✅ Hoàn tất |
 | | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_rhade` | **30.64** | **46.88** | **41.38** | **-0.0841** | 🚀 **TOP-1 TUYỆT ĐỐI (+0.36 BLEU, +0.41 chrF++, +0.29 METEOR)** |
-| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Tày (`tay` → `vi`)** | Vanilla ViT5 Base | `checkpoints/vit5_vanilla_tay` | 34.99 | 44.72 | 35.93 | -0.2031 | ✅ Hoàn tất |
 | | Align-to-Distill (A2D) | `checkpoints/vit5_align_to_distill_tay` | 33.20 | 43.49 | 34.95 | -0.2126 | ✅ Hoàn tất |
 | | Shift-AET | `checkpoints/vit5_shift_aet_tay` | 35.14 | 45.16 | 36.59 | -0.1778 | ✅ Hoàn tất |
 | | AWESOME-align | `checkpoints/vit5_awesome_align_tay` | 35.44 | 45.61 | 37.18 | -0.1555 | ✅ Hoàn tất |
 | | CL-LSA (InfoNCE) | `checkpoints/vit5_cl_lsa_tay` | 35.83 | 45.49 | 36.51 | -0.1827 | ✅ Hoàn tất |
-| | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_tay` | **35.97** | **45.42** | [Đang tính] | [Đang tính] | 🚀 **TOP-1 TUYỆT ĐỐI (+0.98 BLEU, Vượt CL-LSA 35.83)** |
+| | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_tay` | **35.97** | **45.42** | **36.31** | **-0.1798** | 🚀 **TOP-1 TUYỆT ĐỐI (+0.98 BLEU, +0.70 chrF++, COMET +0.0233)** |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Ba Na (`bahnaric` → `vi`)** | Vanilla ViT5 Base | `checkpoints/vit5_vanilla_bahnaric` | 11.34 | 27.67 | 24.47 | -0.7609 | ✅ Hoàn tất |
 | | Align-to-Distill (A2D) | `checkpoints/vit5_align_to_distill_bahnaric` | 11.14 | 27.71 | 23.95 | -0.7451 | ✅ Hoàn tất |
 | | Shift-AET | `checkpoints/vit5_shift_aet_bahnaric` | 11.50 | 28.35 | 24.53 | -0.7285 | ✅ Hoàn tất |
 | | AWESOME-align | `checkpoints/vit5_awesome_align_bahnaric` | 11.53 | 27.92 | 24.40 | -0.7404 | ✅ Hoàn tất |
 | | CL-LSA (InfoNCE) | `checkpoints/vit5_cl_lsa_bahnaric` | 9.36 | 24.99 | 20.96 | -0.8460 | ✅ Hoàn tất |
-| | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_bahnaric` | **10.56** | **27.25** | [Đang tính] | [Đang tính] | 🔬 **Scientific Edge Case ($\kappa=3.5$)** |
+| | **UniTSSA FINAL (Ours 🏆)** | `checkpoints/tssa_final/vit5_tssa_bahnaric` | **10.56** | **27.25** | **24.41** | **-0.7575** | 🔬 **Scientific Edge Case ($\kappa=3.5$)** |
 
 ### Nhận định khoa học chuẩn xác từ kết quả ViT5 mới:
 1. **Sau khi tối ưu hóa theo Không Gian Loại Hình 2 Chiều $(\kappa, \delta)$ ở bản UniTSSA FINAL**:

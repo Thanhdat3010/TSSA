@@ -72,6 +72,27 @@ Thực hiện kiểm định ý nghĩa thống kê theo chuẩn EMNLP/ACL (Phili
 | | **Strongest (`align_to_distill`)** | BLEU | 9.15 | **9.06** | -0.08 | `[-0.47, +0.30]` | $p = 0.6550$ (n.s.) |
 | | | chrF++ | 23.17 | **23.37** | **+0.20** | `[-0.16, +0.55]` | $p = 0.1150$ (n.s.) |
 
+---
+
+## II.c. Kiểm Định Ý Nghĩa Thống Kê Trên ViT5 (Paired Bootstrap Resampling - B=1,000)
+
+Thực hiện kiểm định bootstrap ($B=1,000$, Seed 42) trên backbone **ViT5-base** giữa UniTSSA Final và các đối thủ:
+
+| Ngôn Ngữ | Đối Thủ So Sánh (Comparator) | Chỉ Số | Điểm Đối Thủ | UniTSSA Final | Mức Tăng (Δ) | Khoảng Tin Cậy 95% CI | P-Value & Mức Ý Nghĩa |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Ê Đê (`rhade`)** | **Vanilla ViT5** | BLEU | 30.28 | **30.64** | **+0.35** | `[-0.37, +1.05]` | $p = 0.1500$ (n.s.) |
+| | | chrF++ | 46.47 | **46.88** | **+0.41** | `[-0.20, +1.08]` | $p = 0.0940$ (cận ngưỡng)* |
+| | **Best Comp (`awesome_align`)** | BLEU | 29.96 | **30.64** | **+0.67** | `[+0.03, +1.38]` | **$p = 0.0220$ ($p < 0.05$)\*** 🚀 |
+| | | chrF++ | 46.12 | **46.88** | **+0.76** | `[+0.17, +1.40]` | **$p = 0.0110$ ($p < 0.05$)\*** 🚀 |
+| **Tày (`tay`)** | **Vanilla ViT5** | BLEU | 34.99 | **35.97** | **+0.98** | `[-0.09, +2.06]` | **$p = 0.0370$ ($p < 0.05$)\*** 🚀 |
+| | | chrF++ | 44.72 | **45.42** | **+0.70** | `[-0.07, +1.46]` | **$p = 0.0370$ ($p < 0.05$)\*** 🚀 |
+| | **Best Comp (`cl_lsa`)** | BLEU | 35.83 | **35.97** | **+0.14** | `[-1.08, +1.35]` | $p = 0.4340$ (n.s.) |
+| | | chrF++ | 45.49 | **45.42** | -0.07 | `[-0.99, +0.74]` | $p = 0.5680$ (n.s.) |
+| **Ba Na (`bahnaric`)** | **Vanilla ViT5** | BLEU | 11.34 | **10.56** | -0.78 | `[-1.29, -0.25]` | $p = 0.9980$ (n.s.) |
+| | | chrF++ | 27.67 | **27.25** | -0.42 | `[-0.88, +0.04]` | $p = 0.9620$ (n.s.) |
+| | **Best Comp (`awesome_align`)** | BLEU | 11.53 | **10.56** | -0.97 | `[-1.52, -0.38]` | $p = 1.0000$ (n.s.) |
+| | | chrF++ | 27.92 | **27.25** | -0.66 | `[-1.21, -0.13]` | $p = 0.9950$ (n.s.) |
+
 > **Nhận định định lượng:**
 > * Trên tiếng **Ê Đê**, UniTSSA Final vượt trội cả Vanilla BARTpho và Strongest Baseline với độ tin cậy tuyệt đối **$p < 0.001^{***}$** trên cả hai độ đo BLEU và chrF++, với khoảng tin cậy 95% CI hoàn toàn nằm ở miền dương.
 > * Trên tiếng **Ba Na**, giá trị $p = 0.655$ và $p = 0.690$ chứng minh rằng sự khác biệt giữa UniTSSA và các baseline quốc tế (như Align-to-Distill) là hoàn toàn không có ý nghĩa thống kê; khẳng định tính khách quan của hiện tượng đứt gãy subword ($\kappa = 3.5$).

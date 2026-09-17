@@ -31,7 +31,7 @@ Toàn bộ 6 mô hình chính thức của **UniTSSA Final** đã hoàn tất hu
 
 | STT | Tên Nhiệm Vụ | Thời Gian Ước Tính | Loại Tác Vụ | Mục Tiêu Bài Báo | Trạng Thái |
 | :---: | :--- | :---: | :---: | :--- | :---: |
-| **1** | Kiểm định $p$-value trên ViT5 | ~20 phút | Inference CPU | Hoàn thiện bảng ý nghĩa thống kê cho ViT5 | ⏳ Đang ngầm |
+| **1** | Kiểm định $p$-value trên ViT5 | ~20 phút | Inference CPU | Hoàn thiện bảng ý nghĩa thống kê cho ViT5 | ✅ **HOÀN TẤT** |
 | **2** | Bóc tách Độ dài câu & Câu khó (Length & Hard Slicing) | ~3 phút | Inference GPU | Tạo Bảng 3 & Bảng 4 (Table 3 & Table 4) | ⏹️ Chờ chạy |
 | **3** | Trích xuất Mẫu câu định tính (Qualitative Cases) | ~10 giây | Text Processing | Tạo Bảng 6 ví dụ dịch song ngữ (LaTeX Table 6) | ⏹️ Chờ chạy |
 | **4** | Vẽ Ma trận Cross-Attention Heatmaps | ~2 phút | Inference GPU | Tạo Figure 4 minh chứng triệt tiêu Attention Sink | ⏹️ Chờ chạy |

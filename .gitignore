@@ -48,8 +48,8 @@ data_processed/
 *.tmp
 *.log
 
-# Paper PDFs and Baseline Papers (Keep local only)
+# Paper PDFs and Figures (Keep local / server only, regenerate via scripts)
 *.pdf
-!docs/figures/*.pdf
-!docs/figures/*.png
+docs/paper/latex/figures/*.pdf
+docs/paper/latex/figures/*.png
 docs/baseline_papers/

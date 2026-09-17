@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering\small
+\caption{\textbf{Contrasting Qualitative Translation Examples from Test Set (ViT5-base)}: Demonstrating TSSA's accurate cross-lingual token retrieval and morphology preservation.}
+\label{tab:qualitative_vit5}
+\vspace{4pt}
+\begin{tabular}{lp{0.80\textwidth}}
+\toprule
+\multicolumn{2}{l}{\textbf{Rhade $\rightarrow$ Vietnamese (Rare Vocabulary Context)}} \\
+\textbf{Source} & \textit{Lăn hrông} \\
+\textbf{Reference} & Đất hoang \\
+\textbf{Vanilla ViT5} & \textcolor{BrickRed}{Đất khô (chrF++: 18.9 --- \textbf{Inaccurate Semantic Transfer})} \\
+\textbf{UniTSSA (Ours)} & \textcolor{topgreen}{\textbf{Đất hoang} (chrF++: 100.0 --- \textbf{Exact Retrieval})} \\
+\midrule
+\multicolumn{2}{l}{\textbf{Tay $\rightarrow$ Vietnamese (Verbal Phrase Context)}} \\
+\textbf{Source} & \textit{xâng khẩu} \\
+\textbf{Reference} & sàng gạo \\
+\textbf{Vanilla ViT5} & \textcolor{BrickRed}{rây lúa (chrF++: 0.0 --- \textbf{Lexical Failure})} \\
+\textbf{UniTSSA (Ours)} & \textcolor{topgreen}{\textbf{sàng gạo} (chrF++: 100.0 --- \textbf{Exact Retrieval})} \\
+\midrule
+\multicolumn{2}{l}{\textbf{Bahnaric $\rightarrow$ Vietnamese (Numeric Context)}} \\
+\textbf{Source} & \textit{481} \\
+\textbf{Reference} & 481 \\
+\textbf{Vanilla ViT5} & \textcolor{BrickRed}{48 (chrF++: 42.4 --- \textbf{Truncation Error})} \\
+\textbf{UniTSSA (Ours)} & \textcolor{topgreen}{\textbf{481} (chrF++: 100.0 --- \textbf{Exact Numeral Grounding})} \\
+\bottomrule
+\end{tabular}
+\end{table*}

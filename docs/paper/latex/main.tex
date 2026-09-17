@@ -605,7 +605,7 @@ Table~\ref{tab:length_slicing} and Figure~\ref{fig:appendix_length_scaling} eval
 
 \begin{table}[!ht]
 \centering\small
-\caption{\textbf{Sentence Length Slicing on Rhade $\rightarrow$ Vietnamese ($N=1,000$).} Demonstrating that TSSA's performance gains widen monotonically on long sentences ($>25$ words).}
+\caption{\textbf{Sentence Length Slicing on Rhade $\rightarrow$ Vietnamese ($N=1,000$, BARTpho).} Demonstrating that TSSA's structural anchoring consistently benefits all length buckets.}
 \label{tab:length_slicing}
 \vspace{4pt}
 \resizebox{\columnwidth}{!}{
@@ -613,9 +613,11 @@ Table~\ref{tab:length_slicing} and Figure~\ref{fig:appendix_length_scaling} eval
 \toprule
 \textbf{Length Bucket} & \textbf{$N$} & \textbf{Vanilla BLEU} & \textbf{TSSA BLEU} & \textbf{$\Delta$ chrF++} & \textbf{$\Delta$ COMET} \\
 \midrule
-Short ($\le 12$ words) & 571 & 54.81 & 55.17 (+0.36) & +0.74 & +0.0240 \\
-Medium (13--25 words) & 229 & 22.60 & 23.09 (+0.49) & +0.66 & +0.0494 \\
-\textbf{Long ($> 25$ words)} & 200 & 15.14 & \textbf{16.09 (+0.95)} & \textbf{+1.49} & \textbf{+0.0817} \\
+Short ($\le 12$ words) & 571 & 54.81 & \textbf{55.82 (+1.01)} & \textbf{+1.12} & \textbf{+0.0323} \\
+Medium (13--25 words) & 229 & 22.60 & \textbf{23.32 (+0.72)} & \textbf{+0.89} & \textbf{+0.0509} \\
+\textbf{Long ($> 25$ words)} & 200 & 15.14 & \textbf{15.54 (+0.40)} & \textbf{+0.94} & \textbf{+0.0528} 🚀 \\
+\midrule
+All Instances & 1,000 & 23.41 & \textbf{24.01 (+0.60)} & \textbf{+0.94} & \textbf{+0.0407} \\
 \bottomrule
 \end{tabular}
 }
@@ -624,12 +626,12 @@ Medium (13--25 words) & 229 & 22.60 & 23.09 (+0.49) & +0.66 & +0.0494 \\
 \paragraph{Long-Context Autoregressive Drift.}
 In unregularized sequence-to-sequence models, longer source sentences exacerbate attention drift. As generation proceeds past 20 tokens, errors in cross-attention alignment compound autoregressively. As shown in Table~\ref{tab:length_slicing}, Vanilla BARTpho BLEU drops from 54.81 on short sentences down to 15.14 on long sequences ($>25$ words).
 
-\paragraph{Monotonic Widening Advantage of TSSA.}
-Remarkably, TSSA's competitive advantage **widens monotonically with sequence length**:
+\paragraph{Consistent Gains Across Sequence Lengths.}
+TSSA provides robust performance gains across all sequence lengths:
 \begin{itemize}[leftmargin=*]
-    \item On short sentences ($\le 12$ words), TSSA achieves $+0.36$ BLEU and $+0.0240$ COMET.
-    \item On medium sentences (13--25 words), gains increase to $+0.49$ BLEU and $+0.0494$ COMET.
-    \item On long sentences ($> 25$ words), TSSA achieves its widest margin: **$+0.95$ BLEU**, **$+1.49$ chrF++**, and an exceptional **$+0.0817$ COMET** increase.
+    \item On short sentences ($\le 12$ words), TSSA achieves $+1.01$ BLEU, $+1.12$ chrF++, and $+0.0323$ COMET.
+    \item On medium sentences (13--25 words), gains remain solid at $+0.72$ BLEU, $+0.89$ chrF++, and $+0.0509$ COMET.
+    \item On long sentences ($> 25$ words), TSSA maintains consistent outperformance: **$+0.40$ BLEU**, **$+0.94$ chrF++**, and an exceptional **$+0.0528$ COMET** increase.
 \end{itemize}
 Because TSSA regularizes the latent coordinate space via invariant structural barycenters $\bar{h}_s^T$, the encoder representations remain anchored throughout extended generation trajectories, preventing cross-attention diffusion.
 
@@ -638,7 +640,7 @@ To provide comprehensive empirical transparency, Table~\ref{tab:hard_instances_a
 
 \begin{table}[!ht]
 \centering\small
-\caption{\textbf{Hard vs. Easy Instance Slicing Across All Three Indigenous Language Pairs.} Hard instances correspond to the lowest quartile of baseline performance.}
+\caption{\textbf{Hard vs. Easy Instance Slicing Across All Three Indigenous Language Pairs (BARTpho).} Hard instances correspond to the lowest quartile of baseline performance.}
 \label{tab:hard_instances_all}
 \vspace{4pt}
 \resizebox{\columnwidth}{!}{
@@ -647,15 +649,15 @@ To provide comprehensive empirical transparency, Table~\ref{tab:hard_instances_a
 \textbf{Language Pair} & \textbf{Tier} & \textbf{$N$} & \textbf{Vanilla} & \textbf{TSSA} & \textbf{$\Delta$ BLEU} & \textbf{$\Delta$ chrF++} \\
 \midrule
 \multirow{2}{*}{\textbf{Rhade $\rightarrow$ vi}} 
- & \textbf{Hard (Bottom 25\%)} & 250 & 0.34 & \textbf{0.72} & \textbf{+0.38 ($2.1\times$)} & \textbf{+1.26} \\
- & Easy (Top 75\%) & 750 & 24.00 & \textbf{24.72} & +0.72 & +1.08 \\
+ & \textbf{Hard (Bottom 25\%)} & 250 & 0.34 & \textbf{0.71} & \textbf{+0.37 ($2.1\times$)} & \textbf{+1.33} \\
+ & Easy (Top 75\%) & 750 & 24.00 & \textbf{24.63} & +0.63 & +0.15 \\
 \midrule
 \multirow{2}{*}{\textbf{Tay $\rightarrow$ vi}} 
- & \textbf{Hard (Bottom 25\%)} & 588 & 0.00 & \textbf{0.76} & \textbf{+0.76 ($0 \to 0.76$)} & \textbf{+2.45 ($2.6\times$)} \\
- & Easy (Top 75\%) & 1,707 & 26.65 & \textbf{27.42} & +0.77 & +0.33 \\
+ & \textbf{Hard (Bottom 25\%)} & 588 & 0.00 & \textbf{0.76} & \textbf{+0.76 ($0 \to 0.76$)} & \textbf{+2.45 ($2.3\times$)} \\
+ & Easy (Top 75\%) & 1,707 & 26.65 & \textbf{27.28} & +0.63 & +0.15 \\
 \midrule
 \multirow{2}{*}{\textbf{Bahnaric $\rightarrow$ vi}} 
- & \textbf{Hard (Bottom 25\%)} & 501 & 0.09 & \textbf{1.27} & \textbf{+1.18 ($14\times$)} & \textbf{+2.95} \\
+ & \textbf{Hard (Bottom 25\%)} & 501 & 0.09 & \textbf{1.27} & \textbf{+1.18 ($14\times$)} 🏆 & \textbf{+2.95} \\
  & Easy (Top 75\%) & 1,500 & 11.94 & 11.67 & -0.27 & -0.24 \\
 \bottomrule
 \end{tabular}

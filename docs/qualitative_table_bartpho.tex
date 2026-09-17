@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering\small
+\caption{\textbf{Contrasting Qualitative Translation Examples from Test Set (BARTpho-syllable)}: Demonstrating TSSA's elimination of lexical hallucinations and word repetition sinks.}
+\label{tab:qualitative_bartpho}
+\vspace{4pt}
+\begin{tabular}{lp{0.80\textwidth}}
+\toprule
+\multicolumn{2}{l}{\textbf{Rhade $\rightarrow$ Vietnamese (Administrative / Cultural Context)}} \\
+\textbf{Source} & \textit{Msăm abăn} \\
+\textbf{Reference} & Đắp chăn \\
+\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Chăn thổ cẩm (chrF++: 12.6 --- \textbf{Lexical Hallucination})} \\
+\textbf{UniTSSA (Ours)} & \textcolor{topgreen}{\textbf{Đắp chăn} (chrF++: 100.0 --- \textbf{Exact Retrieval})} \\
+\midrule
+\multicolumn{2}{l}{\textbf{Tay $\rightarrow$ Vietnamese (Social / Daily Life Context)}} \\
+\textbf{Source} & \textit{Khảm} \\
+\textbf{Reference} & vượt \\
+\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{quai (chrF++: 0.0 --- \textbf{Severe Delimiter Drift})} \\
+\textbf{UniTSSA (Ours)} & \textcolor{topgreen}{\textbf{vượt} (chrF++: 100.0 --- \textbf{Exact Retrieval})} \\
+\midrule
+\multicolumn{2}{l}{\textbf{Bahnaric $\rightarrow$ Vietnamese (Administrative Decree Context - Test \#1809)}} \\
+\textbf{Source} & \textit{Xêt hmăng dĭ Kông ty Cp Đương 'Binh Đinh tơ văn 'ban sô 392/TTr- CTCPĐBĐ 'năr 22/9/2011, hmăng dĭ Yam đôk Sơ Nông nghiêp păng Phat triên nông thôn tơ văn 'ban sô 2684/TTr-SNN 'năr 23/9/2011} \\
+\textbf{Reference} & Xét đề nghị của Công ty CP Đường Bình Định tại văn bản số 392/TTr- CTCPĐBĐ ngày 22/9/2011, đề nghị của Giám đốc Sở Nông nghiệp và PTNT tại văn bản số 2684/TTr-SNN ngày 23/9/2011 \\
+\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Căn cứ. Công văn số 394/TTr- CTCPĐBĐ ngày 22/9/2011 của. UBND tỉnh và. Quyết định số 2684/QĐ-SNN ngày 23/9/2011 của. UBND huyện (chrF++: 36.4 --- \textbf{Entity \& Number Distortion})} \\
+\textbf{UniTSSA (Ours)} & \textcolor{topgreen}{\textbf{Căn cứ. Công ty Cổ phần. Bình Định tại văn bản số 392/TTr- CTCPĐBĐ ngày 22/9/2011, Căn cứ. Giám đốc Sở Nông nghiệp và. Phát triển nông thôn tại văn bản số 2684/TTr-SNN ngày 23/9/2011} (chrF++: 71.7 --- \textbf{Exact Decree Numbers Grounded})} \\
+\bottomrule
+\end{tabular}
+\end{table*}

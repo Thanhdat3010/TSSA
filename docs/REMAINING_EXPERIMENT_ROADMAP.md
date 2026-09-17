@@ -32,10 +32,10 @@ Toàn bộ 6 mô hình chính thức của **UniTSSA Final** đã hoàn tất hu
 | STT | Tên Nhiệm Vụ | Thời Gian Ước Tính | Loại Tác Vụ | Mục Tiêu Bài Báo | Trạng Thái |
 | :---: | :--- | :---: | :---: | :--- | :---: |
 | **1** | Kiểm định $p$-value trên ViT5 | ~20 phút | Inference CPU | Hoàn thiện bảng ý nghĩa thống kê cho ViT5 | ✅ **HOÀN TẤT** |
-| **2** | Bóc tách Độ dài câu & Câu khó (Length & Hard Slicing) | ~3 phút | Inference GPU | Tạo Bảng 3 & Bảng 4 (Table 3 & Table 4) | ⏹️ Chờ chạy |
-| **3** | Trích xuất Mẫu câu định tính (Qualitative Cases) | ~10 giây | Text Processing | Tạo Bảng 6 ví dụ dịch song ngữ (LaTeX Table 6) | ⏹️ Chờ chạy |
-| **4** | Vẽ Ma trận Cross-Attention Heatmaps | ~2 phút | Inference GPU | Tạo Figure 4 minh chứng triệt tiêu Attention Sink | ⏹️ Chờ chạy |
-| **5** | Huấn luyện Ablation Study trên CẢ 2 BACKBONE | ~1.5 giờ | Training GPU | Tạo Bảng 2 bóc tách vai trò 3 module | ⏹️ Chờ chạy |
+| **2** | Bóc tách Độ dài câu & Câu khó (Length & Hard Slicing) | ~3 phút | Inference GPU | Tạo Bảng 3 & Bảng 4 (Table 3 & Table 4) | ✅ **HOÀN TẤT** |
+| **3** | Trích xuất Mẫu câu định tính (Qualitative Cases) | ~10 giây | Text Processing | Tạo Bảng 6 ví dụ dịch song ngữ (LaTeX Table 6) | ✅ **HOÀN TẤT** |
+| **4** | Vẽ Ma trận Cross-Attention Heatmaps | ~2 phút | Inference GPU | Tạo Figure 4 minh chứng triệt tiêu Attention Sink | ✅ **HOÀN TẤT** |
+| **5** | Huấn luyện Ablation Study trên CẢ 2 BACKBONE | ~1.5 giờ | Training GPU | Tạo Bảng 2 bóc tách vai trò 3 module | ⏳ **ĐANG CHẠY / CHỜ CHẠY** |
 
 ---
 

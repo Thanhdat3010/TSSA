@@ -1,0 +1,27 @@
+\begin{table}[!ht]
+\centering\small
+\caption{\textbf{Dual-Backbone Comprehensive Ablation Suite on Tay $\rightarrow$ Vietnamese.} Demonstrating the distinct mechanistic roles of the three TSSA modules across divergent Sequence-to-Sequence architectures (ViT5-base and BARTpho-syllable).}
+\label{tab:ablation_dual_backbone}
+\vspace{4pt}
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{llccc}
+\toprule
+\textbf{Backbone Architecture} & \textbf{Ablation Variant} & \textbf{SacreBLEU} $\uparrow$ & \textbf{chrF++} $\uparrow$ & \textbf{$\Delta$ vs. Full} \\
+\midrule
+\multirow{5}{*}{\textbf{ViT5-base} ($H=12, \rho^*=0.250$)} 
+ & \textbf{Full UniTSSA Final 🏆} & \textbf{35.97} & \textbf{45.42} & \textbf{0.00} \\
+ & w/o Dynamic Head Routing ($\lambda_{\text{route}} = 0$) & 36.19 & 45.58 & +0.22 \\
+ & w/o Structural Anchoring ($\lambda_{\text{struct}} = 0$) & 35.68 & 45.24 & -0.29 \\
+ & w/o Contrastive Priming ($\lambda_{\text{prime}} = 0$) & 34.50 & 44.51 & \textbf{-1.47} ⚠️ \\
+ & Vanilla ViT5 Baseline & 34.99 & 44.72 & -0.98 \\
+\midrule
+\multirow{5}{*}{\textbf{BARTpho-syllable} ($H=16, \rho^*=0.333$)} 
+ & \textbf{Full UniTSSA Final 🏆} & \textbf{25.32} & \textbf{36.18} & \textbf{0.00} \\
+ & w/o Dynamic Head Routing ($\lambda_{\text{route}} = 0$) & 25.29 & 36.35 & -0.03 \\
+ & w/o Structural Anchoring ($\lambda_{\text{struct}} = 0$) & 25.46 & 36.34 & +0.14 \\
+ & w/o Contrastive Priming ($\lambda_{\text{prime}} = 0$) & 25.46 & 36.34 & +0.14 \\
+ & Vanilla BARTpho Baseline & 24.67 & 35.74 & -0.65 \\
+\bottomrule
+\end{tabular}
+}
+\end{table}

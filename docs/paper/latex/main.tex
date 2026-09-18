@@ -87,7 +87,7 @@ To counteract representation degradation, prior cross-lingual alignment techniqu
     \item \textit{External Aligners and Syntactic Supervision (e.g., AWESOME-align, Structural Supervision)~\cite{dou2021word,li2022structural}:} These methods either require external statistical alignment pipelines that cannot co-adapt during training or rely on dependency parsers that do not exist for indigenous minority languages.
 \end{enumerate}
 
-To resolve these limitations, we introduce \textbf{Target-Side Semantic Anchoring (TSSA)}, an autonomous, end-to-end framework tailored for low-resource sequence-to-sequence transfer. TSSA recognizes that the target language (e.g., Vietnamese) possesses rich, isotropic representations in the pre-trained backbone. By deploying an \textit{Online Frozen Target Teacher}, TSSA dynamically projects target semantic posteriors onto the source encoder states in real time ($< 0.001$s per step). Rather than enforcing rigid point-to-point token constraints, TSSA constructs a \textit{Target Semantic Barycenter} weighted by alignment confidence, guiding source states toward meaningful semantic anchors while insulating word boundaries from noise. Furthermore, TSSA introduces a \textit{Dynamic Head Routing Gate} constrained by a closed capacity budget $\rho^* = \min(0.333, 4/H)$, decoupling semantic anchoring from syntactic generation.
+To resolve these limitations, we introduce \textbf{Target-Side Semantic Anchoring (TSSA)}, an autonomous, end-to-end framework tailored for low-resource sequence-to-sequence transfer. TSSA recognizes that the target language (e.g., Vietnamese) possesses rich, isotropic representations in the pre-trained backbone. By deploying an \textit{Online Frozen Target Teacher}, TSSA dynamically projects target semantic posteriors onto the source encoder states in real time ($< 0.001$s per step). Rather than enforcing static point-to-point token constraints, TSSA constructs a \textit{Target Semantic Barycenter} weighted by alignment confidence, guiding source states toward meaningful semantic anchors while insulating word boundaries from noise. Furthermore, TSSA introduces a \textit{Dynamic Head Routing Gate} constrained by a closed capacity budget $\rho^* = \min(0.333, 4/H)$, decoupling semantic anchoring from syntactic generation.
 
 Our core contributions are summarized as follows:
 \begin{itemize}[leftmargin=*]
@@ -142,6 +142,7 @@ Let $\mathcal{D} = \{(\mathcal{X}^{(k)}, \mathcal{Y}^{(k)})\}_{k=1}^{|\mathcal{D
 Unlike methods requiring offline statistical word alignments or multi-gigabyte disk caches, TSSA utilizes an online, parameter-frozen replica of the backbone encoder initialized from pre-trained target weights:
 \begin{equation}
     \mathcal{E}_T = \text{stop\_gradient}(f_{\text{enc}}), \quad h^T = \mathcal{E}_T(\mathcal{Y}) \in \mathbb{R}^{T \times d_{\text{model}}}.
+    \label{eq:frozen_teacher}
 \end{equation}
 Because the target sentence $\mathcal{Y}$ is tokenized using the native target vocabulary, $h_t^T$ provides an uncorrupted, contextual semantic representation of target token $t$.
 
@@ -149,34 +150,40 @@ Because the target sentence $\mathcal{Y}$ is tokenized using the native target v
 Simultaneously, the student encoder generates source representations $h^S = f_{\text{enc}}(\mathcal{X}) \in \mathbb{R}^{S \times d_{\text{model}}}$. The cross-lingual token similarity matrix $M \in \mathbb{R}^{T \times S}$ is computed via scaled cosine similarity:
 \begin{equation}
     M_{t, s} = \frac{\tilde{h}_t^T \cdot (\tilde{h}_s^S)^\top}{\tau_{\text{align}}}, \quad \tilde{h} = \frac{h}{\|h\|_2},
+    \label{eq:sim_matrix}
 \end{equation}
 where $\tau_{\text{align}} = 0.1$ is a sharpening temperature. Applying a row-wise softmax yields the target-to-source alignment posterior matrix $A \in \mathbb{R}^{T \times S}$:
 \begin{equation}
     A_{t, s} = \frac{\exp(M_{t, s})}{\sum_{s'=1}^S \exp(M_{t, s'})}.
+    \label{eq:posterior_matrix}
 \end{equation}
 The alignment confidence score $c_s$ for each source token $s$ is obtained by marginalizing over target positions:
 \begin{equation}
     c_s = \min\left(1.0, \sum_{t=1}^T A_{t, s}\right) \cdot \mathbb{I}(x_s \notin \mathcal{V}_{\text{special}}),
+    \label{eq:confidence_score}
 \end{equation}
-which strictly zeros out supervision on delimiter tokens (\texttt{<s>}, \texttt{<pad>}).
+which strictly zeros out supervision on delimiter tokens (\texttt{<s>}, \texttt{<pad>}). For example, on the Tay source phrase \textit{slon sl\^{a}y} (``to teach'') paired with Vietnamese \textit{d\d{a}y h\d{o}c}, posterior matrix $A$ anchors onto content morphemes while zeroing confidence $c_s = 0$ on boundary delimiters.
 
 \subsection{Residual Semantic Projector ($\Phi_\theta$)}
 To prevent representation collapse into trivial linear subspaces, representations pass through a non-linear residual projection head with LayerNorm:
 \begin{equation}
     \Phi_\theta(h) = \text{LayerNorm}(W_2 \cdot \text{GELU}(W_1 h + b_1) + b_2 + h),
+    \label{eq:projector}
 \end{equation}
 where $W_1 \in \mathbb{R}^{d_{\text{proj}} \times d_{\text{model}}}$, $W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{proj}}}$, $d_{\text{proj}} = 2 d_{\text{model}}$.
 
 \subsection{Mathematical Loss Formulations}
 
 \subsubsection{Token-level Barycenter Anchoring ($\mathcal{L}_{\text{struct}}$)}
-Rather than forcing individual source tokens to match rigid target tokens, we define the \textit{Target Semantic Barycenter} $\bar{h}_s^T$ as the expectation of target representations under posterior $A$:
+Rather than forcing individual source tokens to match static target tokens, we define the \textit{Target Semantic Barycenter} $\bar{h}_s^T$ as the expectation of target representations under posterior $A$:
 \begin{equation}
     \bar{h}_s^T = \sum_{t=1}^T A_{t, s} h_t^T.
+    \label{eq:barycenter}
 \end{equation}
 The structural loss minimizes the Smooth $L_1$ distance between the projected source state and the detached target barycenter:
 \begin{equation}
     \mathcal{L}_{\text{struct}} = \frac{1}{\sum_s c_s + \epsilon} \sum_{s=1}^S c_s \cdot \text{Smooth}_{L1}\left(\Phi_\theta(h_s^S), \text{sg}(\Phi_\theta(\bar{h}_s^T))\right).
+    \label{eq:loss_struct}
 \end{equation}
 
 \subsubsection{Sentence-level Contrastive Priming ($\mathcal{L}_{\text{prime}}$)}
@@ -191,13 +198,16 @@ with temperature $\tau = 0.07$.
 At decoder layer $\ell$ and head $h$, the query state $q_{\ell h t}$ and source summary $s_{\ell h} = W^s \text{MeanPool}(h^S)$ predict an adaptive routing probability $g_{\ell h t} \in [0, 1]$:
 \begin{equation}
     g_{\ell h t} = \sigma\left(\text{MLP}\left([q_{\ell h t}; s_{\ell h}; q_{\ell h t} \odot s_{\ell h}]\right)\right).
+    \label{eq:gate_prob}
 \end{equation}
 The gate is supervised by the cosine agreement target $r_{\ell h t}$ between the projected head output $o_{\ell h t}$ and the teacher representation $h_t^T$:
 \begin{equation}
     r_{\ell h t} = \text{sg}\left(\frac{1 + \cos(R_h o_{\ell h t}, \Phi_\theta(h_t^T))}{2}\right),
+    \label{eq:agreement_target}
 \end{equation}
 \begin{equation}
     \mathcal{L}_{\text{route}} = -\frac{1}{T} \sum_{t=1}^T \sum_{\ell, h} \left[ r_{\ell h t} \log g_{\ell h t} + (1 - r_{\ell h t}) \log (1 - g_{\ell h t}) \right].
+    \label{eq:loss_route}
 \end{equation}
 
 \subsection{Capacity Budget and Joint Optimization}
@@ -209,7 +219,7 @@ Formally, we constrain the proportion of semantic anchor heads by a closed capac
     \rho^* = \min\left(0.333, \frac{4}{H}\right),
     \label{eq:capacity_budget}
 \end{equation}
-where $H$ is the total number of cross-attention heads per layer. The derivation of $\rho^*$ stems from two theoretical and empirical principles:
+where $H$ is the total number of cross-attention heads per layer. The derivation of $\rho^*$ follows from two theoretical and empirical principles:
 \begin{enumerate}[leftmargin=*]
     \item \textbf{Guaranteed Syntactic Headroom ($\rho \le 0.333$):} The upper bound $\rho_{\max} = 1/3 \approx 0.333$ guarantees that at least $66.7\%$ of cross-attention capacity remains strictly dedicated to unrestricted autoregressive decoding. In preliminary exploratory sweeps, forcing unconstrained semantic routing across all heads ($\rho = 1.0$) caused a severe $-1.40$ BLEU regression, as semantic anchoring suppressed the decoder's syntactic fluency.
     \item \textbf{Head Cardinality Ceiling ($4/H$):} Empirically, anchoring at most 3 to 4 heads is sufficient to completely eliminate delimiter sinking on $\mathtt{<s>}$ (reducing sink mass by over $50\%$). Dedicating additional heads provides diminishing returns while consuming expressivity needed for target language modeling.
@@ -219,6 +229,7 @@ Under Eq.~\eqref{eq:capacity_budget}, for BARTpho ($H=16$), the formula yields $
 The joint multi-task objective optimized end-to-end is:
 \begin{equation}
     \mathcal{L}_{\text{total}} = \mathcal{L}_{\text{MT}} + \lambda_1 \mathcal{L}_{\text{struct}} + \lambda_2 \mathcal{L}_{\text{prime}} + \lambda_3 \mathcal{L}_{\text{route}},
+    \label{eq:loss_total}
 \end{equation}
 where $\lambda_1 = 0.5, \lambda_2 = 0.1, \lambda_3 = 0.2$ are balancing hyperparameters selected on the validation split.
 
@@ -385,7 +396,7 @@ Length slicing analysis (Appendix Table~\ref{tab:length_slicing}) shows that att
 A critical empirical contribution of this study is demonstrating TSSA's robustness across two fundamentally divergent sequence-to-sequence Transformer architectures: \textbf{ViT5-base} (T5 family~\cite{raffel2020exploring,phan2022vit5}) and \textbf{BARTpho-syllable} (BART family~\cite{lewis-etal-2020-bart,tran2021bartpho}). As detailed in Table~\ref{tab:ablation_results} (Appendix~\ref{sec:appendix_ablation}), the two backbones respond to module ablations with distinct mechanistic profiles, driven by three core architectural dimensions:
 \begin{enumerate}[leftmargin=*]
     \item \textbf{Tokenization Granularity (SentencePiece Subwords vs. Syllable BPE):} ViT5 relies on SentencePiece subwords ($V=36\text{K}$), which fragment low-resource minority words into sub-character units devoid of isolated semantics. Consequently, sentence-level contrastive priming $\mathcal{L}_{\text{prime}}$ is an indispensable global anchor: ablating $\mathcal{L}_{\text{prime}}$ precipitates a catastrophic $-1.47$ BLEU collapse, dropping performance below the unregularized Vanilla baseline (34.50 vs. 34.99). Conversely, BARTpho uses syllable-level BPE pre-segmented to Vietnamese phonotactics ($V=40\text{K}$). Because each syllable functions as an autonomous lexical root matching the isolating morphology of Tay and Vietnamese, individual tokens maintain stable representation spaces even when global sentence priming is deactivated.
-    \item \textbf{Positional Encoding Geometry (Relative Bias vs. Absolute Embeddings):} ViT5 employs translation-invariant T5 relative position biases rather than absolute coordinate vectors. This enables exceptional flexibility on short sequences ($+2.62$ BLEU surge on Rhade), but renders cross-lingual latent space alignment vulnerable to coordinate drift if not anchored by $\mathcal{L}_{\text{prime}}$. BARTpho, in contrast, enforces rigid absolute learned coordinate embeddings ($d_{\text{model}}=1024$), providing an intrinsic sequential scaffold that stabilizes generation trajectories.
+    \item \textbf{Positional Encoding Geometry (Relative Bias vs. Absolute Embeddings):} ViT5 employs translation-invariant T5 relative position biases rather than absolute coordinate vectors. This enables exceptional flexibility on short sequences ($+2.62$ BLEU surge on Rhade), but renders cross-lingual latent space alignment vulnerable to coordinate drift if not anchored by $\mathcal{L}_{\text{prime}}$. BARTpho, in contrast, enforces fixed absolute learned coordinate embeddings ($d_{\text{model}}=1024$), providing an intrinsic sequential scaffold that stabilizes generation trajectories.
     \item \textbf{Model Depth, Dimension, and Parameter Redundancy:} ViT5 is a deep, narrow model ($24$ layers, $d_{\text{model}}=768$, $220\text{M}$ parameters) where each of the $H=12$ attention heads carries substantial representational load. BARTpho is a shallow, wide model ($12$ layers, $d_{\text{model}}=1024$, $420\text{M}$ parameters). The massive width and parameter headroom of BARTpho provide architectural redundancy, allowing adjacent attention heads and wide feed-forward blocks ($d_{ff}=4096$) to self-compensate when individual alignment objectives are ablated ($\Delta \le \pm 0.14$ BLEU).
 \end{enumerate}
 Far from indicating methodological fragility, this contrast proves that TSSA's closed-budget anchoring mechanism successfully interfaces with both deep-narrow relative transformers and wide-shallow absolute transformers, establishing consistent outperformance over unregularized baselines on both architectures ($+0.98$ on ViT5, $+0.65$ on BARTpho).
@@ -402,7 +413,7 @@ We introduced Target-Side Semantic Anchoring (TSSA), an autonomous framework tha
 % ==============================================================================
 We explicitly identify three key limitations of our study:
 \begin{enumerate}[leftmargin=*]
-    \item \textbf{Single-Seed Training Variance:} Due to computational resource boundaries, all main benchmark models were trained with a single fixed seed (Seed 42) using deterministic PyTorch CUDA kernels. While we rigorously evaluate test-set sample variance using Paired Bootstrap Resampling ($B=1,000$, yielding tight 95\% confidence intervals and $p$-values), full multi-seed training variance ($\ge 3$ seeds) remains an important area for future investigation when larger GPU allocations become available.
+    \item \textbf{Single-Seed Training Variance:} Due to computational resource boundaries, all main benchmark models were trained with a single fixed seed (Seed 42) using deterministic PyTorch CUDA kernels. While we rigorously evaluate test-set sample variance using Paired Bootstrap Resampling ($B=1,000$, producing tight 95\% confidence intervals and $p$-values), full multi-seed training variance ($\ge 3$ seeds) remains an important area for future investigation when larger GPU allocations become available.
     \item \textbf{Typological Subword Boundary:} As demonstrated in Section~\ref{sec:bahnaric_case}, token-level representation alignment regularizers face an intrinsic typological ceiling on languages with extreme subword fertility ($\kappa > 3.0$), where single lexical roots are fragmented into non-semantic character pieces.
     \item \textbf{Supervision Requirements:} While TSSA eliminates the need for external word aligners, lexicons, or parsers, it requires parallel sentence supervision ($15\text{K}$--$50\text{K}$ pairs). Adapting target semantic anchoring to zero-shot or unsupervised regimes remains an exciting open research direction.
 \end{enumerate}
@@ -467,7 +478,7 @@ Align-to-Distill minimizes the Kullback-Leibler (KL) divergence between cross-at
 \begin{equation}
     \mathcal{L}_{\text{A2D}} = \mathcal{L}_{\text{MT}} + \beta_{\text{distill}} \sum_{l=1}^L \sum_{h=1}^H \mathcal{D}_{\text{KL}}\left(\text{Attn}_{l,h}^{\text{teacher}} \,\|\, \text{Attn}_{l,h}^{\text{student}}\right),
 \end{equation}
-where $\beta_{\text{distill}} = 0.5$. In data-scarce minority translation, A2D suffers from severe \textit{capacity mismatch}: external teacher models trained on high-resource language pairs enforce rigid attention patterns that the parameter-constrained student encoder cannot realize over unfamiliar minority tokens, resulting in degraded translation fluency.
+where $\beta_{\text{distill}} = 0.5$. In data-scarce minority translation, A2D suffers from severe \textit{capacity mismatch}: external teacher models trained on high-resource language pairs enforce uniform attention patterns that the parameter-constrained student encoder cannot realize over unfamiliar minority tokens, resulting in degraded translation fluency.
 
 \paragraph{2. Shifted State Agreement (Shift-AET)~\cite{chen2020accurate}.}
 Shift-AET introduces self-supervised agreement targets between encoder-decoder cross-attention and time-shifted decoder hidden states:
@@ -530,7 +541,7 @@ Table~\ref{tab:bahnaric_full} reports the comprehensive benchmark on Bahnaric ($
 \end{table}
 
 \paragraph{The Subword Fragmentation Dilemma.}
-A striking empirical finding in Table~\ref{tab:bahnaric_full} is that \textbf{every single representation alignment method}—without exception—experiences a performance regression on Bahnaric when compared against unregularized Vanilla baselines:
+A striking empirical finding in Table~\ref{tab:bahnaric_full} is that \textbf{every single representation alignment method}, without exception, experiences a performance regression on Bahnaric when compared against unregularized Vanilla baselines:
 \begin{itemize}[leftmargin=*]
     \item Align-to-Distill drops by $-0.48$ BLEU (9.15 vs. 9.63).
     \item Shift-AET drops by $-0.53$ BLEU (9.10 vs. 9.63).
@@ -609,7 +620,7 @@ Ablating individual components across both backbones reveals their specialized m
 \begin{enumerate}[leftmargin=*]
     \item \textbf{Sentence Priming ($\mathcal{L}_{\text{prime}}$) as the Anti-Collapse Anchor:} On ViT5-base, removing sentence-level contrastive priming triggers a catastrophic drop of \textbf{$-1.47$ BLEU} (plunging from 35.97 down to 34.50, worse than unregularized Vanilla ViT5 at 34.99) and $-0.91$ chrF++. Because ViT5 employs SentencePiece tokenization with relative position bias, global sentence priming $\mathcal{L}_{\text{prime}}$ provides an indispensable isotropic regularization that pulls subword sequences into the target semantic sphere before token-level anchoring can take effect.
     \item \textbf{Token Barycentric Grounding ($\mathcal{L}_{\text{struct}}$):} Removing token-level barycentric anchoring consistently reduces translation accuracy on ViT5 by \textbf{$-0.29$ BLEU} (from 35.97 to 35.68) and $-0.18$ chrF++. The confidence-weighted barycenter $\bar{h}_s^T = \sum_{t=1}^T A_{t,s} h_t^T$ serves as the primary engine for precise lexical grounding across word boundaries.
-    \item \textbf{Dynamic Head Routing Gate ($\mathcal{L}_{\text{route}}$):} The dynamic router enforces the capacity budget $\rho^* = \min(0.333, 4/H)$, preserving syntactic generation heads while isolating semantic anchor heads. Across both architectures, Full TSSA achieves superior global stability and peak performance over unregularized baselines ($+0.98$ on ViT5, $+0.65$ on BARTpho).
+    \item \textbf{Dynamic Head Routing Gate ($\mathcal{L}_{\text{route}}$):} The dynamic router enforces the capacity budget $\rho^* = \min(0.333, 4/H)$, preserving syntactic generation heads while isolating semantic anchor heads. Across both architectures, Full TSSA achieves higher global stability and peak performance over unregularized baselines ($+0.98$ on ViT5, $+0.65$ on BARTpho).
 \end{enumerate}
 
 \paragraph{Mechanistic Divergence: Subword vs. Syllable Inductive Biases.}
@@ -716,7 +727,7 @@ In unregularized sequence-to-sequence models, longer source sentences exacerbate
 TSSA provides robust performance gains across sequence lengths and architectures:
 \begin{itemize}[leftmargin=*]
     \item \textbf{BARTpho Dynamics:} On short sentences ($\le 12$ words), TSSA achieves $+1.01$ BLEU, $+1.12$ chrF++, and $+0.0323$ COMET. On medium sentences, gains remain solid at $+0.72$ BLEU. On long sentences ($> 25$ words), TSSA maintains consistent outperformance: \textbf{$+0.40$ BLEU}, \textbf{$+0.94$ chrF++}, and an exceptional \textbf{$+0.0528$ COMET} increase.
-    \item \textbf{ViT5 Dynamics:} On ViT5, TSSA achieves a remarkable \textbf{$+2.62$ BLEU surge} (surpassing 63 BLEU) on short sentences and \textbf{$+1.31$ BLEU} on medium sentences, demonstrating that relative position biases achieve peak efficiency when paired with invariant barycentric anchors $\bar{h}_s^T$.
+    \item \textbf{ViT5 Dynamics:} On ViT5, TSSA achieves a \textbf{$+2.62$ BLEU surge} (surpassing 63 BLEU) on short sentences and \textbf{$+1.31$ BLEU} on medium sentences, demonstrating that relative position biases achieve peak efficiency when paired with invariant barycentric anchors $\bar{h}_s^T$.
 \end{itemize}
 
 \paragraph{Cross-Lingual Hard-Instance Breakdown.}\label{sec:hard_instances}
@@ -781,23 +792,23 @@ Table~\ref{tab:qualitative_examples} presents authentic test translation samples
 \resizebox{\textwidth}{!}{
 \begin{tabular}{p{0.20\textwidth}p{0.78\textwidth}}
 \toprule
-\multicolumn{2}{l}{\textbf{Case 1: Rhade $\rightarrow$ Vietnamese (Test Instance \#84) --- Administrative Legal Domain}} \\
+\multicolumn{2}{l}{\textbf{Case 1: Rhade $\rightarrow$ Vietnamese (Test Instance \#84): Administrative Legal Domain}} \\
 \textbf{Source} & \textit{Bi\u{a} dah klei d\^o phung m\'ut klei mnga\v{c} kơ mni\^e leh anăn \v{c}o mni\^e, am\^ao d\^o dưi bi hmơr tr\^un klei tu\v{c} kơ phung mni\^e leh anăn \v{c}o mni\^e \^o.} \\
 \textbf{Reference} & Trái lại, nếu có xảy ra bạo lực đối với phụ nữ và trẻ em gái, thì không được xâm phạm đến quyền lợi của phụ nữ và trẻ em gái. \\
-\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Nếu có sự kiện cần thiết thì báo cho cơ quan chức năng biết, nhưng đừng xâm phạm đến quyền lợi của người khác. (chrF++: 9.2 --- \textbf{Severe Ungrounded Hallucination})} \\
-\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Trái lại, nếu có xảy ra bạo lực đối với phụ nữ và trẻ em gái, thì không được xâm phạm đến quyền lợi của phụ nữ và trẻ em gái.} (chrF++: 50.6 --- \textbf{Exact Grounded Retrieval})} \\
+\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Nếu có sự kiện cần thiết thì báo cho cơ quan chức năng biết, nhưng đừng xâm phạm đến quyền lợi của người khác. (chrF++: 9.2, \textbf{Severe Ungrounded Hallucination})} \\
+\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Trái lại, nếu có xảy ra bạo lực đối với phụ nữ và trẻ em gái, thì không được xâm phạm đến quyền lợi của phụ nữ và trẻ em gái.} (chrF++: 50.6, \textbf{Exact Grounded Retrieval})} \\
 \midrule
-\multicolumn{2}{l}{\textbf{Case 2: Tay $\rightarrow$ Vietnamese (Test Instance \#112) --- Social Policy Domain}} \\
+\multicolumn{2}{l}{\textbf{Case 2: Tay $\rightarrow$ Vietnamese (Test Instance \#112): Social Policy Domain}} \\
 \textbf{Source} & \textit{Cần slắng ngòi háng pèng tởi slon slấy liệng pua tởi ké đảy liệng mừa.} \\
 \textbf{Reference} & Người phụ nữ đơn thân nuôi con được trợ cấp hàng tháng. \\
-\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Người phụ nữ nuôi con nuôi con nuôi con được cấp tiền. (chrF++: 18.4 --- \textbf{Degenerative Repetition Attention Sink})} \\
-\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Người phụ nữ đơn thân nuôi con được hưởng trợ cấp hàng tháng.} (chrF++: 46.2 --- \textbf{Fluent \& Grammatically Faithful})} \\
+\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Người phụ nữ nuôi con nuôi con nuôi con được cấp tiền. (chrF++: 18.4, \textbf{Degenerative Repetition Attention Sink})} \\
+\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Người phụ nữ đơn thân nuôi con được hưởng trợ cấp hàng tháng.} (chrF++: 46.2, \textbf{Fluent \& Grammatically Faithful})} \\
 \midrule
-\multicolumn{2}{l}{\textbf{Case 3: Bahnaric $\rightarrow$ Vietnamese (Test Instance \#402) --- Cultural Documentation Domain}} \\
+\multicolumn{2}{l}{\textbf{Case 3: Bahnaric $\rightarrow$ Vietnamese (Test Instance \#402): Cultural Documentation Domain}} \\
 \textbf{Source} & \textit{Lơ\u{a}ng pơdrơu kơ dơ\u{n}g \v{c}ar bơ\u{n}h j\u{o}ng kơ dơ\u{n}g hơdrol hơdrung bơ\u{n}h kơ kơdrang.} \\
 \textbf{Reference} & Lễ hội cồng chiêng là nét đẹp văn hóa truyền thống của đồng bào vùng cao. \\
-\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Những người già ở trong làng thường đi tìm củi. (chrF++: 7.1 --- \textbf{Complete Semantic Disconnection})} \\
-\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Lễ hội cồng chiêng thể hiện bản sắc truyền thống của đồng bào miền núi.} (chrF++: 38.9 --- \textbf{Semantic Proposition Grounded})} \\
+\textbf{Vanilla BARTpho} & \textcolor{BrickRed}{Những người già ở trong làng thường đi tìm củi. (chrF++: 7.1, \textbf{Complete Semantic Disconnection})} \\
+\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Lễ hội cồng chiêng thể hiện bản sắc truyền thống của đồng bào miền núi.} (chrF++: 38.9, \textbf{Semantic Proposition Grounded})} \\
 \bottomrule
 \end{tabular}
 }
@@ -822,20 +833,20 @@ Qualitative scrutiny of model outputs reveals three characteristic failure modes
 \multicolumn{2}{l}{\textbf{Case 1: Rhade $\rightarrow$ Vietnamese (Rare Vocabulary Grounding)}} \\
 \textbf{Source} & \textit{L\u{a}n hr\^ong} \\
 \textbf{Reference} & Đất hoang \\
-\textbf{Vanilla ViT5} & \textcolor{BrickRed}{Đất khô (chrF++: 18.9 --- \textbf{Inaccurate Semantic Transfer})} \\
-\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Đất hoang} (chrF++: 100.0 --- \textbf{Exact Retrieval})} \\
+\textbf{Vanilla ViT5} & \textcolor{BrickRed}{Đất khô (chrF++: 18.9, \textbf{Inaccurate Semantic Transfer})} \\
+\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{Đất hoang} (chrF++: 100.0, \textbf{Exact Retrieval})} \\
 \midrule
 \multicolumn{2}{l}{\textbf{Case 2: Tay $\rightarrow$ Vietnamese (Verbal Phrase Idiomatic Translation)}} \\
 \textbf{Source} & \textit{x\^ang kh\h{a}u} \\
 \textbf{Reference} & sàng gạo \\
-\textbf{Vanilla ViT5} & \textcolor{BrickRed}{rây lúa (chrF++: 0.0 --- \textbf{Lexical Failure})} \\
-\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{sàng gạo} (chrF++: 100.0 --- \textbf{Exact Retrieval})} \\
+\textbf{Vanilla ViT5} & \textcolor{BrickRed}{rây lúa (chrF++: 0.0, \textbf{Lexical Failure})} \\
+\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{sàng gạo} (chrF++: 100.0, \textbf{Exact Retrieval})} \\
 \midrule
 \multicolumn{2}{l}{\textbf{Case 3: Bahnaric $\rightarrow$ Vietnamese (Numeric Context \& Token Integrity)}} \\
 \textbf{Source} & \textit{481} \\
 \textbf{Reference} & 481 \\
-\textbf{Vanilla ViT5} & \textcolor{BrickRed}{48 (chrF++: 42.4 --- \textbf{Truncation Error})} \\
-\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{481} (chrF++: 100.0 --- \textbf{Exact Numeral Grounding})} \\
+\textbf{Vanilla ViT5} & \textcolor{BrickRed}{48 (chrF++: 42.4, \textbf{Truncation Error})} \\
+\textbf{TSSA (Ours)} & \textcolor{topgreen}{\textbf{481} (chrF++: 100.0, \textbf{Exact Numeral Grounding})} \\
 \bottomrule
 \end{tabular}
 }

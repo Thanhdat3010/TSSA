@@ -57,7 +57,7 @@
 \title{Target-Side Semantic Anchoring: Resolving Attention Sinking and Representation Collapse in Low-Resource Neural Machine Translation}
 
 % Author information for double-blind review
-\author{Anonymous NAACL Submission \\
+\author{Anonymous ACL Submission \\
   \texttt{Paper ID: Main Track} \\}
 
 \begin{document}
@@ -68,7 +68,7 @@ When fine-tuning massively pre-trained sequence-to-sequence transformers on low-
 
 In this work, we propose \textbf{Target-Side Semantic Anchoring (TSSA)}, an autonomous, parser-free framework that regularizes latent cross-attention geometry without requiring external word aligners or offline feature caches. TSSA couples three synergistic mechanisms: (1) an \textit{Online Frozen Target Teacher} extracting clean target semantic priors on-the-fly; (2) a \textit{Scale-Invariant Structural Barycenter Loss} coupled with \textit{Contrastive Sentence Priming} that aligns representations across word boundaries; and (3) a \textit{Dynamic Head Routing Gate} supervised by teacher cosine agreement that decouples semantic translation heads from syntactic generation heads under a closed capacity budget $\rho^* = \min(0.333, 4/H)$. 
 
-Extensive empirical evaluations across two divergent sequence-to-sequence backbones (\textbf{ViT5} and \textbf{BARTpho}) on indigenous Vietnamese minority languages demonstrate that TSSA establishes new state-of-the-art benchmarks across isolating and agglutinative typologies. On ViT5, TSSA achieves \textbf{35.97 BLEU (+0.98)} on Tay and \textbf{30.64 BLEU (+0.36, 46.88 chrF++)} on Rhade, outperforming four published alignment baselines. Paired bootstrap resampling ($B=1,000$) confirms statistically significant gains over baselines on Rhade ($p < 0.001^{\ast\ast\ast}$ on BARTpho, $p < 0.05^*$ on ViT5) and Tay ($p < 0.05^*$ on ViT5). Intrinsic probing confirms a 50.7\% reduction in cross-attention entropy and complete elimination of delimiter attention sinking. Crucially, TSSA functions strictly as a training regularizer, introducing zero inference parameter or latency overhead. Finally, our negative empirical finding on Bahnaric ($\kappa = 3.5$) delineates an intrinsic typological boundary where extreme subword fragmentation constrains token-level representation interventions.
+Extensive empirical evaluations across two divergent sequence-to-sequence backbones (\textbf{ViT5} and \textbf{BARTpho}) on indigenous Vietnamese minority languages demonstrate that TSSA establishes new state-of-the-art benchmarks across isolating and agglutinative typologies. On ViT5, TSSA achieves \textbf{35.97 BLEU} on Tay (+0.98 over Vanilla, $p = 0.0370^*$) and \textbf{30.64 BLEU} on Rhade (+0.67 over strongest baseline AWESOME-align, $p = 0.0220^*$). On BARTpho Rhade, TSSA achieves \textbf{24.01 BLEU} (+0.96 over AWESOME-align, $p < 0.001^{\ast\ast\ast}$). On isolating Tay, where monosyllabic syntax already facilitates monotone alignment, TSSA achieves competitive parity ($p > 0.05$) with external baselines while maintaining the operational advantage of requiring zero external aligners and zero runtime latency overhead. Intrinsic probing confirms a 50.7\% reduction in cross-attention entropy and complete elimination of delimiter attention sinking. Crucially, TSSA functions strictly as a training regularizer, introducing zero inference parameter or latency overhead. Finally, our negative empirical finding on Bahnaric ($\kappa = 3.5$) delineates an intrinsic typological boundary where extreme subword fragmentation constrains token-level representation interventions.
 \end{abstract}
 
 % ==============================================================================
@@ -93,7 +93,7 @@ Our core contributions are summarized as follows:
 \begin{itemize}[leftmargin=*]
     \item We propose \textbf{TSSA}, an autonomous, parser-free alignment framework that regularizes latent cross-attention geometry without requiring external aligners, bilingual lexicons, or offline caches, operating with \textbf{zero inference cost}.
     \item We introduce the \textbf{Scale-Invariant Structural Barycenter Loss} ($\mathcal{L}_{\text{struct}}$) coupled with \textbf{Contrastive Sentence Priming} ($\mathcal{L}_{\text{prime}}$), and formulate a \textbf{Dynamic Head Routing Gate} ($\mathcal{L}_{\text{route}}$) governed by a closed capacity budget $\rho^*$ that establishes a Pareto-optimal trade-off between semantic grounding and syntactic fluency.
-    \item We demonstrate across two structurally divergent backbones (\textbf{ViT5} and \textbf{BARTpho}) that TSSA establishes new state-of-the-art translation accuracy on Tay (\textbf{35.97 BLEU}, +0.98) and Rhade (\textbf{30.64 BLEU}, +0.36; \textbf{46.88 chrF++}), outperforming four published alignment baselines with statistically verified gains ($p < 0.001^{\ast\ast\ast}$ on BARTpho Rhade, $p = 0.0220^*$ on ViT5 Rhade, $p = 0.0370^*$ on ViT5 Tay).
+    \item We demonstrate across two structurally divergent backbones (\textbf{ViT5} and \textbf{BARTpho}) that TSSA consistently elevates low-resource translation quality: on agglutinative Rhade, TSSA decisively surpasses the strongest published baseline AWESOME-align ($p < 0.001^{\ast\ast\ast}$ on BARTpho, $p = 0.0220^*$ on ViT5); on isolating Tay, it significantly outperforms unregularized vanilla baselines ($p = 0.0370^*$ on ViT5) while matching external alignment baselines at statistical parity without external tools or inference overhead.
     \item We conduct a transparent investigation into Bahnaric ($\kappa = 3.5$), discovering a general typological boundary condition where extreme subword fragmentation causes all evaluated alignment regularizers to regress on surface n-grams, while TSSA preserves underlying neural semantics and rescues catastrophic tail-failure modes by $14\times$.
 \end{itemize}
 
@@ -112,9 +112,9 @@ Cross-attention mechanisms form the communication bridge in sequence-to-sequence
 \smallskip
 \noindent\textbf{Cross-Lingual Representation Alignment.}\quad
 Prior attempts to regularize cross-attention fall into three main paradigms:
-(1) \textit{Knowledge Distillation (Align-to-Distill)}~\cite{jin2024align} transfers attention distributions from large external teachers, introducing teacher-student capacity mismatch on low-resource pairs.
-(2) \textit{Contrastive Alignment (CL-LSA, InfoXLM)}~\cite{chi2021infoxlm} utilizes token-level InfoNCE, which penalizes synonyms and causes severe false-negative bias.
-(3) \textit{Embedding Space Alignment (AWESOME-align, CrossInit)}~\cite{dou2021word,ai2024zero} fine-tunes embeddings with offline objectives, lacking dynamic interaction with autoregressive decoding dynamics. TSSA bridges this gap by unifying online teacher projection, structural barycenters, and capacity-aware head routing.
+(1) \textit{Attention Distillation (Align-to-Distill, A2D)}~\cite{jin2024align} forces student cross-attention distributions to match an external teacher's attention maps via KL divergence. In low-resource minority translation, this external transfer inflicts severe \textit{capacity and modality mismatch}: the student is forced to mimic rigid attention weights on unfamiliar source tokens without native target anchors. Crucially, TSSA differs fundamentally from A2D: rather than distilling cross-attention distributions, TSSA leaves student attention maps unconstrained, instead dynamically projecting target semantic coordinates from the backbone's own parameter-frozen encoder into a soft \textit{Target Semantic Barycenter}.
+(2) \textit{Contrastive Token Alignment (CL-LSA, InfoXLM)}~\cite{chi2021infoxlm} enforces token-level InfoNCE, which treats in-batch synonyms, morphological variants, and frequent functional words as negative pairs, inflicting catastrophic false-negative penalties in data-scarce regimes. TSSA circumvents this by anchoring representations via continuous distance to the target barycenter, reserving contrastive InfoNCE exclusively for global sentence-level priming ($\mathcal{L}_{\text{prime}}$).
+(3) \textit{Embedding Space Alignment (AWESOME-align, CrossInit)}~\cite{dou2021word,ai2024zero} optimizes static embeddings via offline objectives, decoupled from autoregressive decoding dynamics. TSSA bridges these paradigms by introducing capacity-constrained functional head segregation under budget $\rho^* = \min(0.333, 4/H)$.
 
 \smallskip
 \noindent\textbf{The Sequence-to-Sequence Paradigm vs. Frontier LLMs.}\quad
@@ -219,7 +219,7 @@ Formally, we constrain the proportion of semantic anchor heads by a closed capac
     \rho^* = \min\left(0.333, \frac{4}{H}\right),
     \label{eq:capacity_budget}
 \end{equation}
-where $H$ is the total number of cross-attention heads per layer. The derivation of $\rho^*$ follows from two theoretical and empirical principles:
+where $H$ is the total number of cross-attention heads per layer. We formulate $\rho^*$ as an empirical Pareto heuristic governed by two operational principles:
 \begin{enumerate}[leftmargin=*]
     \item \textbf{Guaranteed Syntactic Headroom ($\rho \le 0.333$):} The upper bound $\rho_{\max} = 1/3 \approx 0.333$ guarantees that at least $66.7\%$ of cross-attention capacity remains strictly dedicated to unrestricted autoregressive decoding. In preliminary exploratory sweeps, forcing unconstrained semantic routing across all heads ($\rho = 1.0$) caused a severe $-1.40$ BLEU regression, as semantic anchoring suppressed the decoder's syntactic fluency.
     \item \textbf{Head Cardinality Ceiling ($4/H$):} Empirically, anchoring at most 3 to 4 heads is sufficient to completely eliminate delimiter sinking on $\mathtt{<s>}$ (reducing sink mass by over $50\%$). Dedicating additional heads provides diminishing returns while consuming expressivity needed for target language modeling.
@@ -239,7 +239,7 @@ where $\lambda_1 = 0.5, \lambda_2 = 0.1, \lambda_3 = 0.2$ are balancing hyperpar
 % ==============================================================================
 
 \subsection{Datasets and Typological Profiles}
-We evaluate on three indigenous language pairs from the official Vietnamese Minority MT benchmark\footnote{All datasets, preprocessing scripts, and checkpoint artifacts are open-sourced for research reproducibility at \url{https://github.com/Thanhdat3010/TSSA} (anonymized repository available at \url{https://anonymous.4open.science/r/TSSA-NAACL2026/}).}:
+We evaluate on three indigenous language pairs from the official Vietnamese Minority MT benchmark\footnote{All datasets, preprocessing scripts, and checkpoint artifacts are open-sourced for double-blind review at \url{https://anonymous.4open.science/r/TSSA-SUBMISSION/} (de-anonymized public repository released upon acceptance).}:
 \begin{itemize}[leftmargin=*]
     \item \textbf{Rhade (Austronesian):} Agglutinative morphology, $14,969$ train, $1,000$ val, $1,000$ test pairs ($\kappa = 1.4$).
     \item \textbf{Tay (Tai-Kadai):} Isolating grammar with SVO order, $20,600$ train, $1,000$ val, $2,295$ test pairs ($\kappa = 1.2$).
@@ -316,7 +316,7 @@ We report four standardized metrics: SacreBLEU~\cite{post2018call}, chrF++~\cite
 \multicolumn{7}{l}{\textit{\textbf{Panel A: BARTpho-syllable Backbone}}} \\
 \midrule
 \multirow{4}{*}{\textbf{Rhade}} 
- & vs. Vanilla BARTpho & BLEU & +0.61 & [-0.04, +1.24] & 0.0410 & $p < 0.05^*$ \\
+ & vs. Vanilla BARTpho & BLEU & +0.60 & [-0.04, +1.24] & 0.0410 & $p < 0.05^*$ \\
  & vs. Vanilla BARTpho & chrF++ & +0.95 & [+0.33, +1.56] & 0.0000 & $p < 0.001^{\ast\ast\ast}$ \\
  & vs. AWESOME-align & BLEU & +0.96 & [+0.41, +1.48] & 0.0000 & $p < 0.001^{\ast\ast\ast}$ \\
  & vs. AWESOME-align & chrF++ & +1.34 & [+0.83, +1.84] & 0.0000 & $p < 0.001^{\ast\ast\ast}$ \\
@@ -421,7 +421,7 @@ We explicitly identify three key limitations of our study:
 % ==============================================================================
 \section*{Ethics Statement}
 % ==============================================================================
-All minority language datasets utilized in this study are publicly available, fully anonymized, and derived from certified educational archives and cultural documentation initiatives in Vietnam. Our work adheres to strict ethical guidelines regarding the digital empowerment of indigenous minority populations (Rhade, Tay, and Bahnar). All models, evaluation scripts, and tokenization recipes are open-sourced under the MIT license at \url{https://github.com/Thanhdat3010/TSSA} to foster reproducible, transparent, and equitable NLP research for underserved linguistic communities.
+All minority language datasets utilized in this study are publicly available, fully anonymized, and derived from certified educational archives and cultural documentation initiatives in Vietnam. Our work adheres to strict ethical guidelines regarding the digital empowerment of indigenous minority populations (Rhade, Tay, and Bahnar). All models, evaluation scripts, and tokenization recipes are open-sourced under the MIT license at \url{https://anonymous.4open.science/r/TSSA-SUBMISSION/} to foster reproducible, transparent, and equitable NLP research for underserved linguistic communities.
 
 % ==============================================================================
 \bibliography{custom}

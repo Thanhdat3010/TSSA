@@ -256,11 +256,11 @@ We benchmark against five established alignment paradigms:
 (1) \textbf{Vanilla Seq2Seq} (BARTpho / ViT5);
 (2) \textbf{Attention Distillation:} Align-to-Distill (A2D)~\cite{jin2024align};
 (3) \textbf{Shifted State Alignment:} Shift-AET~\cite{chen2020accurate};
-(4) \textbf{Embedding Alignment:} AWESOME-align~\cite{dou2021word};
+(4) \textbf{Embedding Alignment:} AWESOME-align~\cite{dou2021word} (fine-tuned directly on in-domain bilingual parallel splits following self-training objectives);
 (5) \textbf{Contrastive Representation:} Cross-Lingual InfoNCE (CL-LSA)~\cite{chi2021infoxlm}.
 
 \subsection{Training and Evaluation Protocol}
-All models across all paradigms are trained under a strictly controlled computational budget using Seed 42 with deterministic PyTorch CUDA kernels (\texttt{torch.manual\_seed(42)}, \texttt{torch.use\_deterministic\_algorithms(True)}) on a single NVIDIA RTX 4090 GPU (24GB VRAM) for 20 epochs with early stopping (patience 5) based on validation chrF++. We use the AdamW optimizer ($\beta_1=0.9, \beta_2=0.98, \epsilon=10^{-8}$) with a linear warmup of 1,000 steps followed by polynomial decay, and an effective batch size of 32 via gradient accumulation. Crucially, the Online Target Teacher $\mathcal{E}_T$ adds only $\approx 11.4\%$ training compute and is completely discarded prior to inference, resulting in \textbf{exactly zero additional parameters and zero latency overhead during inference}.
+All models across all paradigms are trained under a strictly controlled computational budget using Seed 42 with deterministic PyTorch CUDA kernels (\texttt{torch.manual\_seed(42)}, \texttt{torch.use\_deterministic\_algorithms(True)}) on a single NVIDIA RTX 4090 GPU (24GB VRAM) for 20 epochs with early stopping (patience 5) based on validation chrF++. We use the AdamW optimizer ($\beta_1=0.9, \beta_2=0.98, \epsilon=10^{-8}$) with a linear warmup of 1,000 steps followed by polynomial decay, and an effective batch size of 32 via gradient accumulation. Crucially, the Online Target Teacher $\mathcal{E}_T$ adds only $\approx 11.4\%$ training compute (measured as wall-clock training time per epoch compared to unregularized Vanilla backbone fine-tuning on the same single NVIDIA RTX 4090 GPU under identical batch size) and is completely discarded prior to inference, resulting in \textbf{exactly zero additional parameters and zero latency overhead during inference}.
 
 We report four standardized metrics: SacreBLEU~\cite{post2018call}, chrF++~\cite{popovic2015chrf}, METEOR~\cite{banerjee2005meteor}, and neural COMET (\texttt{wmt20-comet-da})~\cite{rei2020comet}. Statistical significance is computed via \textbf{Paired Bootstrap Resampling} ($B=1,000$ iterations, Seed 42)~\cite{koehn2004statistical}, reporting 95\% confidence intervals and two-tailed $p$-values against both vanilla backbones and the strongest alignment baselines.
 
@@ -348,7 +348,7 @@ We report four standardized metrics: SacreBLEU~\cite{post2018call}, chrF++~\cite
 Table~\ref{tab:main_benchmark} presents translation performance on Rhade and Tay across both backbones. TSSA decisively outperforms vanilla models and prior alignment baselines across both language families:
 \begin{itemize}[leftmargin=*]
     \item \textbf{Agglutinative Rhade Peak:} On Rhade, TSSA reaches \textbf{24.01 BLEU} (+0.60 over Vanilla) and \textbf{40.27 chrF++} (+0.94) on BARTpho. On ViT5, it breaks past the 30.28 baseline plateau to achieve an all-time peak of \textbf{30.64 BLEU (+0.36)} and \textbf{46.88 chrF++ (+0.41)}.
-    \item \textbf{Isolating Tay Dominance:} On Tay, TSSA achieves \textbf{25.32 BLEU} on BARTpho (+0.65 over Vanilla) and reaches \textbf{35.97 BLEU (+0.98)} on ViT5, establishing the highest recorded score on this benchmark.
+    \item \textbf{Isolating Tay Dominance:} On Tay, TSSA achieves \textbf{25.32 BLEU} on BARTpho (+0.65 over Vanilla) and reaches \textbf{35.97 BLEU (+0.98)} on ViT5, achieving top-tier BLEU (35.97) while maintaining competitive chrF++ (45.42).
 \end{itemize}
 
 \subsection{Statistical Significance and Performance Calibration}

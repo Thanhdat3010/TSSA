@@ -21,7 +21,7 @@ class TSSAProCriterion(nn.Module):
     def __init__(self, 
                  use_struct: bool = True, 
                  use_prime: bool = True, 
-                 use_route: bool = True,
+                 use_route: bool = False,
                  conf_threshold: float = 0.20,
                  temperature: float = 0.07,
                  align_tau: float = 0.10,
@@ -46,7 +46,7 @@ class TSSAProCriterion(nn.Module):
         # 1. Residual Projector Sentence InfoNCE Priming
         self.prime_loss_fn = PrimeLoss(temperature=temperature) if use_prime else None
 
-        # 2. Dynamic Head-Wise Router Supervision Loss
+        # 2. Dynamic Head-Wise Router Supervision Loss (Disabled by default to avoid decoder interference)
         self.route_loss_fn = RouteLoss(target_budget=target_budget) if use_route else None
 
     def compute_latent_barycenter_loss(self, 
@@ -55,60 +55,68 @@ class TSSAProCriterion(nn.Module):
                                       src_mask: torch.Tensor = None, 
                                       tgt_mask: torch.Tensor = None) -> torch.Tensor:
         """
-        Computes L_struct via Latent Barycentric Anchoring in the representation space.
-        Applies Dynamic Entropy Filtering w_s = exp(- H_s / tau_H) dynamically on every token.
-        Pure mathematical formulation without discrete language rules.
+        Scale-Invariant Latent Hypersphere Anchoring Loss:
+        - Float32 precision casting to prevent FP16 underflow/overflow.
+        - Unit Hypersphere L2 normalization S^{D-1} to eliminate LayerNorm vs RMSNorm scale divergence.
+        - Subword cross-lingual affinity & soft alignment posterior with stop-gradient on alignment.
+        - Spherical barycenter vector projected to S^{D-1}.
+        - Dynamic Information Entropy Filter w_s = exp(- H_s / tau_H).
+        - Scale-invariant Cosine distance (1 - cos) strictly bounded in [0, 2].
+        - Normalized by actual valid token count sum(src_mask) to ensure high-entropy sentences truly attenuate to 0.
         """
-        # 1. Stop-gradient on Teacher features (prevent representation drift)
-        teacher_enc = teacher_enc.detach()
-        B, S, D = student_enc.shape
-        T = teacher_enc.size(1)
+        # 1. Cast to float32 for stable numerical operations under FP16 training
+        student_enc_fp32 = student_enc.float()
+        teacher_enc_fp32 = teacher_enc.detach().float()
+        
+        B, S, D = student_enc_fp32.shape
+        T = teacher_enc_fp32.size(1)
 
-        # 2. Compute Cosine Affinity Matrix in representation space [B, S, T]
-        s_norm = F.normalize(student_enc, p=2, dim=-1) # [B, S, D]
-        t_norm = F.normalize(teacher_enc, p=2, dim=-1) # [B, T, D]
+        # 2. Project onto Unit Hypersphere S^{D-1} (Scale-Invariance across LayerNorm & RMSNorm)
+        s_norm = F.normalize(student_enc_fp32, p=2, dim=-1, eps=self.eps) # [B, S, D]
+        t_norm = F.normalize(teacher_enc_fp32, p=2, dim=-1, eps=self.eps) # [B, T, D]
+
+        # 3. Subword Cross-Lingual Affinity Matrix [B, S, T]
         sim_st = torch.bmm(s_norm, t_norm.transpose(1, 2)) / self.align_tau # [B, S, T]
 
         if tgt_mask is not None:
-            # Mask out target padding positions from softmax
             mask_t = (1.0 - tgt_mask.unsqueeze(1).float()) * -1e4
             sim_st = sim_st + mask_t
 
-        # 3. Soft alignment posterior A_{s, t} over target tokens
-        align_st = F.softmax(sim_st, dim=-1) # [B, S, T]
+        # 4. Soft Alignment Posterior with Stop-Gradient to prevent student cheating
+        align_st = F.softmax(sim_st, dim=-1).detach() # [B, S, T]
 
-        # 4. Target Barycenter vector: h̄_s^T = ∑_t A_{s,t} h_t^T
-        target_barycenter = torch.bmm(align_st, teacher_enc) # [B, S, D]
+        # 5. Spherical Barycentric Target Vector
+        target_barycenter_raw = torch.bmm(align_st, t_norm) # [B, S, D]
+        target_barycenter = F.normalize(target_barycenter_raw, p=2, dim=-1, eps=self.eps) # [B, S, D]
 
-        # 5. Alignment confidence c_s = max_t A_{s,t}
-        c_s, _ = torch.max(align_st, dim=-1) # [B, S]
-
-        # 6. Dynamic Entropy Filter w_s = exp(- H_s / tau_H)
-        # Sharp lexical alignment -> Low entropy -> w_s ~ 1.0
-        # Dispersed affix noise -> High entropy -> w_s -> 0.0
+        # 6. Dynamic Information Entropy Filter w_s = exp(- H_s / tau_H)
         p_clamped = align_st.clamp(min=self.eps)
         entropy_s = - (p_clamped * torch.log(p_clamped)).sum(dim=-1) # [B, S]
         w_s = torch.exp(- entropy_s / self.entropy_tau) # [B, S]
 
-        # 7. Confidence & valid token gating
-        conf_gate = (c_s >= self.conf_threshold).float() # [B, S]
-        effective_weights = c_s * w_s * conf_gate # [B, S]
-
         if src_mask is not None:
-            effective_weights = effective_weights * src_mask.float()
+            valid_mask = src_mask.float()
+        else:
+            valid_mask = torch.ones((B, S), device=student_enc.device, dtype=torch.float32)
 
-        # 8. Distance in latent representation space (Smooth L1)
-        diff = F.smooth_l1_loss(student_enc, target_barycenter, reduction="none").mean(dim=-1) # [B, S]
-        weighted_loss = diff * effective_weights
+        # 7. Scale-Invariant Cosine Distance on Hypersphere: 1 - <s_norm, target_barycenter>
+        cos_sim = (s_norm * target_barycenter).sum(dim=-1) # [B, S]
+        cos_dist = 1.0 - cos_sim # [B, S] in [0, 2]
 
-        normalizer = effective_weights.sum().clamp(min=1.0)
-        return weighted_loss.sum() / normalizer
+        weighted_loss = cos_dist * w_s * valid_mask # [B, S]
+
+        # 8. Normalization by actual valid token count
+        # If high-entropy Ba Na sentence causes w_s -> 0, numerator vanishes while denominator remains |S_valid|
+        # -> Loss truly attenuates to zero!
+        normalizer = valid_mask.sum().clamp(min=1.0)
+        loss_struct = weighted_loss.sum() / normalizer
+        return loss_struct.to(student_enc.dtype)
 
     def forward(self, 
                 loss_mt: torch.Tensor, 
                 student_outputs: dict, 
                 batch: dict = None,
-                lambdas: tuple = (0.20, 0.08, 0.05)) -> dict:
+                lambdas: tuple = (0.20, 0.08, 0.00)) -> dict:
         """
         Forward pass for TSSA-Pro loss computation.
         Args:
@@ -120,14 +128,17 @@ class TSSAProCriterion(nn.Module):
             dict containing total loss and individual loss components.
         """
         batch = batch or {}
-        l1, l2, l3 = lambdas
+        l1 = lambdas[0] if len(lambdas) > 0 else 0.20
+        l2 = lambdas[1] if len(lambdas) > 1 else 0.08
+        l3 = lambdas[2] if len(lambdas) > 2 else 0.00
+
         loss_total = loss_mt
         log_dict = {"loss_mt": loss_mt.item()}
 
         src_mask = batch.get("attention_mask")
         tgt_mask = batch.get("decoder_attention_mask")
 
-        # 1. Latent Barycentric Anchoring Loss (L_struct)
+        # 1. Scale-Invariant Latent Barycentric Anchoring Loss (L_struct)
         student_enc = student_outputs.get("encoder_last_hidden_state")
         teacher_enc = student_outputs.get("teacher_enc_states")
         
@@ -141,7 +152,7 @@ class TSSAProCriterion(nn.Module):
             log_dict["loss_struct"] = 0.0
 
         # 2. Residual Projector Sentence InfoNCE Priming (L_prime)
-        # Continuous Gaussian Subword Fertility Attenuation (Zero IF-ELSE):
+        # Continuous Gaussian Subword Fertility Attenuation:
         # fertility_factor(kappa) = exp(- (kappa - 1.0)^2 / (2 * sigma_kappa^2))
         fertility_factor = math.exp(- ((max(1.0, self.kappa) - 1.0) ** 2) / (2.0 * (self.sigma_kappa ** 2)))
         eff_l2 = l2 * fertility_factor
@@ -156,7 +167,7 @@ class TSSAProCriterion(nn.Module):
         else:
             log_dict["loss_prime"] = 0.0
 
-        # 3. Dynamic Head Router Supervision / Capacity Budget (L_route)
+        # 3. Dynamic Head Router Supervision (Disabled if l3 == 0 or use_route is False)
         router_gates = student_outputs.get("router_gates")
         if self.use_route and l3 > 0 and router_gates is not None and self.route_loss_fn is not None:
             l_route = self.route_loss_fn(router_gates, tgt_mask=tgt_mask)

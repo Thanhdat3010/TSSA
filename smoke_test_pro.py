@@ -40,9 +40,9 @@ def test_backbone(model_ckpt: str, is_t5: bool, device: str):
     # 2. Khởi tạo Model
     print("   [2/5] Nạp Model & Semantic Projector...")
     if is_t5:
-        model = TSSAViT5Model(model_name_or_path=model_ckpt, use_route=True).to(device)
+        model = TSSAViT5Model(model_name_or_path=model_ckpt, use_route=False).to(device)
     else:
-        model = TSSASeq2SeqModel(model_name_or_path=model_ckpt, use_route=True).to(device)
+        model = TSSASeq2SeqModel(model_name_or_path=model_ckpt, use_route=False).to(device)
     model.train()
 
     assert hasattr(model, "projector"), "Thiếu ResidualSemanticProjector!"
@@ -72,12 +72,12 @@ def test_backbone(model_ckpt: str, is_t5: bool, device: str):
     assert "encoder_last_hidden_state" in outputs, "Thiếu encoder_last_hidden_state!"
     assert "teacher_enc_states" in outputs and outputs["teacher_enc_states"] is not None, "Thiếu teacher_enc_states!"
 
-    # 4. Kiểm tra TSSA-Pro Criterion
-    print("   [4/5] Tính toán TSSA-Pro Loss (Latent Barycenter + Dynamic Entropy Filter)...")
+    # 4. Kiểm tra TSSA-Pro Criterion (Scale-Invariant Cosine Hypersphere)
+    print("   [4/5] Tính toán TSSA-Pro Loss (Scale-Invariant Latent Hypersphere)...")
     criterion = TSSAProCriterion(
         use_struct=True,
         use_prime=True,
-        use_route=True,
+        use_route=False,
         conf_threshold=0.20,
         temperature=0.07,
         align_tau=0.10,
@@ -86,7 +86,7 @@ def test_backbone(model_ckpt: str, is_t5: bool, device: str):
         kappa=1.20
     ).to(device)
 
-    loss_res = criterion(outputs["loss"], outputs, batch, lambdas=(0.20, 0.08, 0.05))
+    loss_res = criterion(outputs["loss"], outputs, batch, lambdas=(0.20, 0.08, 0.00))
     total_loss = loss_res["loss"]
 
     print(f"         -> Loss MT     = {loss_res['log_dict']['loss_mt']:.4f}")

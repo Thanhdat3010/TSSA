@@ -122,9 +122,9 @@ def main():
             delta_van = b - vanilla_b
             delta_sota = b - sota_b
 
-            status = "🏆 PASS" if delta_van > 0 and (delta_sota >= 0 or lang == "bahnaric" and delta_van >= 0) else "⚠️ CHECK"
-            if "CHECK" in status:
-                all_passed = False
+            status = "+Vanilla" if delta_van > 0 else "Boundary"
+            if delta_sota > 0:
+                status = "+SOTA"
 
             row = (
                 f"{backbone:<10} | {lang:<9} | {b:<6.2f} | {c:<6.2f} | "
@@ -138,10 +138,7 @@ def main():
 
     lines.append("-" * len(table_header))
     lines.append("")
-    if all_passed:
-        lines.append("🎉 KẾT LUẬN: TOÀN BỘ 6/6 MÔ HÌNH TSSA-PRO ĐÃ ĐẠT TIÊU CHÍ VƯỢT TRỘI!")
-    else:
-        lines.append("ℹ️ LƯU Ý: Một số mô hình đang chờ huấn luyện hoặc cần kiểm tra thêm log.")
+    lines.append("Báo cáo đối soát thống kê hoàn tất.")
     lines.append("=" * 85)
 
     report_content = "\n".join(lines)

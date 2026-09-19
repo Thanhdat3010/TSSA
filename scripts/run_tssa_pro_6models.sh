@@ -46,18 +46,18 @@ echo "========================================================================"
 trap 'echo -e "\n[!] Đã nhận tín hiệu hủy (Ctrl+C). Đang dừng an toàn..."; exit 1;' INT
 
 # ------------------------------------------------------------------------------
-# THAM SỐ TOÁN HỌC PHỔ QUÁT TSSA-PRO (UNIVERSAL PARAMETERS - KHÔNG IF/ELSE)
+# THAM SỐ TOÁN HỌC PHỔ QUÁT TSSA (SCALE-INVARIANT HYPERSPHERE - ZERO IF/ELSE)
 # ------------------------------------------------------------------------------
-# Toàn bộ tham số được cố định theo lý thuyết toán học liên tục:
-#   - L_struct: lambda = 0.20, Entropy Gate tau_H = 1.5, Conf >= 0.20
+# Toàn bộ tham số được cố định theo lý thuyết hình học mặt cầu bất biến thang đo:
+#   - L_struct: lambda = 0.20, Entropy Gate tau_H = 1.5, Cosine Hypersphere S^{D-1}
 #   - L_prime : lambda = 0.08, tau_prime = 0.07, sigma_kappa = 0.75
 #               Hệ số Gaussian suy giảm InfoNCE: exp(-(max(1, kappa)-1)^2 / (2*0.75^2))
-#               Tự động tính kappa từ dữ liệu (Tay ~1.2 -> 96%, Ede ~1.4 -> 87%, Ba Na ~3.5 -> 0.3%)
-#   - L_route : lambda = 0.05, rho* = 0.250 (Closed Capacity Budget 25% Heads)
+#   - Decoder : 100% Tự do sinh câu cú pháp (Zero intervention on Decoder)
+#   - Precision: FP16 tiêu chuẩn (Loss & Softmax tính bằng FP32 chống underflow)
 # ------------------------------------------------------------------------------
 LAMBDA_STRUCT=0.20
 LAMBDA_PRIME=0.08
-LAMBDA_ROUTE=0.05
+LAMBDA_ROUTE=0.00
 SIGMA_KAPPA=0.75
 
 # ------------------------------------------------------------------------------
@@ -65,7 +65,7 @@ SIGMA_KAPPA=0.75
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo ">>> [BƯỚC 1/2] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH BARTpho (UNIVERSAL)"
+echo ">>> [BƯỚC 1/2] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH BARTpho (SCALE-INVARIANT)"
 echo "========================================================================"
 
 for LANG in "${LANGUAGES[@]}"; do
@@ -74,7 +74,7 @@ for LANG in "${LANGUAGES[@]}"; do
 
     echo ""
     echo ">>> [BARTpho - ${LANG^^}] Bắt đầu: ${EXP_NAME} (LR=${LR_BARTPHO})"
-    echo "    [*] Cấu hình toán học phổ quát: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, route=${LAMBDA_ROUTE}, rho*=${TARGET_BUDGET}"
+    echo "    [*] Cấu hình toán học phổ quát: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, route=${LAMBDA_ROUTE}"
 
     START_TIME=$(date +%s)
 
@@ -93,11 +93,10 @@ for LANG in "${LANGUAGES[@]}"; do
         --sigma_kappa "${SIGMA_KAPPA}" \
         --use_struct \
         --use_prime \
-        --use_route \
+        --no_route \
         --lambda_struct "${LAMBDA_STRUCT}" \
         --lambda_prime "${LAMBDA_PRIME}" \
         --lambda_route "${LAMBDA_ROUTE}" \
-        --target_budget "${TARGET_BUDGET}" \
         --prime_tau "${PRIME_TAU}" \
         --conf_threshold "${CONF_THRESHOLD}"
 
@@ -111,7 +110,7 @@ done
 # ------------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
-echo ">>> [BƯỚC 2/2] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH ViT5 (UNIVERSAL)"
+echo ">>> [BƯỚC 2/2] BẮT ĐẦU HUẤN LUYỆN 3 MÔ HÌNH ViT5 (SCALE-INVARIANT)"
 echo "========================================================================"
 
 for LANG in "${LANGUAGES[@]}"; do
@@ -120,7 +119,7 @@ for LANG in "${LANGUAGES[@]}"; do
 
     echo ""
     echo ">>> [ViT5 - ${LANG^^}] Bắt đầu: ${EXP_NAME} (LR=${LR_VIT5})"
-    echo "    [*] Cấu hình toán học phổ quát: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, route=${LAMBDA_ROUTE}, rho*=${TARGET_BUDGET}"
+    echo "    [*] Cấu hình toán học phổ quát: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, route=${LAMBDA_ROUTE}"
 
     START_TIME=$(date +%s)
 
@@ -139,11 +138,10 @@ for LANG in "${LANGUAGES[@]}"; do
         --sigma_kappa "${SIGMA_KAPPA}" \
         --use_struct \
         --use_prime \
-        --use_route \
+        --no_route \
         --lambda_struct "${LAMBDA_STRUCT}" \
         --lambda_prime "${LAMBDA_PRIME}" \
         --lambda_route "${LAMBDA_ROUTE}" \
-        --target_budget "${TARGET_BUDGET}" \
         --prime_tau "${PRIME_TAU}" \
         --conf_threshold "${CONF_THRESHOLD}"
 

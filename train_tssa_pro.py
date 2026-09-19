@@ -87,12 +87,12 @@ def parse_args():
     parser.add_argument("--no_struct", dest="use_struct", action="store_false")
     parser.add_argument("--use_prime", action="store_true", default=True, help="Bật L_prime (Sentence InfoNCE)")
     parser.add_argument("--no_prime", dest="use_prime", action="store_false")
-    parser.add_argument("--use_route", action="store_true", default=True, help="Bật L_route (Decoder Head Router)")
+    parser.add_argument("--use_route", action="store_true", default=False, help="Bật L_route (Decoder Head Router - Mặc định Tắt để giải phóng Decoder)")
     parser.add_argument("--no_route", dest="use_route", action="store_false")
 
     parser.add_argument("--lambda_struct", type=float, default=0.20, help="Trọng số mỏ neo L_struct")
     parser.add_argument("--lambda_prime", type=float, default=0.08, help="Trọng số mỏ neo L_prime")
-    parser.add_argument("--lambda_route", type=float, default=0.05, help="Trọng số mỏ neo L_route")
+    parser.add_argument("--lambda_route", type=float, default=0.00, help="Trọng số mỏ neo L_route")
     parser.add_argument("--target_budget", type=float, default=0.250,
                         help="Ngân sách chuyên biệt hóa Anchor Head rho* (mặc định Pareto: 0.250 = 25% heads)")
     parser.add_argument("--prime_tau", type=float, default=0.07, help="Nhiệt độ InfoNCE cho L_prime")

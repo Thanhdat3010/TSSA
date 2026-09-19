@@ -90,6 +90,12 @@ def parse_args():
     parser.add_argument("--use_route", action="store_true", default=False, help="Bật L_route (Decoder Head Router - Mặc định Tắt để giải phóng Decoder)")
     parser.add_argument("--no_route", dest="use_route", action="store_false")
 
+    parser.add_argument("--use_centering", action="store_true", default=True, help="Bật Centering trước L2 normalize để khử anisotropy")
+    parser.add_argument("--no_centering", dest="use_centering", action="store_false")
+    parser.add_argument("--protect_struct_fertility", action="store_true", default=True,
+                        help="Áp dụng fertility factor vào cả L_struct để bảo vệ Ba Na")
+    parser.add_argument("--no_protect_struct_fertility", dest="protect_struct_fertility", action="store_false")
+
     parser.add_argument("--lambda_struct", type=float, default=0.20, help="Trọng số mỏ neo L_struct")
     parser.add_argument("--lambda_prime", type=float, default=0.08, help="Trọng số mỏ neo L_prime")
     parser.add_argument("--lambda_route", type=float, default=0.00, help="Trọng số mỏ neo L_route")
@@ -97,7 +103,7 @@ def parse_args():
                         help="Ngân sách chuyên biệt hóa Anchor Head rho* (mặc định Pareto: 0.250 = 25% heads)")
     parser.add_argument("--prime_tau", type=float, default=0.07, help="Nhiệt độ InfoNCE cho L_prime")
     parser.add_argument("--align_tau", type=float, default=0.10, help="Nhiệt độ ma trận tương đồng")
-    parser.add_argument("--entropy_tau", type=float, default=1.5, help="Hệ số làm mềm Entropy Gate")
+    parser.add_argument("--entropy_tau", type=float, default=0.50, help="Hệ số làm mềm Normalized Entropy Gate")
     parser.add_argument("--conf_threshold", type=float, default=0.20, help="Ngưỡng tin cậy Anchor mỏ neo")
 
     # 4. Tham số Huấn luyện
@@ -184,6 +190,8 @@ def main():
         use_struct=args.use_struct,
         use_prime=args.use_prime,
         use_route=args.use_route,
+        use_centering=args.use_centering,
+        protect_struct_fertility=args.protect_struct_fertility,
         conf_threshold=args.conf_threshold,
         temperature=args.prime_tau,
         align_tau=args.align_tau,

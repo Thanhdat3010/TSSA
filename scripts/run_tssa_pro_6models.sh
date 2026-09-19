@@ -5,12 +5,12 @@
 # Fair Comparison Protocol:
 #   - Identical standard LR: LR_BARTpho=2e-5, LR_ViT5=1e-4
 #   - Epochs: 5, Batch Size: 16, Seed: 42, FP16
-#   - Closed Capacity Budget: rho* = 0.250 (25% Anchor Heads, 75% Free Heads)
-#   - Continuous Gaussian Fertility Attenuation (via Typological Kappa)
-#   - Dynamic Information-Theoretic Entropy Filtering (Latent Barycenter)
+#   - Scale-Invariant Latent Hypersphere (S^{D-1}) with Batch-Centering (Anti-Anisotropy)
+#   - Length-Normalized Dynamic Information Entropy Filtering (tau_H = 0.50)
+#   - Continuous Gaussian Fertility Protection (Ba Na gracefully protected)
+#   - Decoder: 100% Free Autoregressive Syntax Generation
 #
 # Checkpoints saved strictly to: checkpoints/tssa_pro/
-# All legacy & previous checkpoints remain 100% preserved.
 # ==============================================================================
 
 set -e
@@ -27,7 +27,13 @@ LR_VIT5=1e-4
 
 PRIME_TAU=0.07
 CONF_THRESHOLD=0.20
-TARGET_BUDGET=0.250
+ENTROPY_TAU=0.50
+
+# Allow LAMBDA_STRUCT to be overridden from argument $1 or env var, default 1.00
+LAMBDA_STRUCT="${1:-${LAMBDA_STRUCT:-1.00}}"
+LAMBDA_PRIME=0.08
+LAMBDA_ROUTE=0.00
+SIGMA_KAPPA=0.75
 
 LANGUAGES=("rhade" "tay" "bahnaric")
 
@@ -37,28 +43,14 @@ echo "========================================================================"
 echo "    🚀 TSSA-PRO UNIVERSAL BENCHMARK RUNNER (6/6 MÔ HÌNH TUẦN TỰ)"
 echo "========================================================================"
 echo "[*] Thư mục lưu trữ mới       : ${OUTPUT_DIR}"
-echo "[*] Ngân sách đầu chú ý rho*  : ${TARGET_BUDGET} (25% Anchor Heads, 75% Free)"
+echo "[*] Trọng số mỏ neo           : struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}"
 echo "[*] Tốc độ học (Fair Standard): BARTpho=${LR_BARTPHO}, ViT5=${LR_VIT5}"
 echo "[*] Số epochs                 : ${NUM_EPOCHS}, Batch: ${BATCH_SIZE}, Seed: ${SEED}"
+echo "[*] Cơ chế toán học           : Centering + Scale-Invariant + tau_H=${ENTROPY_TAU}"
 echo "[*] Danh sách ngôn ngữ        : ${LANGUAGES[*]}"
 echo "========================================================================"
 
 trap 'echo -e "\n[!] Đã nhận tín hiệu hủy (Ctrl+C). Đang dừng an toàn..."; exit 1;' INT
-
-# ------------------------------------------------------------------------------
-# THAM SỐ TOÁN HỌC PHỔ QUÁT TSSA (SCALE-INVARIANT HYPERSPHERE - ZERO IF/ELSE)
-# ------------------------------------------------------------------------------
-# Toàn bộ tham số được cố định theo lý thuyết hình học mặt cầu bất biến thang đo:
-#   - L_struct: lambda = 0.20, Entropy Gate tau_H = 1.5, Cosine Hypersphere S^{D-1}
-#   - L_prime : lambda = 0.08, tau_prime = 0.07, sigma_kappa = 0.75
-#               Hệ số Gaussian suy giảm InfoNCE: exp(-(max(1, kappa)-1)^2 / (2*0.75^2))
-#   - Decoder : 100% Tự do sinh câu cú pháp (Zero intervention on Decoder)
-#   - Precision: FP16 tiêu chuẩn (Loss & Softmax tính bằng FP32 chống underflow)
-# ------------------------------------------------------------------------------
-LAMBDA_STRUCT=0.20
-LAMBDA_PRIME=0.08
-LAMBDA_ROUTE=0.00
-SIGMA_KAPPA=0.75
 
 # ------------------------------------------------------------------------------
 # PHẦN 1: HUẤN LUYỆN 3 MÔ HÌNH BARTpho (vinai/bartpho-syllable)
@@ -74,7 +66,7 @@ for LANG in "${LANGUAGES[@]}"; do
 
     echo ""
     echo ">>> [BARTpho - ${LANG^^}] Bắt đầu: ${EXP_NAME} (LR=${LR_BARTPHO})"
-    echo "    [*] Cấu hình toán học phổ quát: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, route=${LAMBDA_ROUTE}"
+    echo "    [*] Cấu hình: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, tau_H=${ENTROPY_TAU}"
 
     START_TIME=$(date +%s)
 
@@ -94,6 +86,9 @@ for LANG in "${LANGUAGES[@]}"; do
         --use_struct \
         --use_prime \
         --no_route \
+        --use_centering \
+        --protect_struct_fertility \
+        --entropy_tau "${ENTROPY_TAU}" \
         --lambda_struct "${LAMBDA_STRUCT}" \
         --lambda_prime "${LAMBDA_PRIME}" \
         --lambda_route "${LAMBDA_ROUTE}" \
@@ -119,7 +114,7 @@ for LANG in "${LANGUAGES[@]}"; do
 
     echo ""
     echo ">>> [ViT5 - ${LANG^^}] Bắt đầu: ${EXP_NAME} (LR=${LR_VIT5})"
-    echo "    [*] Cấu hình toán học phổ quát: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, route=${LAMBDA_ROUTE}"
+    echo "    [*] Cấu hình: struct=${LAMBDA_STRUCT}, prime=${LAMBDA_PRIME}, tau_H=${ENTROPY_TAU}"
 
     START_TIME=$(date +%s)
 
@@ -139,6 +134,9 @@ for LANG in "${LANGUAGES[@]}"; do
         --use_struct \
         --use_prime \
         --no_route \
+        --use_centering \
+        --protect_struct_fertility \
+        --entropy_tau "${ENTROPY_TAU}" \
         --lambda_struct "${LAMBDA_STRUCT}" \
         --lambda_prime "${LAMBDA_PRIME}" \
         --lambda_route "${LAMBDA_ROUTE}" \

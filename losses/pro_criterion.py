@@ -29,6 +29,8 @@ class TSSAProCriterion(nn.Module):
                  use_prime: bool = True, 
                  use_route: bool = False,
                  use_centering: bool = True,
+                 use_gate: bool = True,
+                 shuffle_teacher: bool = False,
                  protect_struct_fertility: bool = True,
                  conf_threshold: float = 0.20,
                  temperature: float = 0.07,
@@ -43,6 +45,8 @@ class TSSAProCriterion(nn.Module):
         self.use_prime = use_prime
         self.use_route = use_route
         self.use_centering = use_centering
+        self.use_gate = use_gate
+        self.shuffle_teacher = shuffle_teacher
         self.protect_struct_fertility = protect_struct_fertility
         self.conf_threshold = conf_threshold
         self.temperature = temperature
@@ -108,6 +112,11 @@ class TSSAProCriterion(nn.Module):
         s_norm = F.normalize(s_centered, p=2, dim=-1, eps=self.eps) # [B, S, D]
         t_norm = F.normalize(t_centered, p=2, dim=-1, eps=self.eps) # [B, T, D]
 
+        # Control Experiment: Teacher Shuffling to test whether semantic alignment is genuine
+        if self.shuffle_teacher and T > 1:
+            perm = torch.randperm(T, device=t_norm.device)
+            t_norm = t_norm[:, perm, :]
+
         # 4. Subword Cross-Lingual Affinity Matrix [B, S, T]
         sim_st = torch.bmm(s_norm, t_norm.transpose(1, 2)) / self.align_tau # [B, S, T]
 
@@ -123,20 +132,24 @@ class TSSAProCriterion(nn.Module):
         target_barycenter = F.normalize(target_barycenter_raw, p=2, dim=-1, eps=self.eps) # [B, S, D]
 
         # 7. Dynamic Information Entropy Filter with Length Normalization
-        p_clamped = align_st.clamp(min=self.eps)
-        entropy_s = - (p_clamped * torch.log(p_clamped)).sum(dim=-1) # [B, S]
+        if self.use_gate:
+            p_clamped = align_st.clamp(min=self.eps)
+            entropy_s = - (p_clamped * torch.log(p_clamped)).sum(dim=-1) # [B, S]
 
-        if tgt_mask is not None:
-            tgt_valid_len = tgt_mask.sum(dim=-1, keepdim=True).float() # [B, 1]
+            if tgt_mask is not None:
+                tgt_valid_len = tgt_mask.sum(dim=-1, keepdim=True).float() # [B, 1]
+            else:
+                tgt_valid_len = torch.full((B, 1), float(T), device=student_enc.device, dtype=torch.float32)
+
+            # Clamp T_valid >= 2 to prevent ln(1) = 0 division-by-zero
+            clamped_tgt_len = tgt_valid_len.clamp(min=2.0)
+            max_entropy = torch.log(clamped_tgt_len) # [B, 1] >= ln(2) ~ 0.693
+
+            norm_entropy_s = (entropy_s / max_entropy).clamp(0.0, 1.0) # [B, S] in [0, 1]
+            w_s = torch.exp(- norm_entropy_s / self.entropy_tau) # [B, S] in [exp(-1/tau), 1.0]
         else:
-            tgt_valid_len = torch.full((B, 1), float(T), device=student_enc.device, dtype=torch.float32)
-
-        # Clamp T_valid >= 2 to prevent ln(1) = 0 division-by-zero
-        clamped_tgt_len = tgt_valid_len.clamp(min=2.0)
-        max_entropy = torch.log(clamped_tgt_len) # [B, 1] >= ln(2) ~ 0.693
-
-        norm_entropy_s = (entropy_s / max_entropy).clamp(0.0, 1.0) # [B, S] in [0, 1]
-        w_s = torch.exp(- norm_entropy_s / self.entropy_tau) # [B, S] in [exp(-1/tau), 1.0]
+            norm_entropy_s = torch.zeros((B, S), device=student_enc.device, dtype=torch.float32)
+            w_s = torch.ones((B, S), device=student_enc.device, dtype=torch.float32)
 
         if src_mask is not None:
             valid_mask = src_mask.float()

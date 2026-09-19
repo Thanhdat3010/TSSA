@@ -92,6 +92,9 @@ def parse_args():
 
     parser.add_argument("--use_centering", action="store_true", default=True, help="Bật Centering trước L2 normalize để khử anisotropy")
     parser.add_argument("--no_centering", dest="use_centering", action="store_false")
+    parser.add_argument("--use_gate", action="store_true", default=True, help="Bật Dynamic Entropy Gate")
+    parser.add_argument("--no_gate", dest="use_gate", action="store_false")
+    parser.add_argument("--shuffle_teacher", action="store_true", default=False, help="Xáo trộn ngẫu nhiên vector teacher (Ablation Control)")
     parser.add_argument("--protect_struct_fertility", action="store_true", default=True,
                         help="Áp dụng fertility factor vào cả L_struct để bảo vệ Ba Na")
     parser.add_argument("--no_protect_struct_fertility", dest="protect_struct_fertility", action="store_false")
@@ -191,6 +194,8 @@ def main():
         use_prime=args.use_prime,
         use_route=args.use_route,
         use_centering=args.use_centering,
+        use_gate=args.use_gate,
+        shuffle_teacher=args.shuffle_teacher,
         protect_struct_fertility=args.protect_struct_fertility,
         conf_threshold=args.conf_threshold,
         temperature=args.prime_tau,

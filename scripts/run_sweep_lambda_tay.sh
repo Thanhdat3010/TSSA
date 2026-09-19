@@ -87,34 +87,7 @@ run_sweep_for_model() {
     done
 
     # Bảng tổng kết kết quả sweep
-    echo ""
-    echo "========================================================================"
-    echo "📊 BẢNG TỔNG HỢP KẾT QUẢ SWEEP ${MODEL_TYPE^^} (TÀY -> VIỆT):"
-    echo "------------------------------------------------------------------------"
-    printf "%-12s | %-10s | %-12s | %-15s | %-15s\n" "Lambda" "BLEU" "chrF++" "vs Vanilla (${VANILLA_BLEU})" "vs SOTA (${SOTA_BLEU})"
-    echo "------------------------------------------------------------------------"
-    for LAMBDA in "${LAMBDA_VALUES[@]}"; do
-        local METRICS_FILE="${OUTPUT_DIR}/${MODEL_TYPE}_tay_lambda_${LAMBDA}/eval_metrics.json"
-        if [ -f "${METRICS_FILE}" ]; then
-            python -c "
-import json
-with open('${METRICS_FILE}') as f:
-    d = json.load(f)
-bleu = d.get('bleu', d.get('sacrebleu', 0.0))
-chrf = d.get('chrf', d.get('chrf++', 0.0))
-vanilla = float('${VANILLA_BLEU}')
-sota = float('${SOTA_BLEU}')
-diff_v = bleu - vanilla
-diff_s = bleu - sota
-sign_v = '+' if diff_v >= 0 else ''
-sign_s = '+' if diff_s >= 0 else ''
-print(f'lambda={LAMBDA:<5} | {bleu:<10.2f} | {chrf:<12.2f} | {sign_v}{diff_v:<14.2f} | {sign_s}{diff_s:<14.2f}')
-"
-        else
-            printf "%-12s | %-10s | %-12s | %-15s | %-15s\n" "lambda=${LAMBDA}" "N/A" "N/A" "N/A" "N/A"
-        fi
-    done
-    echo "========================================================================"
+    python scripts/report_sweep.py "${OUTPUT_DIR}"
 }
 
 if [ "${BACKBONE}" == "vit5" ] || [ "${BACKBONE}" == "both" ]; then

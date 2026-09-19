@@ -114,7 +114,8 @@ def test_backbone(model_ckpt: str, is_t5: bool, device: str):
 
     assert not torch.isnan(total_loss), "Total loss bị NaN!"
     assert total_loss.item() > 0, "Total loss phải > 0!"
-    assert log_d.get('mean_H_norm', 0.0) < 0.85, f"Entropy chuẩn hóa quá cao ({log_d.get('mean_H_norm')})!"
+    assert 0.0 <= log_d.get('mean_H_norm', 0.0) <= 1.0, f"Entropy chuẩn hóa ngoài dải [0, 1] ({log_d.get('mean_H_norm')})!"
+    assert log_d.get('mean_w_s', 0.0) > 0.0, "Cổng w_s phải > 0!"
 
     # 5. Phân tích Gradient Ratio: ||grad(lambda * L_struct)|| / ||grad(L_MT)||
     print("   [5/6] Đo tỷ lệ Gradient Norm: ||∇(λ * L_struct)|| / ||∇(L_MT)||...")

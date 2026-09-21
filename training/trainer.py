@@ -41,7 +41,7 @@ class TSSASeq2SeqTrainer(Seq2SeqTrainer):
         total_loss = loss_mt
 
         # 2. Compute TSSA Loss if active
-        if self.model_type == "tssa" and self.criterion is not None:
+        if self.model_type in ["tssa", "tssa_pro"] and self.criterion is not None:
             current_step = self.state.global_step
             lambdas = self.loss_scheduler.get_lambdas(current_step) if self.loss_scheduler else (0.2, 0.1, 0.05)
             crit_res = self.criterion(loss_mt, outputs, inputs, lambdas=lambdas)

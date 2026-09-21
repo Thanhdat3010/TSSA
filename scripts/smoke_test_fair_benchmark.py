@@ -20,6 +20,12 @@ Usage:
 
 import os
 import sys
+
+# Thêm thư mục gốc vào sys.path để import các module data, models, losses
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import shutil
 import random
 import argparse

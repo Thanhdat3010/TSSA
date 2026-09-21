@@ -44,7 +44,9 @@ except Exception:
 from data.dataloader import get_dataloaders
 from models.tssa_seq2seq import TSSASeq2SeqModel
 from models.tssa_vit5 import TSSAViT5Model
+from models.tssa_v4_seq2seq import TSSAV4Seq2SeqModel
 from losses.pro_criterion import TSSAProCriterion
+from losses.v4_criterion import V4AlignmentCriterion
 from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
 from training.trainer import TSSASeq2SeqTrainer
@@ -93,7 +95,8 @@ def parse_args():
 
     # 1. Phương Pháp & Mô Hình
     parser.add_argument("--model_type", type=str, default="vanilla",
-                        choices=["vanilla", "awesome_align", "cl_lsa", "align_to_distill", "shift_aet", "tssa_pro"],
+                        choices=["vanilla", "awesome_align", "cl_lsa", "align_to_distill", "shift_aet", "tssa_pro",
+                                 "v4_sent", "v4_tok", "v4_hybrid"],
                         help="Phương pháp đối chuẩn cần chạy")
     parser.add_argument("--model_ckpt", type=str, default="vinai/bartpho-syllable",
                         help="HuggingFace checkpoint mô hình nền")
@@ -122,6 +125,11 @@ def parse_args():
     parser.add_argument("--conf_threshold", type=float, default=0.20)
     parser.add_argument("--sigma_kappa", type=float, default=0.75)
     parser.add_argument("--kappa", type=float, default=None)
+
+    # 4. Tham Số TSSA-V4 Decoupled Middle-Layer (Chỉ dùng khi model_type.startswith('v4_'))
+    parser.add_argument("--v4_queue_size", type=int, default=256, help="Kích thước hàng đợi bộ nhớ InfoNCE MoCo")
+    parser.add_argument("--v4_lambda_sent", type=float, default=0.10, help="Trọng số loss câu cho V4")
+    parser.add_argument("--v4_lambda_tok", type=float, default=0.10, help="Trọng số loss token barycenter cho V4")
 
     # 4. Giải Mã & Đánh Giá
     parser.add_argument("--num_beams", type=int, default=4, help="Beam size khi sinh bản dịch")
@@ -189,10 +197,12 @@ def main():
     )
     print(f"[+] Dữ liệu: Train={len(train_dataset)} mẫu, Test/Val={len(test_dataset)} mẫu")
 
-    # 6. Khởi tạo Mô hình (TSSASeq2SeqModel hoặc TSSAViT5Model)
+    # 6. Khởi tạo Mô hình (TSSAV4Seq2SeqModel, TSSASeq2SeqModel hoặc TSSAViT5Model)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[*] Đang khởi tạo mô hình trên: {device}")
-    if is_t5:
+    if args.model_type.startswith("v4_"):
+        model = TSSAV4Seq2SeqModel(model_name_or_path=args.model_ckpt).to(device)
+    elif is_t5:
         model = TSSAViT5Model(model_name_or_path=args.model_ckpt, use_route=False).to(device)
     else:
         model = TSSASeq2SeqModel(model_name_or_path=args.model_ckpt, use_route=False).to(device)
@@ -206,6 +216,19 @@ def main():
     if args.model_type == "vanilla":
         print("[*] Chế độ: VANILLA BASELINE thuần túy (Chỉ tối ưu Cross-Entropy L_MT, không loss phụ).")
         trainer_model_type = "vanilla"
+
+    elif args.model_type.startswith("v4_"):
+        print(f"[*] Chế độ: TSSA-V4 DECOUPLED MIDDLE-LAYER ({args.model_type.upper()})")
+        criterion = V4AlignmentCriterion(
+            mode=args.model_type,
+            d_model=model.d_model,
+            queue_size=args.v4_queue_size,
+            temperature=0.07,
+            entropy_tau=args.entropy_tau,
+            lambda_sent=args.v4_lambda_sent,
+            lambda_tok=args.v4_lambda_tok
+        ).to(device)
+        trainer_model_type = args.model_type
 
     elif args.model_type == "tssa_pro":
         print("[*] Chế độ: TSSA-PRO (Mỏ neo Latent Barycenter + Dynamic Gate + InfoNCE).")

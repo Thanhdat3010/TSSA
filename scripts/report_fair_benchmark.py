@@ -34,7 +34,10 @@ METHODS = [
     {"id": "cl_lsa", "name": "CL-LSA (NAACL 2021)", "is_ref": False},
     {"id": "align_to_distill", "name": "Align-to-Distill (COLING 2024)", "is_ref": False},
     {"id": "shift_aet", "name": "Shift-AET (EMNLP 2020)", "is_ref": False},
-    {"id": "tssa_pro", "name": "TSSA-Pro (Ours)", "is_ref": False}
+    {"id": "tssa_pro", "name": "TSSA-Pro (Old Anchor)", "is_ref": False},
+    {"id": "v4_sent", "name": "TSSA-V4 (Sentence InfoNCE)", "is_ref": False},
+    {"id": "v4_tok", "name": "TSSA-V4 (Token Barycenter)", "is_ref": False},
+    {"id": "v4_hybrid", "name": "TSSA-V4 (Hybrid Dual-Level)", "is_ref": False}
 ]
 
 def load_metrics(ckpt_dir):

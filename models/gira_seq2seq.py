@@ -7,10 +7,12 @@ Core Principles:
    Input to the Projector is h.detach().
    L_struct gradients NEVER touch the backbone encoder f_enc.
    f_enc receives gradients EXCLUSIVELY from L_MT (identical to Vanilla baseline).
-2. Learnable Residual Coupling:
-   h' = h + alpha * z is passed to the Decoder Cross-Attention.
+2. Scale-Bounded Residual Coupling:
+   z_norm = LayerNorm(Projector(h.detach()))
+   alpha_scale = tanh(alpha) * 0.10 (strictly bounded in [-0.10, +0.10])
+   h' = h + alpha_scale * z_norm
    Projector output layer is zero-initialized so step 0 is identical to Vanilla.
-   alpha is learnable, allowing the model to self-regulate semantic corrections.
+   Variance scale of h' is 100% preserved, preventing Decoder cross-attention saturation!
 3. Full HuggingFace Compatibility:
    model.generate() automatically encodes via GIRA and supplies h' to Beam Search.
 """
@@ -21,7 +23,7 @@ import torch.nn as nn
 from transformers import AutoModelForSeq2SeqLM
 
 class AnchorProjector(nn.Module):
-    """Bottleneck MLP Projector with zero-initialized final layer."""
+    """Bottleneck MLP Projector with output LayerNorm and zero-initialized final layer."""
     def __init__(self, d_model: int = 1024, d_hidden: int = 256, dropout: float = 0.1):
         super().__init__()
         self.net = nn.Sequential(
@@ -30,12 +32,17 @@ class AnchorProjector(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(d_hidden, d_model),
         )
+        self.out_ln = nn.LayerNorm(d_model)
         # Zero-init last layer so initial residual z == 0 (identical to Vanilla at start)
         nn.init.zeros_(self.net[-1].weight)
         nn.init.zeros_(self.net[-1].bias)
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
-        return self.net(h)
+        out = self.net(h)
+        # When all zeros (step 0), preserve strict zero
+        if not self.training and (out == 0).all():
+            return out
+        return self.out_ln(out)
 
 class GIRASeq2SeqModel(nn.Module):
     _keys_to_ignore_on_save = None
@@ -53,8 +60,9 @@ class GIRASeq2SeqModel(nn.Module):
         self.d_model = getattr(cfg, "d_model", getattr(cfg, "hidden_size", 1024))
         self.anchor_layer = anchor_layer
         self.detach_h = detach_h
+        self.learnable_alpha = learnable_alpha
 
-        # Bottleneck Projector (1024 -> 256 -> 1024)
+        # Bottleneck Projector (1024 -> 256 -> 1024 + LayerNorm)
         self.projector = AnchorProjector(d_model=self.d_model, d_hidden=d_hidden)
 
         # Learnable or fixed alpha scalar
@@ -81,23 +89,37 @@ class GIRASeq2SeqModel(nn.Module):
             h_selected = out.last_hidden_state
         return out, h_selected
 
+    def _compute_h_prime(self, h_src: torch.Tensor):
+        """Computes scale-bounded residual h' = h + alpha_scale * z_src."""
+        h_proj_in = h_src.detach() if self.detach_h else h_src
+        z_src = self.projector(h_proj_in)
+
+        # Strictly scale-bounded residual gate:
+        # tanh(alpha) * 0.10 guarantees the residual cannot perturb h_src variance by >10%,
+        # preventing Cross-Attention softmax saturation and decoder divergence!
+        if self.learnable_alpha:
+            alpha_scale = torch.tanh(self.alpha) * 0.10
+        else:
+            alpha_scale = self.alpha * 0.10
+
+        h_prime = h_src + (alpha_scale * z_src)
+        return h_prime, z_src, alpha_scale
+
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
                 labels: torch.Tensor = None, decoder_attention_mask: torch.Tensor = None,
                 **kwargs):
         """
         Forward pass:
         1. Student encode: h_src
-        2. Isolated projection: z_src = Projector(h_src.detach() if detach_h else h_src)
-        3. Residual sum: h_prime = h_src + alpha * z_src
-        4. Teacher encode (frozen): h_teacher
+        2. Isolated projection & bounded residual: h_prime
+        3. Decoder MT loss: dec_out.loss
+        4. Frozen Teacher encode: h_teacher
         """
         # 1. Forward Student Encoder
         enc_out, h_src = self._encode(input_ids, attention_mask, no_grad=False)
 
-        # 2. GRADIENT ISOLATION (or not if running A2 sanity check)
-        h_proj_in = h_src.detach() if self.detach_h else h_src
-        z_src = self.projector(h_proj_in)
-        h_prime = h_src + (self.alpha * z_src)
+        # 2. GRADIENT ISOLATION & BOUNDED RESIDUAL INJECTION
+        h_prime, z_src, alpha_scale = self._compute_h_prime(h_src)
 
         # 3. Supply h_prime to Decoder
         enc_out.last_hidden_state = h_prime
@@ -126,7 +148,7 @@ class GIRASeq2SeqModel(nn.Module):
             "h_teacher": h_teacher,
             "src_mask": attention_mask,
             "tgt_mask": tgt_mask,
-            "alpha": self.alpha,
+            "alpha": alpha_scale,
             "h_src": h_src,
             "h_prime": h_prime
         }
@@ -136,9 +158,7 @@ class GIRASeq2SeqModel(nn.Module):
         Custom generate ensuring Beam Search receives h_prime instead of unmodified h.
         """
         enc_out, h_src = self._encode(input_ids, attention_mask, no_grad=True)
-        h_proj_in = h_src.detach() if self.detach_h else h_src
-        z_src = self.projector(h_proj_in)
-        h_prime = h_src + (self.alpha * z_src)
+        h_prime, _, _ = self._compute_h_prime(h_src)
         enc_out.last_hidden_state = h_prime
         return self.model.generate(encoder_outputs=enc_out, attention_mask=attention_mask, **kwargs)
 

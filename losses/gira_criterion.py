@@ -29,10 +29,10 @@ class GIRACriterion(nn.Module):
 
     def compute_struct_loss(self, z_src: torch.Tensor, h_teacher: torch.Tensor,
                             src_mask: torch.Tensor, tgt_mask: torch.Tensor) -> tuple:
-        """Computes isolated barycentric anchor loss."""
-        # Ensure float32 for numerical stability under FP16 training
-        z = F.normalize(z_src.float(), dim=-1)
-        t = F.normalize(h_teacher.detach().float(), dim=-1)
+        """Computes isolated barycentric anchor loss with numerical safeguards."""
+        # Safe float32 L2 normalization with explicit eps to prevent near-zero gradient explosion
+        z = F.normalize(z_src.float(), p=2, dim=-1, eps=1e-8)
+        t = F.normalize(h_teacher.detach().float(), p=2, dim=-1, eps=1e-8)
 
         # 1. Similarity matrix
         sim = torch.einsum("bsd,btd->bst", z, t) / self.tau_align
@@ -46,8 +46,8 @@ class GIRACriterion(nn.Module):
         A = torch.softmax(sim, dim=-1).detach() # [B, S, T]
 
         # 4. Spherical target barycenter
-        c = F.normalize(torch.einsum("bst,btd->bsd", A, t), dim=-1)
-        cos = (z * c).sum(-1) # [B, S] in [-1, 1]
+        c = F.normalize(torch.einsum("bst,btd->bsd", A, t), p=2, dim=-1, eps=1e-8)
+        cos = (z * c).sum(-1).clamp(-1.0, 1.0) # [B, S] strictly clamped in [-1, 1]
 
         # 5. Length-normalized information entropy gate
         if tgt_mask is not None:

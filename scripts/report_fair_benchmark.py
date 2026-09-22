@@ -37,7 +37,11 @@ METHODS = [
     {"id": "tssa_pro", "name": "TSSA-Pro (Old Anchor)", "is_ref": False},
     {"id": "v4_sent", "name": "TSSA-V4 (Sentence InfoNCE)", "is_ref": False},
     {"id": "v4_tok", "name": "TSSA-V4 (Token Barycenter)", "is_ref": False},
-    {"id": "v4_hybrid", "name": "TSSA-V4 (Hybrid Dual-Level)", "is_ref": False}
+    {"id": "v4_hybrid", "name": "TSSA-V4 (Hybrid Dual-Level)", "is_ref": False},
+    {"id": "gira", "name": "GIRA (A1: lam=1.0, Isolated)", "is_ref": False},
+    {"id": "gira_nodetach", "name": "GIRA (A2: Sanity No-Detach)", "is_ref": False},
+    {"id": "gira_lam0.5", "name": "GIRA (A4: lam=0.5, Isolated)", "is_ref": False},
+    {"id": "gira_lam2.0", "name": "GIRA (A4: lam=2.0, Isolated)", "is_ref": False}
 ]
 
 def load_metrics(ckpt_dir):

@@ -45,8 +45,10 @@ from data.dataloader import get_dataloaders
 from models.tssa_seq2seq import TSSASeq2SeqModel
 from models.tssa_vit5 import TSSAViT5Model
 from models.tssa_v4_seq2seq import TSSAV4Seq2SeqModel
+from models.gira_seq2seq import GIRASeq2SeqModel
 from losses.pro_criterion import TSSAProCriterion
 from losses.v4_criterion import V4AlignmentCriterion
+from losses.gira_criterion import GIRACriterion
 from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
 from training.trainer import TSSASeq2SeqTrainer
@@ -96,7 +98,7 @@ def parse_args():
     # 1. Phương Pháp & Mô Hình
     parser.add_argument("--model_type", type=str, default="vanilla",
                         choices=["vanilla", "awesome_align", "cl_lsa", "align_to_distill", "shift_aet", "tssa_pro",
-                                 "v4_sent", "v4_tok", "v4_hybrid"],
+                                 "v4_sent", "v4_tok", "v4_hybrid", "gira"],
                         help="Phương pháp đối chuẩn cần chạy")
     parser.add_argument("--model_ckpt", type=str, default="vinai/bartpho-syllable",
                         help="HuggingFace checkpoint mô hình nền")
@@ -130,6 +132,13 @@ def parse_args():
     parser.add_argument("--v4_queue_size", type=int, default=256, help="Kích thước hàng đợi bộ nhớ InfoNCE MoCo")
     parser.add_argument("--v4_lambda_sent", type=float, default=0.10, help="Trọng số loss câu cho V4")
     parser.add_argument("--v4_lambda_tok", type=float, default=0.10, help="Trọng số loss token barycenter cho V4")
+
+    # 5. Tham Số GIRA (Gradient-Isolated Residual Anchor)
+    parser.add_argument("--gira_lambda", type=float, default=1.0, help="Trọng số lambda_struct cho GIRA")
+    parser.add_argument("--gira_layer", type=int, default=-1, help="Tầng neo cho GIRA (-1 = layer 6 cuối)")
+    parser.add_argument("--gira_d_hidden", type=int, default=256, help="Kích thước ẩn bottleneck Projector của GIRA")
+    parser.add_argument("--gira_no_detach", action="store_true", default=False, help="Bỏ h.detach() để chạy Ablation A2 Sanity Check")
+    parser.add_argument("--gira_fixed_alpha", action="store_true", default=False, help="Cố định alpha=1.0 không học (Ablation A3)")
 
     # 4. Giải Mã & Đánh Giá
     parser.add_argument("--num_beams", type=int, default=4, help="Beam size khi sinh bản dịch")
@@ -197,10 +206,19 @@ def main():
     )
     print(f"[+] Dữ liệu: Train={len(train_dataset)} mẫu, Test/Val={len(test_dataset)} mẫu")
 
-    # 6. Khởi tạo Mô hình (TSSAV4Seq2SeqModel, TSSASeq2SeqModel hoặc TSSAViT5Model)
+    # 6. Khởi tạo Mô hình (GIRASeq2SeqModel, TSSAV4Seq2SeqModel, TSSASeq2SeqModel hoặc TSSAViT5Model)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[*] Đang khởi tạo mô hình trên: {device}")
-    if args.model_type.startswith("v4_"):
+    if args.model_type == "gira":
+        model = GIRASeq2SeqModel(
+            model_name_or_path=args.model_ckpt,
+            anchor_layer=args.gira_layer,
+            d_hidden=args.gira_d_hidden,
+            learnable_alpha=not args.gira_fixed_alpha,
+            alpha_init=1.0 if args.gira_fixed_alpha else 0.0,
+            detach_h=not args.gira_no_detach
+        ).to(device)
+    elif args.model_type.startswith("v4_"):
         model = TSSAV4Seq2SeqModel(model_name_or_path=args.model_ckpt).to(device)
     elif is_t5:
         model = TSSAViT5Model(model_name_or_path=args.model_ckpt, use_route=False).to(device)
@@ -216,6 +234,16 @@ def main():
     if args.model_type == "vanilla":
         print("[*] Chế độ: VANILLA BASELINE thuần túy (Chỉ tối ưu Cross-Entropy L_MT, không loss phụ).")
         trainer_model_type = "vanilla"
+
+    elif args.model_type == "gira":
+        mode_str = "A2 SANITY (NO DETACH)" if args.gira_no_detach else "A1 STANDARD (ISOLATED)"
+        print(f"[*] Chế độ: GIRA [{mode_str}] (Lambda={args.gira_lambda}, Layer={args.gira_layer}, d_hidden={args.gira_d_hidden})")
+        criterion = GIRACriterion(
+            lambda_struct=args.gira_lambda,
+            tau_align=0.10,
+            tau_H=0.50
+        ).to(device)
+        trainer_model_type = "gira"
 
     elif args.model_type.startswith("v4_"):
         print(f"[*] Chế độ: TSSA-V4 DECOUPLED MIDDLE-LAYER ({args.model_type.upper()})")

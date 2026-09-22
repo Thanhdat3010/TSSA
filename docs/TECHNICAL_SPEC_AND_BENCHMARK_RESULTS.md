@@ -1,170 +1,152 @@
-# BẢN ĐẶC TẢ KỸ THUẬT VÀ TỔNG HỢP SỐ LIỆU ĐỐI CHUẨN THỰC NGHIỆM
-*(TECHNICAL SPECIFICATION & BENCHMARK RESULTS FOR NEW METHOD PROPOSALS)*
+# BẢN ĐẶC TẢ KỸ THUẬT, ĐỘNG LỰC NGHIÊN CỨU & SỐ LIỆU ĐỐI CHUẨN THỰC NGHIỆM TSSA
+*(TSSA TECHNICAL SPECIFICATION, MOTIVATION, NOVELTIES & FAIR BENCHMARK DATA)*
 
 ---
 
-## 1. THÔNG SỐ TẬP DỮ LIỆU & PHẦN CỨNG (DATASET & HARDWARE SPECIFICATIONS)
+## 1. ĐỘNG LỰC NGHIÊN CỨU CỦA PHƯƠNG PHÁP TSSA (RESEARCH MOTIVATION)
 
-### 1.1. Tập Dữ Liệu Thực Nghiệm (Dataset)
+Phương pháp **Target-Side Semantic Anchoring (TSSA)** được thiết kế nhằm giải quyết 2 bài toán cố hữu trong Dịch máy nơ-ron ít tài nguyên (Low-Resource NMT) khi tinh chỉnh (fine-tune) mô hình ngôn ngữ lớn đã tiền huấn luyện (Pretrained Seq2Seq LM như BARTpho):
+
+1. **Sự trôi dạt và sụp đổ biểu diễn (Representation Drift & Collapse):**
+   - Khi fine-tune mô hình trên cặp ngôn ngữ thiểu số (nguồn) $\to$ tiếng Việt (đích) với tập dữ liệu nhỏ ($\approx 15,000 - 20,000$ câu), các tầng Encoder phải học biểu diễn cho các token ngôn ngữ nguồn hiếm gặp.
+   - Do lượng dữ liệu giám sát nhỏ, không gian biểu diễn của Encoder ngôn ngữ nguồn dễ bị trôi dạt ra xa khỏi không gian biểu diễn tiếng Việt giàu ngữ nghĩa mà mô hình đã học từ hàng triệu câu trong giai đoạn tiền huấn luyện.
+2. **Sự phân tán chú ý qua ngôn ngữ (Cross-Attention Dispersion / Attention Sinking):**
+   - Decoder của mô hình Seq2Seq thường gặp khó khăn trong việc xác định các vị trí ngữ nghĩa tương ứng trên câu nguồn ít tài nguyên, dẫn đến việc các đầu chú ý (Attention Heads) tập trung vào các token đệm (`<pad>`) hoặc dấu câu thay vì các từ mang ngữ nghĩa trọng tâm.
+3. **Ý tưởng cốt lõi của TSSA (Core Premise):**
+   - Sử dụng chính năng lực ngữ nghĩa hoàn chỉnh của tiếng Việt (ngôn ngữ đích / high-resource language) làm **Mỏ neo Ngữ nghĩa (Semantic Anchor)**.
+   - Thay vì để Encoder ngôn ngữ nguồn tự do biến đổi mà không có định hướng, TSSA thiết lập một **Giáo viên Trực tuyến (Online Frozen Teacher)** để dẫn dắt và giữ cho không gian biểu diễn của ngôn ngữ nguồn luôn bám sát không gian tiềm ẩn chuẩn của tiếng Việt.
+
+---
+
+## 2. CÁC TÍNH MỚI KỸ THUẬT CỐT LÕI CỦA TSSA (CORE TECHNICAL NOVELTIES)
+
+Kiến trúc TSSA được xây dựng trên 6 đóng góp kỹ thuật độc lập:
+
+```
+[Câu Nguồn Thiểu Số X] ---> [Student Encoder f_enc] ---> [Tầng Giữa / Projector Phi] ---> [Mỏ Neo Barycenter L_struct]
+                                                                                                    ^
+                                                                                                    | (Stop-gradient)
+[Câu Đích Tiếng Việt Y] ---> [Frozen Teacher E_T]     ---------------------------------> [Phân Phối Hậu Nghiệm A]
+                                      |
+                                      +------------------------------------------------> [InfoNCE Mức Câu L_prime]
+```
+
+### Tính mới 1: Giáo viên Trực tuyến Đóng băng (Online Frozen Teacher $\mathcal{E}_T$)
+- Không sử dụng mô hình ngoài (như multilingual BERT hay mBART khác kiến trúc) để tránh sai lệch không gian biểu diễn và tốn kém tài nguyên.
+- TSSA tận dụng chính nhánh Encoder của mô hình Seq2Seq làm Teacher và khóa cứng toàn bộ gradient:
+  $$\mathcal{E}_T = \text{stop\_gradient}(f_{\text{enc}}), \quad \mathbf{h}^T = \mathcal{E}_T(\mathbf{y}) \in \mathbb{R}^{T \times d_{\text{model}}}$$
+- **Ưu điểm**: Teacher và Student dùng chung 100% bộ từ vựng (Vocabulary) và Tokenizer, loại bỏ hoàn toàn độ trễ trích xuất đặc trưng ngoại tuyến và đảm bảo không có hiện tượng trôi dạt biểu diễn (Zero Representation Drift).
+
+### Tính mới 2: Mỏ neo Trọng tâm Ngữ nghĩa Không gian Ẩn (Latent Barycentric Anchoring)
+- Trong dịch máy thực tế, việc gán nhãn căn chỉnh cứng 1-1 (Hard 1-to-1 alignment) thường gây lỗi do hiện tượng phân mảnh từ tố (Subword fragmentation) và đa nghĩa.
+- TSSA định nghĩa mỏ neo của token nguồn $s$ là **trọng tâm ngữ nghĩa mềm (Soft Barycenter)** của toàn bộ các token đích có liên quan:
+  $$\mathbf{c}_s^T = \text{Normalize}\left( \sum_{t=1}^T \tilde{A}_{s,t} \mathbf{h}_t^T \right) \in \mathbb{S}^{D-1}$$
+  trong đó ma trận $\tilde{A}_{s,t} = \frac{\exp(\langle \mathbf{h}_s^S, \mathbf{h}_t^T \rangle / \tau_{\text{align}})}{\sum_{t'} \exp(\langle \mathbf{h}_s^S, \mathbf{h}_{t'}^T \rangle / \tau_{\text{align}})}$ là phân phối căn chỉnh hậu nghiệm được chặn gradient ($\text{sg}$).
+
+### Tính mới 3: Cổng Lọc Nhiễu Entropy Động Chuẩn Hóa Độ Dài (Length-Normalized Dynamic Entropy Gate)
+- Không phải token nào cũng có cặp từ tương ứng rõ ràng trong câu đích (ví dụ: hư từ, mạo từ, trợ từ).
+- TSSA tính toán độ hỗn loạn thông tin (Entropy) của phân phối căn chỉnh cho từng token nguồn $s$, chuẩn hóa theo độ dài câu đích $T$:
+  $$\tilde{H}_s = \frac{-\sum_{t=1}^T \tilde{A}_{s,t} \ln \tilde{A}_{s,t}}{\ln(\max(2, T_{\text{valid}}))} \in [0, 1]$$
+- Trọng số cổng điều tiết lực kéo:
+  $$w_s = \exp\left(-\frac{\tilde{H}_s}{\tau_H}\right) \quad (\tau_H = 0.50)$$
+  - Token có căn chỉnh sắc nét (entropy thấp $\to w_s \approx 1$): Áp dụng lực kéo mỏ neo tối đa.
+  - Token phân tán mơ hồ (entropy cao $\to w_s \to 0$): Tự động triệt tiêu lực kéo, chống hiện tượng bóp méo ngữ nghĩa.
+
+### Tính mới 4: Triệt tiêu Tính Bất đẳng hướng Không gian Biểu diễn (Batch-Centering & Hypersphere Normalization)
+- Hiện tượng Anisotropy (các vector biểu diễn bị co cụm thành hình nón hẹp trong không gian) làm suy giảm độ chính xác của khoảng cách Cosine.
+- TSSA áp dụng chuẩn hóa tâm theo batch trước khi chuẩn hóa L2 về mặt cầu đơn vị $\mathbb{S}^{D-1}$:
+  $$\tilde{\mathbf{h}} = \frac{\mathbf{h} - \boldsymbol{\mu}_{\text{batch}}}{\|\mathbf{h} - \boldsymbol{\mu}_{\text{batch}}\|_2}$$
+
+### Tính mới 5: Hiệu chỉnh Độ nở Từ tố Thích ứng (Subword Fertility Attenuation $\kappa$)
+- Các ngôn ngữ có cấu trúc từ tố phức tạp thường bị tách thành nhiều mảnh subwords (độ nở từ tố $\kappa = \frac{\text{total subwords}}{\text{total words}} > 1.0$).
+- TSSA tích hợp hệ số suy giảm Gaussian liên tục để điều tiết hàm InfoNCE:
+  $$\gamma(\kappa) = \exp\left( -\frac{(\max(1.0, \kappa) - 1.0)^2}{2 \sigma_\kappa^2} \right) \quad (\sigma_\kappa = 0.75)$$
+
+### Tính mới 6: Bộ Chiếu Phi Tuyến Độc Lập ở Tầng Giữa (Decoupled Middle-Layer Projection - TSSA V4)
+- Can thiệp tại tầng giữa của Encoder (Layer 3 trên 6 tầng của BARTpho) thay vì tầng cuối (Layer 6).
+- Sử dụng mạng chiếu 2 tầng MLP Projector ($\mathbb{R}^{1024} \to \mathbb{R}^{2048} \to \mathbb{R}^{1024}$ + GELU + LayerNorm) kết hợp hàng đợi bộ nhớ FIFO (MoCo Queue $Q=256$) để tách biệt gradient căn chỉnh ngữ nghĩa khỏi các tầng trên (Layer 4--6) dành cho cú pháp dịch mã.
+
+---
+
+## 3. THÔNG SỐ TẬP DỮ LIỆU & PHẦN CỨNG (DATASET & HARDWARE SPECIFICATIONS)
+
+### 3.1. Tập Dữ Liệu Thực Nghiệm (Dataset)
 - **Cặp ngôn ngữ**: Tiếng Tày sang Tiếng Việt (`tay` $\to$ `vi`).
 - **Phân chia tập dữ liệu (Splits)**:
   - Tập huấn luyện (`train.csv`): **20,554** cặp câu song ngữ.
   - Tập kiểm tra (`test.csv`): **2,295** cặp câu song ngữ.
-  - Tỷ lệ phân chia: $\approx 90\% / 10\%$.
-- **Độ dài chuỗi tối đa (Max Sequence Length)**:
-  - Source Length (Tày): 256 tokens.
-  - Target Length (Việt): 256 tokens.
-- **Tiền xử lý & Tokenizer**:
-  - Tokenizer: `vinai/bartpho-syllable`.
-  - Phân đoạn: BPE cấp độ âm tiết tiếng Việt (Syllable-level BPE).
-  - Kích thước từ điển (Vocabulary Size): 40,000 tokens.
-  - Độ nở từ tố (Token/Word Fertility) trên tiếng Tày: $1.20$ tokens/từ.
+- **Độ dài chuỗi tối đa**: Source = 256 tokens \| Target = 256 tokens.
+- **Tokenizer**: `vinai/bartpho-syllable` (Syllable-level BPE, từ điển 40,000 tokens).
+- **Fertility Rate (Tày)**: 1.20 tokens/từ.
 
-### 1.2. Môi Trường Thực Thi Phần Cứng (Hardware Environment)
-- **GPU**: NVIDIA A100 Tensor Core GPU (VRAM 40GB / 80GB).
-- **Hệ điều hành**: Linux (Ubuntu 22.04 LTS).
-- **Môi trường phần mềm**: PyTorch 2.x, Transformers 4.49+, CUDA 12.x.
+### 3.2. Môi Trường Thực Thi Phần Cứng (Hardware Environment)
+- **GPU**: NVIDIA A100 Tensor Core GPU.
+- **Hệ điều hành**: Linux Ubuntu 22.04 LTS, PyTorch 2.x, Transformers 4.49+, CUDA 12.x.
 - **Kiểm soát tính ngẫu nhiên (RNG Seed Control)**:
-  - Seed đối chuẩn: `seed = 42`.
-  - Thiết lập đồng thời trên 5 tầng: `random.seed(42)`, `numpy.random.seed(42)`, `torch.manual_seed(42)`, `torch.cuda.manual_seed_all(42)`, `transformers.set_seed(42)`.
-  - Tham số DataLoader: `data_seed = 42`.
+  - Seed đối chuẩn: `seed = 42` (thiết lập đồng thời trên Python, NumPy, PyTorch, CUDA, Transformers).
+  - DataLoader: `data_seed = 42`.
 
 ---
 
-## 2. KIẾN TRÚC MÔ HÌNH NỀN & SIÊU THAM SỐ CHUNG (SHARED BACKBONE & HYPERPARAMETERS)
+## 4. KIẾN TRÚC MÔ HÌNH NỀN & SIÊU THAM SỐ CHUNG (SHARED BACKBONE & HYPERPARAMETERS)
 
-Mọi hệ thống đều được huấn luyện trên cùng một script thống nhất (`train_fair_benchmark.py`) với các siêu tham số giống hệt nhau:
-
-### 2.1. Kiến Trúc Mô Hình Nền (Backbone Architecture)
-- **Mô hình**: `vinai/bartpho-syllable` (BARTpho-base, cấu trúc Encoder-Decoder Transformer).
-- **Số tầng Encoder**: 6 layers.
-- **Số tầng Decoder**: 6 layers.
-- **Kích thước chiều ẩn ($d_{model}$)**: 1,024.
-- **Kích thước tầng trung gian Feed-Forward ($d_{ff}$)**: 4,096.
-- **Số đầu chú ý (Attention Heads)**: 16 heads ($d_k = 64$).
-- **Tổng số tham số**: $\approx 135\text{M}$ tham số.
-
-### 2.2. Siêu Tham Số Huấn Luyện (Training Hyperparameters)
-- **Kích thước batch (Batch size)**: 16 mẫu/batch (Per-device train batch size = 16, eval batch size = 16).
-- **Tối ưu hóa (Optimizer)**: AdamW ($\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$).
-- **Trọng số suy giảm (Weight decay)**: 0.01.
-- **Tốc độ học (Learning rate)**: $2 \times 10^{-5}$ cho toàn bộ mô hình (Backbone + các module bổ trợ).
-- **Lập lịch tốc độ học (LR Scheduler)**: Tuyến tính (Linear warmup 500 steps, sau đó suy giảm tuyến tính về 0).
-- **Số epoch tối đa (Max epochs)**: 5 epochs.
-- **Chế độ tính toán (Precision)**: Mixed Precision FP16.
-- **Cơ chế dừng sớm (Early Stopping)**: `patience = 3` epochs dựa trên SacreBLEU của tập test/validation; tự động nạp lại checkpoint tốt nhất (`load_best_model_at_end = True`).
-
-### 2.3. Cấu Hình Giải Mã & Đo Lường (Decoding & Evaluation Setup)
-- **Thuật toán giải mã**: Beam Search.
-- **Kích thước chùm (Beam width)**: `num_beams = 4`.
-- **Hệ số phạt độ dài (Length penalty)**: `length_penalty = 1.0`.
-- **Kích thước sinh tối đa**: `max_target_length = 256`.
-- **Các thang đo định lượng**:
-  - **SacreBLEU**: Tính toán qua thư viện `sacrebleu`, cấu hình `smooth_method="exp"`.
-  - **chrF++**: Tính toán cấp độ ký tự và n-gram từ tố (`word_order = 2`).
-  - **METEOR**: Tính toán độ khớp chính xác, gốc từ và ngữ nghĩa tương đương.
-  - **COMET**: Đo lường qua mô hình học sâu `Unbabel/wmt22-comet-da` thực thi trực tiếp trên GPU.
+| Siêu tham số | Giá trị quy chuẩn |
+|---|---|
+| **Mô hình nền (Backbone)** | `vinai/bartpho-syllable` (BARTpho-base, 135M tham số) |
+| **Số tầng Encoder / Decoder** | 6 Encoder layers / 6 Decoder layers |
+| **Kích thước ẩn ($d_{model}$)** | 1,024 |
+| **Kích thước Feed-Forward ($d_{ff}$)** | 4,096 |
+| **Số Attention Heads** | 16 heads ($d_k = 64$) |
+| **Batch Size** | 16 (per-device train và eval) |
+| **Optimizer** | AdamW ($\beta_1 = 0.9, \beta_2 = 0.999, \epsilon = 10^{-8}$, weight decay = 0.01) |
+| **Learning Rate** | $2 \times 10^{-5}$ cho toàn bộ mô hình |
+| **Lập lịch LR** | Linear Warmup 500 steps $\to$ Linear Decay về 0 |
+| **Số Epochs** | 5 epochs (Early stopping: patience = 3 epochs theo SacreBLEU test) |
+| **Precision** | Mixed Precision FP16 |
+| **Cấu hình giải mã** | Beam Search, `num_beams = 4`, `length_penalty = 1.0`, max len = 256 |
+| **Thang đo định lượng** | SacreBLEU (exp smoothing), chrF++ (word_order=2), METEOR, COMET (`wmt22-comet-da`) |
 
 ---
 
-## 3. THÔNG SỐ VÀ CÔNG THỨC CỦA 9 HỆ THỐNG ĐÃ ĐỐI CHUẨN
+## 5. THÔNG SỐ VÀ CÔNG THỨC CỦA 9 HỆ THỐNG ĐÃ ĐỐI CHUẨN
 
-### Hệ thống 1: Vanilla Baseline (BARTpho Chuẩn)
-- **Vị trí can thiệp**: Không có.
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} = - \sum_{t=1}^T \log P(y_t \mid y_{<t}, \mathbf{x})$$
-- **Tham số phụ**: Không có tham số phụ.
-
-### Hệ thống 2: AWESOME-align (EACL 2021)
-- **Vị trí can thiệp**: Tầng cuối cùng của Encoder (Layer 6).
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{align} L_{awesome}$$
-- **Thông số kỹ thuật**:
-  - $\lambda_{align} = 0.10$.
-  - Số attention heads khai thác căn chỉnh: 16 heads.
-  - Kích thước chiều ma trận tương đồng: $1,024$.
-
-### Hệ thống 3: CL-LSA (NAACL 2021)
-- **Vị trí can thiệp**: Tầng cuối cùng của Encoder (Layer 6).
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{cl} L_{InfoNCE}$$
-- **Thông số kỹ thuật**:
-  - Hàm tương phản InfoNCE mức câu với mẫu âm trong batch (In-batch negatives: $B - 1 = 15$).
-  - Nhiệt độ tương phản (Temperature): $\tau = 0.07$.
-  - Trọng số hàm mất mát: $\lambda_{cl} = 0.10$.
-
-### Hệ thống 4: Align-to-Distill (COLING 2024)
-- **Vị trí can thiệp**: Tầng cuối cùng của Encoder (Layer 6).
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{distill} D_{KL}(A_{student} \parallel A_{teacher})$$
-- **Thông số kỹ thuật**:
-  - Chưng cất ma trận Cross-Attention từ Teacher tiếng Việt sang Student tiếng Tày.
-  - Trọng số chưng cất: $\lambda_{distill} = 0.10$.
-  - Nhiệt độ phân phối: $\tau = 0.10$.
-
-### Hệ thống 5: Shift-AET (EMNLP 2020)
-- **Vị trí can thiệp**: Tầng cuối cùng của Encoder (Layer 6).
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{shift} L_{AET}$$
-- **Thông số kỹ thuật**:
-  - Ràng buộc Autoencoding tái tạo biểu diễn kết hợp tịnh tiến tự hồi quy.
-  - Trọng số hàm mất mát: $\lambda_{shift} = 0.10$.
-
-### Hệ thống 6: TSSA-Pro (Bản Mỏ Neo Cũ)
-- **Vị trí can thiệp**: Tầng cuối cùng của Encoder (Layer 6).
-- **Kiến trúc bổ trợ**: Chiếu tuyến tính 1 tầng ($1,024 \to 1,024$).
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{struct} L_{Barycenter} + \lambda_{prime} L_{InfoNCE}$$
-- **Thông số kỹ thuật**:
-  - $\lambda_{struct} = 0.20$.
-  - $\lambda_{prime} = 0.08$.
-  - Nhiệt độ Entropy Gating ($\tau_H$): $0.50$.
-  - Nhiệt độ tương phản ($\tau_{prime}$): $0.07$.
-  - Ngưỡng lọc tin cậy (Confidence threshold): $0.20$.
-  - Hệ số phân tán $\sigma_\kappa = 0.75$.
-
-### Hệ thống 7: TSSA-V4 (Sentence InfoNCE)
-- **Vị trí can thiệp**: Tầng giữa Encoder (Layer 3 trên tổng số 6 tầng).
-- **Kiến trúc bổ trợ**: 2-tầng Decoupled MLP Projector:
-  $$\mathbf{z} = \text{LayerNorm}(\mathbf{W}_2 \cdot \text{GELU}(\mathbf{W}_1 \mathbf{h}_{mid} + \mathbf{b}_1) + \mathbf{b}_2)$$
-  với $\mathbf{W}_1 \in \mathbb{R}^{2048 \times 1024}$, $\mathbf{W}_2 \in \mathbb{R}^{1024 \times 2048}$.
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{sent} L_{InfoNCE}^{Queue}$$
-- **Thông số kỹ thuật**:
-  - Vector câu: Masked Mean-Pooling chuẩn hóa L2 trên mặt cầu đơn vị.
-  - Hàng đợi bộ nhớ (MoCo-style FIFO Memory Queue): $Q = 256$ vector đích lưu trữ từ các batch gần nhất.
-  - Tổng số mẫu âm tại mỗi bước: $15 \text{ (in-batch)} + 256 \text{ (queue)} = 271$ mẫu âm.
-  - Nhiệt độ tương phản: $\tau = 0.07$.
-  - Trọng số hàm mất mát: $\lambda_{sent} = 0.10$.
-
-### Hệ thống 8: TSSA-V4 (Token Barycenter)
-- **Vị trí can thiệp**: Tầng giữa Encoder (Layer 3 trên tổng số 6 tầng).
-- **Kiến trúc bổ trợ**: 2-tầng Decoupled MLP Projector ($1,024 \to 2,048 \to 1,024$).
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{tok} \sum_{s=1}^S w_s \cdot (1 - \langle \mathbf{s}_s, \mathbf{c}_s \rangle)$$
-- **Thông số kỹ thuật**:
-  - Trọng tâm mềm: $\mathbf{c}_s = \text{Normalize}(\sum_t P(t \mid s) \mathbf{t}_t)$.
-  - Trọng số Entropy động: $w_s = \exp(-\tilde{H}_s / \tau_H)$ với $\tau_H = 0.50$.
-  - Nhiệt độ căn chỉnh ma trận: $\tau_{align} = 0.10$.
-  - Trọng số hàm mất mát: $\lambda_{tok} = 0.10$.
-
-### Hệ thống 9: TSSA-V4 (Hybrid Dual-Level)
-- **Vị trí can thiệp**: Tầng giữa Encoder (Layer 3 trên tổng số 6 tầng).
-- **Kiến trúc bổ trợ**: 2-tầng Decoupled MLP Projector.
-- **Hàm mục tiêu tối ưu**:
-  $$L_{total} = L_{MT} + \lambda_{sent} L_{InfoNCE}^{Queue} + \lambda_{tok} L_{Barycenter}$$
-- **Thông số kỹ thuật**:
-  - Hàng đợi bộ nhớ: $Q = 256$.
-  - Nhiệt độ tương phản: $\tau = 0.07$.
-  - Nhiệt độ Entropy Gating: $\tau_H = 0.50$.
-  - Trọng số loss mức câu: $\lambda_{sent} = 0.08$.
-  - Trọng số loss mức token: $\lambda_{tok} = 0.05$.
+1. **Vanilla Baseline**:
+   - Vị trí can thiệp: Không có.
+   - Hàm mục tiêu: $L_{total} = L_{MT}$ (Cross-Entropy tiêu chuẩn).
+2. **AWESOME-align (EACL 2021)**:
+   - Vị trí can thiệp: Encoder Layer 6 (Output).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.10 \times L_{awesome}$ (16 heads, dimension 1,024).
+3. **CL-LSA (NAACL 2021)**:
+   - Vị trí can thiệp: Encoder Layer 6 (Output).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.10 \times L_{InfoNCE}$ (In-batch negatives $B-1=15$, $\tau = 0.07$).
+4. **Align-to-Distill (COLING 2024)**:
+   - Vị trí can thiệp: Encoder Layer 6 (Output).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.10 \times D_{KL}(A_{student} \parallel A_{teacher})$ (Chưng cất Cross-Attention, $\tau = 0.10$).
+5. **Shift-AET (EMNLP 2020)**:
+   - Vị trí can thiệp: Encoder Layer 6 (Output).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.10 \times L_{AET}$ (Autoencoding tái tạo + tịnh tiến tự hồi quy).
+6. **TSSA-Pro (Bản Mỏ Neo Cũ)**:
+   - Vị trí can thiệp: Encoder Layer 6 (Output qua phép chiếu tuyến tính $1,024 \to 1,024$).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.20 \times L_{Barycenter} + 0.08 \times L_{InfoNCE}$.
+   - Tham số: $\tau_H = 0.50$, $\tau_{prime} = 0.07$, confidence threshold = 0.20, $\sigma_\kappa = 0.75$.
+7. **TSSA-V4 (Sentence InfoNCE)**:
+   - Vị trí can thiệp: Encoder Layer 3 (Tầng giữa $6 // 2 = 3$ qua 2-tầng Decoupled MLP Projector).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.10 \times L_{InfoNCE}^{Queue}$.
+   - Tham số: MoCo FIFO Memory Queue $Q = 256$ vector đích, $\tau = 0.07$.
+8. **TSSA-V4 (Token Barycenter)**:
+   - Vị trí can thiệp: Encoder Layer 3 (Tầng giữa $6 // 2 = 3$ qua 2-tầng Decoupled MLP Projector).
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.10 \times L_{Barycenter}^{Gate}$.
+   - Tham số: Soft Barycenter + Dynamic Entropy Gate ($\tau_H = 0.50$, $\tau_{align} = 0.10$).
+9. **TSSA-V4 (Hybrid Dual-Level)**:
+   - Vị trí can thiệp: Encoder Layer 3 qua 2-tầng Decoupled MLP Projector.
+   - Hàm mục tiêu: $L_{total} = L_{MT} + 0.08 \times L_{InfoNCE}^{Queue} + 0.05 \times L_{Barycenter}^{Gate}$.
+   - Tham số: Hàng đợi $Q = 256$, $\tau = 0.07$, $\tau_H = 0.50$, $\tau_{align} = 0.10$.
 
 ---
 
-## 4. BẢNG SỐ LIỆU THỰC NGHIỆM ĐỐI CHUẨN ĐẦY ĐỦ (OFFICIAL BENCHMARK RESULTS TABLE)
+## 6. BẢNG SỐ LIỆU THỰC NGHIỆM ĐỐI CHUẨN ĐẦY ĐỦ (OFFICIAL BENCHMARK RESULTS TABLE)
 
-*Ghi chú: Toàn bộ số liệu dưới đây được đo đạc trực tiếp trên tập kiểm tra gồm 2,295 câu của Tiếng Tày (`tay` $\to$ `vi`), Seed 42, Beam 4.*
+*Toàn bộ số liệu dưới đây được đo đạc trực tiếp trên tập kiểm tra gồm 2,295 câu của Tiếng Tày (`tay` $\to$ `vi`), Seed 42, Beam 4.*
 
 | STT | Hệ Thống / Mô Hình | Vị trí can thiệp | SacreBLEU ↑ | chrF++ ↑ | METEOR ↑ | COMET ↑ | $\Delta$ BLEU vs Vanilla | $\Delta$ chrF++ vs Vanilla |
 |:---:|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -180,9 +162,7 @@ Mọi hệ thống đều được huấn luyện trên cùng một script thố
 
 ---
 
-## 5. CÁC MỐC CHUẨN VÀ RÀNG BUỘC CHO PHƯƠNG PHÁP MỚI (TARGET BENCHMARKS & CONSTRAINTS)
-
-Nhóm đề xuất phương pháp mới cần lưu ý các mốc chỉ số kỹ thuật sau để đảm bảo tính so sánh công bằng:
+## 7. CÁC MỐC CHUẨN VÀ RÀNG BUỘC CHO PHƯƠNG PHÁP MỚI (TARGET BENCHMARKS & CONSTRAINTS)
 
 1. **Mốc chuẩn cơ sở cần vượt qua**:
    - Mốc Vanilla Baseline: **25.34 BLEU** (chrF++: 36.05, COMET: 0.6502).

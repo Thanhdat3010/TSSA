@@ -40,7 +40,7 @@ class GIRACriterion(nn.Module):
         # 2. Mask target padding
         if tgt_mask is not None:
             mask_t = tgt_mask.bool().unsqueeze(1) # [B, 1, T]
-            sim = sim.masked_fill(~mask_t, float("-inf"))
+            sim = sim.masked_fill(~mask_t, -1e4)
 
         # 3. Soft alignment posterior with stop-gradient
         A = torch.softmax(sim, dim=-1).detach() # [B, S, T]

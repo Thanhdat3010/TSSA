@@ -56,8 +56,8 @@ def main():
     assert proj_params < 1_500_000, "Projector quá lớn so với thiết kế!"
     print("  [✓] Cấu trúc Bottleneck đạt chuẩn.")
 
-    # 2. Tạo batch giả lập và kiểm tra Zero-Init
-    print("\n[2/5] Kiểm tra Zero-init ban đầu trên Forward Pass ...")
+    # 2. Tạo batch giả lập và kiểm tra Zero-Residual
+    print("\n[2/5] Kiểm tra Zero-Residual ban đầu trên Forward Pass ...")
     dummy_src = tokenizer(["Tôi đi học hôm nay", "Ngôn ngữ thiểu số"], return_tensors="pt", padding=True).to(device)
     dummy_tgt = tokenizer(["Báo cáo nghiên cứu khoa học", "Kết quả dịch máy"], return_tensors="pt", padding=True).to(device)
     labels = dummy_tgt["input_ids"].clone()
@@ -71,13 +71,12 @@ def main():
     }
 
     out = model(**batch)
-    z_max = out["z_src"].abs().max().item()
+    z_norm = out["z_src"].norm(dim=-1).mean().item()
     diff_h = (out["h_prime"] - out["h_src"]).abs().max().item()
-    print(f"  [i] Max |z_src| ban đầu : {z_max:.8f}")
+    print(f"  [i] Mean |z_src| ban đầu : {z_norm:.4f}")
     print(f"  [i] Max |h' - h| ban đầu: {diff_h:.8f}")
-    assert z_max < 1e-6, "Projector chưa được zero-init đúng!"
     assert diff_h < 1e-6, "h' không bằng h ở bước 0!"
-    print("  [✓] Zero-init hoạt động hoàn hảo: Step 0 đồng nhất 100% với Vanilla!")
+    print("  [✓] Zero-Residual hoạt động hoàn hảo: Step 0 h' đồng nhất 100% với Vanilla!")
 
     # 3. KIỂM TRA CÔ LẬP GRADIENT (CRITICAL TEST)
     print("\n[3/5] KIỂM TRA CÔ LẬP GRADIENT KHI CHẠY L_struct (ĐIỀU KIỆN TIÊN QUYẾT) ...")
@@ -101,11 +100,14 @@ def main():
             print(f"    - {n}")
         raise RuntimeError("RÒ GRADIENT VÀO BACKBONE! Cần kiểm tra lại h.detach()!")
 
-    # Kiểm tra Projector CÓ nhận gradient
-    proj_has_grad = any(p.grad is not None and p.grad.abs().sum() > 0 for p in model.projector.parameters())
-    assert proj_has_grad, "Projector KHÔNG nhận gradient từ L_struct!"
+    # Kiểm tra Projector CÓ nhận gradient và gradient norm lành mạnh (không nổ tỷ gradient)
+    proj_grads = [p.grad.norm().item() for p in model.projector.parameters() if p.grad is not None]
+    total_proj_norm = sum(proj_grads)
+    print(f"  [i] Projector Gradient Norm: {total_proj_norm:.4f}")
+    assert total_proj_norm > 0.0, "Projector KHÔNG nhận gradient từ L_struct!"
+    assert total_proj_norm < 100.0, f"Projector Gradient Norm bị nổ: {total_proj_norm}!"
     print("  [✓] XÁC NHẬN TUYỆT ĐỐI: L_struct KHÔNG BAO GIỜ chạm vào backbone BARTpho!")
-    print("  [✓] Projector nhận gradient L_struct bình thường.")
+    print("  [✓] Projector nhận gradient L_struct mượt mà, số học ổn định.")
 
     # 4. Kiểm tra Gradient từ L_MT
     print("\n[4/5] Kiểm tra gradient từ L_MT (Cross-Entropy translation) ...")
@@ -122,7 +124,8 @@ def main():
         gen_tokens = model.generate(dummy_src["input_ids"][:1], max_length=15, num_beams=4)
         gen_text = tokenizer.decode(gen_tokens[0], skip_special_tokens=True)
     print(f"  [i] Dịch thử mẫu 1: \"{gen_text}\"")
-    print("  [✓] Phương thức generate() tương thích 100% với beam search.")
+    assert len(gen_text.strip()) > 0, "Phương thức generate() sinh ra chuỗi rỗng!"
+    print("  [✓] Phương thức generate() tương thích 100% với beam search và sinh chuỗi hợp lệ.")
 
     print("\n" + "=" * 80)
     print(" 🎉 TẤT CẢ 5/5 BƯỚC SMOKE TEST GIRA ĐỀU THÀNH CÔNG RỰC RỠ!")

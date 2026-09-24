@@ -23,7 +23,7 @@ import torch.nn as nn
 from transformers import AutoModelForSeq2SeqLM
 
 class AnchorProjector(nn.Module):
-    """Bottleneck MLP Projector with output LayerNorm and zero-initialized final layer."""
+    """Bottleneck MLP Projector mapping encoder representations to alignment space."""
     def __init__(self, d_model: int = 1024, d_hidden: int = 256, dropout: float = 0.1):
         super().__init__()
         self.net = nn.Sequential(
@@ -31,18 +31,11 @@ class AnchorProjector(nn.Module):
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(d_hidden, d_model),
+            nn.LayerNorm(d_model)
         )
-        self.out_ln = nn.LayerNorm(d_model)
-        # Zero-init last layer so initial residual z == 0 (identical to Vanilla at start)
-        nn.init.zeros_(self.net[-1].weight)
-        nn.init.zeros_(self.net[-1].bias)
 
     def forward(self, h: torch.Tensor) -> torch.Tensor:
-        out = self.net(h)
-        # When all zeros (step 0), preserve strict zero
-        if not self.training and (out == 0).all():
-            return out
-        return self.out_ln(out)
+        return self.net(h)
 
 class GIRASeq2SeqModel(nn.Module):
     _keys_to_ignore_on_save = None
@@ -65,7 +58,8 @@ class GIRASeq2SeqModel(nn.Module):
         # Bottleneck Projector (1024 -> 256 -> 1024 + LayerNorm)
         self.projector = AnchorProjector(d_model=self.d_model, d_hidden=d_hidden)
 
-        # Learnable or fixed alpha scalar
+        # Learnable or fixed alpha scalar (initialized to alpha_init, e.g., 0.0)
+        # Residual coupling: alpha_scale = tanh(alpha) * 0.10 guarantees zero-residual at step 0 if alpha_init=0.0
         if learnable_alpha:
             self.alpha = nn.Parameter(torch.tensor(alpha_init, dtype=torch.float32))
         else:
@@ -105,7 +99,7 @@ class GIRASeq2SeqModel(nn.Module):
         h_prime = h_src + (alpha_scale * z_src)
         return h_prime, z_src, alpha_scale
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor,
+    def forward(self, input_ids: torch.Tensor = None, attention_mask: torch.Tensor = None,
                 labels: torch.Tensor = None, decoder_attention_mask: torch.Tensor = None,
                 **kwargs):
         """
@@ -121,10 +115,15 @@ class GIRASeq2SeqModel(nn.Module):
         # 2. GRADIENT ISOLATION & BOUNDED RESIDUAL INJECTION
         h_prime, z_src, alpha_scale = self._compute_h_prime(h_src)
 
-        # 3. Supply h_prime to Decoder
-        enc_out.last_hidden_state = h_prime
+        # 3. Supply h_prime to Decoder cleanly via BaseModelOutput
+        from transformers.modeling_outputs import BaseModelOutput
+        clean_enc_out = BaseModelOutput(
+            last_hidden_state=h_prime,
+            hidden_states=enc_out.hidden_states,
+            attentions=enc_out.attentions
+        )
         dec_out = self.model(
-            encoder_outputs=enc_out,
+            encoder_outputs=clean_enc_out,
             attention_mask=attention_mask,
             labels=labels,
             decoder_attention_mask=decoder_attention_mask,
@@ -153,14 +152,20 @@ class GIRASeq2SeqModel(nn.Module):
             "h_prime": h_prime
         }
 
-    def generate(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None, **kwargs):
+    def generate(self, input_ids: torch.Tensor = None, attention_mask: torch.Tensor = None, **kwargs):
         """
         Custom generate ensuring Beam Search receives h_prime instead of unmodified h.
         """
-        enc_out, h_src = self._encode(input_ids, attention_mask, no_grad=True)
-        h_prime, _, _ = self._compute_h_prime(h_src)
-        enc_out.last_hidden_state = h_prime
-        return self.model.generate(encoder_outputs=enc_out, attention_mask=attention_mask, **kwargs)
+        if "encoder_outputs" not in kwargs:
+            enc_out, h_src = self._encode(input_ids, attention_mask, no_grad=True)
+            h_prime, _, _ = self._compute_h_prime(h_src)
+            from transformers.modeling_outputs import BaseModelOutput
+            kwargs["encoder_outputs"] = BaseModelOutput(
+                last_hidden_state=h_prime,
+                hidden_states=enc_out.hidden_states,
+                attentions=enc_out.attentions
+            )
+        return self.model.generate(attention_mask=attention_mask, **kwargs)
 
     def get_encoder(self):
         return self.model.get_encoder()

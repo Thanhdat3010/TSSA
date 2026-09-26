@@ -23,6 +23,11 @@ import sys
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 import json
 import random
@@ -46,12 +51,15 @@ from models.tssa_seq2seq import TSSASeq2SeqModel
 from models.tssa_vit5 import TSSAViT5Model
 from models.tssa_v4_seq2seq import TSSAV4Seq2SeqModel
 from models.gira_seq2seq import GIRASeq2SeqModel
+from models.ca_tssa_seq2seq import CATSSASeq2SeqModel
 from losses.pro_criterion import TSSAProCriterion
 from losses.v4_criterion import V4AlignmentCriterion
 from losses.gira_criterion import GIRACriterion
+from losses.ca_tssa_criterion import CATSSACriterion
 from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
 from training.trainer import TSSASeq2SeqTrainer
+from training.ca_tssa_trainer import CATSSATrainer
 from evaluation.evaluator import TranslationEvaluator
 
 def set_all_seeds(seed: int):
@@ -98,7 +106,7 @@ def parse_args():
     # 1. Phương Pháp & Mô Hình
     parser.add_argument("--model_type", type=str, default="vanilla",
                         choices=["vanilla", "awesome_align", "cl_lsa", "align_to_distill", "shift_aet", "tssa_pro",
-                                 "v4_sent", "v4_tok", "v4_hybrid", "gira"],
+                                 "v4_sent", "v4_tok", "v4_hybrid", "gira", "ca_tssa"],
                         help="Phương pháp đối chuẩn cần chạy")
     parser.add_argument("--model_ckpt", type=str, default="vinai/bartpho-syllable",
                         help="HuggingFace checkpoint mô hình nền")
@@ -139,6 +147,20 @@ def parse_args():
     parser.add_argument("--gira_d_hidden", type=int, default=256, help="Kích thước ẩn bottleneck Projector của GIRA")
     parser.add_argument("--gira_no_detach", action="store_true", default=False, help="Bỏ h.detach() để chạy Ablation A2 Sanity Check")
     parser.add_argument("--gira_fixed_alpha", action="store_true", default=False, help="Cố định alpha=1.0 không học (Ablation A3)")
+
+    # 6. CA-TSSA: các hằng số này được đăng ký trước, không sweep theo test.
+    parser.add_argument("--ca_gradient_policy", type=str, default="token_project",
+                        choices=["token_project", "global_project", "joint", "detach"],
+                        help="Chính sách gradient tại encoder interface")
+    parser.add_argument("--ca_grad_cap", type=float, default=0.10,
+                        help="Giới hạn norm anchor gradient so với MT gradient")
+    parser.add_argument("--ca_warmup_ratio", type=float, default=0.10,
+                        help="Tỷ lệ bước ramp gradient anchor")
+    parser.add_argument("--ca_d_hidden", type=int, default=256,
+                        help="Bottleneck projector, tự chặn ở d_model")
+    parser.add_argument("--selection_protocol", type=str, default="legacy_best",
+                        choices=["legacy_best", "fixed_final"],
+                        help="legacy_best để đối chiếu bảng cũ; fixed_final cho bảng paper")
 
     # 4. Giải Mã & Đánh Giá
     parser.add_argument("--num_beams", type=int, default=4, help="Beam size khi sinh bản dịch")
@@ -209,7 +231,12 @@ def main():
     # 6. Khởi tạo Mô hình (GIRASeq2SeqModel, TSSAV4Seq2SeqModel, TSSASeq2SeqModel hoặc TSSAViT5Model)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[*] Đang khởi tạo mô hình trên: {device}")
-    if args.model_type == "gira":
+    if args.model_type == "ca_tssa":
+        model = CATSSASeq2SeqModel(
+            model_name_or_path=args.model_ckpt,
+            d_hidden=args.ca_d_hidden,
+        ).to(device)
+    elif args.model_type == "gira":
         model = GIRASeq2SeqModel(
             model_name_or_path=args.model_ckpt,
             anchor_layer=args.gira_layer,
@@ -229,11 +256,30 @@ def main():
     criterion = None
     baseline_factory = None
     loss_scheduler = None
+    ca_fertility = None
     total_steps = len(train_loader) * args.num_epochs
 
     if args.model_type == "vanilla":
         print("[*] Chế độ: VANILLA BASELINE thuần túy (Chỉ tối ưu Cross-Entropy L_MT, không loss phụ).")
         trainer_model_type = "vanilla"
+
+    elif args.model_type == "ca_tssa":
+        ca_fertility = estimate_dataset_fertility(train_dataset, tokenizer)
+        print(
+            "[*] Chế độ: CA-TSSA "
+            f"(policy={args.ca_gradient_policy}, cap={args.ca_grad_cap}, "
+            f"warmup={args.ca_warmup_ratio}, d_hidden={model.d_hidden}, "
+            f"fertility={ca_fertility})"
+        )
+        criterion = CATSSACriterion(
+            gradient_policy=args.ca_gradient_policy,
+            grad_cap=args.ca_grad_cap,
+            warmup_ratio=args.ca_warmup_ratio,
+            total_steps=total_steps,
+            tau_align=0.10,
+            tau_h=0.50,
+        ).to(device)
+        trainer_model_type = "ca_tssa"
 
     elif args.model_type == "gira":
         mode_str = "A2 SANITY (NO DETACH)" if args.gira_no_detach else "A1 STANDARD (ISOLATED)"
@@ -299,10 +345,11 @@ def main():
         trainer_model_type = args.model_type
 
     # 8. Thiết lập Training Arguments đồng nhất
+    use_legacy_selection = args.selection_protocol == "legacy_best"
     training_args = Seq2SeqTrainingArguments(
         output_dir=save_dir,
-        eval_strategy="epoch",
-        save_strategy="epoch",
+        eval_strategy="epoch" if use_legacy_selection else "no",
+        save_strategy="epoch" if use_legacy_selection else "no",
         learning_rate=args.learning_rate,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
@@ -312,9 +359,9 @@ def main():
         logging_dir=os.path.join(save_dir, "logs"),
         logging_steps=50,
         predict_with_generate=True,
-        load_best_model_at_end=True,
-        metric_for_best_model="sacrebleu",
-        greater_is_better=True,
+        load_best_model_at_end=use_legacy_selection,
+        metric_for_best_model="sacrebleu" if use_legacy_selection else None,
+        greater_is_better=True if use_legacy_selection else None,
         save_total_limit=1,
         fp16=use_fp16,
         bf16=use_bf16,
@@ -335,7 +382,9 @@ def main():
         return {"sacrebleu": round(bleu_res.score, 2)}
 
     # 9. Khởi tạo Trainer
-    trainer = TSSASeq2SeqTrainer(
+    trainer_cls = CATSSATrainer if args.model_type == "ca_tssa" else TSSASeq2SeqTrainer
+    callbacks = [EarlyStoppingCallback(early_stopping_patience=3)] if use_legacy_selection else []
+    trainer = trainer_cls(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
@@ -346,7 +395,7 @@ def main():
         model_type=trainer_model_type,
         baseline_loss_factory=baseline_factory,
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
+        callbacks=callbacks
     )
 
     # 10. Bắt đầu Huấn Luyện
@@ -358,6 +407,8 @@ def main():
     print("\n[*] Đang lưu mô hình tốt nhất (Best Model)...")
     trainer.save_model(save_dir)
     tokenizer.save_pretrained(save_dir)
+    if args.model_type == "ca_tssa" and criterion is not None:
+        criterion.save_diagnostics(save_dir)
 
     for item in os.listdir(save_dir):
         item_path = os.path.join(save_dir, item)
@@ -390,6 +441,17 @@ def main():
         "num_beams": args.num_beams,
         "length_penalty": args.length_penalty
     }
+    if args.model_type == "ca_tssa":
+        results["metadata"].update({
+            "gradient_policy": args.ca_gradient_policy,
+            "grad_cap": args.ca_grad_cap,
+            "ca_warmup_ratio": args.ca_warmup_ratio,
+            "ca_d_hidden": model.d_hidden,
+            "selection_protocol": args.selection_protocol,
+            "teacher_fingerprint": model.teacher_initial_fingerprint,
+            "dataset_fertility": ca_fertility,
+        })
+        results["gradient_diagnostics"] = criterion.get_diagnostics()
 
     metrics_file = os.path.join(save_dir, "eval_metrics.json")
     with open(metrics_file, "w", encoding="utf-8") as f:

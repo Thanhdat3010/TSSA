@@ -41,7 +41,11 @@ METHODS = [
     {"id": "gira", "name": "GIRA (A1: lam=1.0, Isolated)", "is_ref": False},
     {"id": "gira_nodetach", "name": "GIRA (A2: Sanity No-Detach)", "is_ref": False},
     {"id": "gira_lam0.5", "name": "GIRA (A4: lam=0.5, Isolated)", "is_ref": False},
-    {"id": "gira_lam2.0", "name": "GIRA (A4: lam=2.0, Isolated)", "is_ref": False}
+    {"id": "gira_lam2.0", "name": "GIRA (A4: lam=2.0, Isolated)", "is_ref": False},
+    {"id": "ca_tssa_token", "name": "CA-TSSA (Token Project, Primary)", "is_ref": False},
+    {"id": "ca_tssa_global", "name": "CA-TSSA (Global Project)", "is_ref": False},
+    {"id": "ca_tssa_joint", "name": "CA-TSSA (Joint)", "is_ref": False},
+    {"id": "ca_tssa_detach", "name": "CA-TSSA (Detach)", "is_ref": False}
 ]
 
 def load_metrics(ckpt_dir):

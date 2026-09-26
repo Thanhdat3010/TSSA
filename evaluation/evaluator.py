@@ -4,6 +4,7 @@ Computes SacreBLEU, chrF++, METEOR, and COMET scores on test datasets.
 """
 
 import os
+import json
 import torch
 import numpy as np
 import pandas as pd

@@ -433,13 +433,21 @@ def main():
     # Đính kèm metadata cấu hình để đối soát
     results["metadata"] = {
         "model_type": args.model_type,
+        "model_ckpt": args.model_ckpt,
         "lang": args.lang,
         "seed": args.seed,
         "learning_rate": args.learning_rate,
         "num_epochs": args.num_epochs,
         "batch_size": args.batch_size,
+        "weight_decay": args.weight_decay,
+        "warmup_steps": args.warmup_steps,
+        "max_source_length": args.max_source_length,
+        "max_target_length": args.max_target_length,
+        "fp16": use_fp16,
+        "bf16": use_bf16,
         "num_beams": args.num_beams,
-        "length_penalty": args.length_penalty
+        "length_penalty": args.length_penalty,
+        "selection_protocol": args.selection_protocol,
     }
     if args.model_type == "ca_tssa":
         results["metadata"].update({
@@ -447,7 +455,6 @@ def main():
             "grad_cap": args.ca_grad_cap,
             "ca_warmup_ratio": args.ca_warmup_ratio,
             "ca_d_hidden": model.d_hidden,
-            "selection_protocol": args.selection_protocol,
             "teacher_fingerprint": model.teacher_initial_fingerprint,
             "dataset_fertility": ca_fertility,
         })

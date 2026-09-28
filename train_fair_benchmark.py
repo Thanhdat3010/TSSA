@@ -52,14 +52,17 @@ from models.tssa_vit5 import TSSAViT5Model
 from models.tssa_v4_seq2seq import TSSAV4Seq2SeqModel
 from models.gira_seq2seq import GIRASeq2SeqModel
 from models.ca_tssa_seq2seq import CATSSASeq2SeqModel
+from models.cf_tssa_seq2seq import CFTSSASeq2SeqModel
 from losses.pro_criterion import TSSAProCriterion
 from losses.v4_criterion import V4AlignmentCriterion
 from losses.gira_criterion import GIRACriterion
 from losses.ca_tssa_criterion import CATSSACriterion
+from losses.cf_tssa_criterion import CFTSSACriterion
 from losses.baselines.factory import UnifiedAlignmentLossFactory
 from training.loss_scheduler import TSSALossScheduler
 from training.trainer import TSSASeq2SeqTrainer
 from training.ca_tssa_trainer import CATSSATrainer
+from training.cf_tssa_trainer import CFTSSATrainer
 from evaluation.evaluator import TranslationEvaluator
 
 def set_all_seeds(seed: int):
@@ -106,7 +109,7 @@ def parse_args():
     # 1. Phương Pháp & Mô Hình
     parser.add_argument("--model_type", type=str, default="vanilla",
                         choices=["vanilla", "awesome_align", "cl_lsa", "align_to_distill", "shift_aet", "tssa_pro",
-                                 "v4_sent", "v4_tok", "v4_hybrid", "gira", "ca_tssa"],
+                                 "v4_sent", "v4_tok", "v4_hybrid", "gira", "ca_tssa", "cf_tssa"],
                         help="Phương pháp đối chuẩn cần chạy")
     parser.add_argument("--model_ckpt", type=str, default="vinai/bartpho-syllable",
                         help="HuggingFace checkpoint mô hình nền")
@@ -231,7 +234,12 @@ def main():
     # 6. Khởi tạo Mô hình (GIRASeq2SeqModel, TSSAV4Seq2SeqModel, TSSASeq2SeqModel hoặc TSSAViT5Model)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[*] Đang khởi tạo mô hình trên: {device}")
-    if args.model_type == "ca_tssa":
+    if args.model_type == "cf_tssa":
+        model = CFTSSASeq2SeqModel(
+            model_name_or_path=args.model_ckpt,
+            special_token_ids=tokenizer.all_special_ids,
+        ).to(device)
+    elif args.model_type == "ca_tssa":
         model = CATSSASeq2SeqModel(
             model_name_or_path=args.model_ckpt,
             d_hidden=args.ca_d_hidden,
@@ -262,6 +270,11 @@ def main():
     if args.model_type == "vanilla":
         print("[*] Chế độ: VANILLA BASELINE thuần túy (Chỉ tối ưu Cross-Entropy L_MT, không loss phụ).")
         trainer_model_type = "vanilla"
+
+    elif args.model_type == "cf_tssa":
+        criterion = CFTSSACriterion(total_steps=total_steps).to(device)
+        trainer_model_type = "cf_tssa"
+        print("[*] CF-TSSA: tau=.10, eta=.10, margin=1e-4, gradient budget=.05, ramp=.10")
 
     elif args.model_type == "ca_tssa":
         ca_fertility = estimate_dataset_fertility(train_dataset, tokenizer)
@@ -382,7 +395,8 @@ def main():
         return {"sacrebleu": round(bleu_res.score, 2)}
 
     # 9. Khởi tạo Trainer
-    trainer_cls = CATSSATrainer if args.model_type == "ca_tssa" else TSSASeq2SeqTrainer
+    trainer_cls = (CFTSSATrainer if args.model_type == "cf_tssa" else
+                   CATSSATrainer if args.model_type == "ca_tssa" else TSSASeq2SeqTrainer)
     callbacks = [EarlyStoppingCallback(early_stopping_patience=3)] if use_legacy_selection else []
     trainer = trainer_cls(
         model=model,
@@ -407,7 +421,7 @@ def main():
     print("\n[*] Đang lưu mô hình tốt nhất (Best Model)...")
     trainer.save_model(save_dir)
     tokenizer.save_pretrained(save_dir)
-    if args.model_type == "ca_tssa" and criterion is not None:
+    if args.model_type in ("ca_tssa", "cf_tssa") and criterion is not None:
         criterion.save_diagnostics(save_dir)
 
     for item in os.listdir(save_dir):
@@ -449,6 +463,17 @@ def main():
         "length_penalty": args.length_penalty,
         "selection_protocol": args.selection_protocol,
     }
+    if args.model_type == "cf_tssa":
+        results["metadata"].update({
+            "cf_tau": criterion.tau,
+            "cf_eta": criterion.eta,
+            "cf_margin": criterion.margin,
+            "cf_grad_budget": criterion.grad_budget,
+            "cf_warmup_ratio": criterion.warmup_ratio,
+            "teacher_fingerprint": model.teacher_initial_fingerprint,
+            "trainable_extra_parameters": 0,
+        })
+        results["cf_diagnostics"] = criterion.get_diagnostics()
     if args.model_type == "ca_tssa":
         results["metadata"].update({
             "gradient_policy": args.ca_gradient_policy,
